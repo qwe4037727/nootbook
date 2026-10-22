@@ -297,8 +297,7 @@ func (k *Knowledge) Normalize() {
 	k.Summaries = summaries
 }
 
-func mergeCharacter(base, update Character) Character {
-	if update.ID != "" {
+func mergeCharacter(base, update Character) Character {	if update.ID != "" {
 		base.ID = update.ID
 	}
 	if update.Name != "" {
@@ -331,6 +330,66 @@ func mergeWorldEntry(base, update WorldEntry) WorldEntry {
 	base.Confidence = max(base.Confidence, update.Confidence)
 	base.LastSeen = max(base.LastSeen, update.LastSeen)
 	return base
+}
+
+// MatchCharacter 按名称+别名 key 集合相交匹配既有角色（spec §6.2，#6 归并统一契约）。
+// 返回首个命中下标（-1=无命中）；ambiguous=true 表示多实体命中——
+// 调用方不得自动合并，应进入歧义实体候选提案（§6.3）。
+func MatchCharacter(characters []Character, incomingName string, incomingAliases []string) (index int, ambiguous bool) {
+	sets := make([]map[string]struct{}, len(characters))
+	for i := range characters {
+		sets[i] = entityNameKeys(characters[i].Name, characters[i].Aliases)
+	}
+	return matchByEntityKeys(sets, entityNameKeys(incomingName, incomingAliases))
+}
+
+// MatchWorldEntry 按标题+别名 key 集合相交匹配既有世界条目（spec §6.2）。
+func MatchWorldEntry(entries []WorldEntry, incomingTitle string, incomingAliases []string) (index int, ambiguous bool) {
+	sets := make([]map[string]struct{}, len(entries))
+	for i := range entries {
+		sets[i] = entityNameKeys(entries[i].Title, entries[i].Aliases)
+	}
+	return matchByEntityKeys(sets, entityNameKeys(incomingTitle, incomingAliases))
+}
+
+func entityNameKeys(name string, aliases []string) map[string]struct{} {
+	keys := make(map[string]struct{}, len(aliases)+1)
+	for _, value := range append([]string{name}, aliases...) {
+		key := normalizeKey(value)
+		if key != "" {
+			keys[key] = struct{}{}
+		}
+	}
+	return keys
+}
+
+func matchByEntityKeys(sets []map[string]struct{}, incoming map[string]struct{}) (int, bool) {
+	hits := make([]int, 0, 2)
+	for i, keys := range sets {
+		if intersectsEntityKeys(incoming, keys) {
+			hits = append(hits, i)
+		}
+	}
+	switch len(hits) {
+	case 0:
+		return -1, false
+	case 1:
+		return hits[0], false
+	default:
+		return hits[0], true
+	}
+}
+
+func intersectsEntityKeys(a, b map[string]struct{}) bool {
+	if len(a) > len(b) {
+		a, b = b, a
+	}
+	for key := range a {
+		if _, ok := b[key]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func cleanList(values []string, limit int) []string {

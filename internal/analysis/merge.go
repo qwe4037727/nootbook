@@ -50,7 +50,11 @@ func applyChapter(knowledge *novel.Knowledge, chapter novel.Chapter, result chap
 			continue
 		}
 		cleanCharacter(&incoming)
-		index := matchCharacter(knowledge.Characters, incoming)
+		index, ambiguous := novel.MatchCharacter(knowledge.Characters, incoming.Name, incoming.Aliases)
+		if ambiguous {
+			// spec §6.2：多实体命中不自动合并——迭代 2 由歧义实体候选提案处理（§6.3）。
+			continue
+		}
 		if index < 0 {
 			incoming.ID = novel.NewID("c")
 			incoming.LastSeen = chapter.Index
@@ -83,7 +87,10 @@ func applyChapter(knowledge *novel.Knowledge, chapter novel.Chapter, result chap
 			continue
 		}
 		cleanWorldEntry(&incoming)
-		index := matchWorldEntry(knowledge.World, incoming)
+		index, ambiguous := novel.MatchWorldEntry(knowledge.World, incoming.Title, incoming.Aliases)
+		if ambiguous {
+			continue // 同上：歧义不自动合并
+		}
 		if index < 0 {
 			incoming.ID = novel.NewID("w")
 			incoming.LastSeen = chapter.Index
@@ -175,51 +182,6 @@ func cleanWorldEntry(entry *novel.WorldEntry) {
 		entry.Confidence = 0.5
 	}
 	entry.Confidence = min(entry.Confidence, 1)
-}
-
-func matchCharacter(characters []novel.Character, incoming novel.Character) int {
-	incomingKeys := nameKeys(incoming.Name, incoming.Aliases)
-	for i := range characters {
-		keys := nameKeys(characters[i].Name, characters[i].Aliases)
-		if intersects(incomingKeys, keys) {
-			return i
-		}
-	}
-	return -1
-}
-
-func matchWorldEntry(entries []novel.WorldEntry, incoming novel.WorldEntry) int {
-	incomingKeys := nameKeys(incoming.Title, incoming.Aliases)
-	for i := range entries {
-		keys := nameKeys(entries[i].Title, entries[i].Aliases)
-		if intersects(incomingKeys, keys) {
-			return i
-		}
-	}
-	return -1
-}
-
-func nameKeys(name string, aliases []string) map[string]struct{} {
-	keys := make(map[string]struct{}, len(aliases)+1)
-	for _, value := range append([]string{name}, aliases...) {
-		key := matchKey(value)
-		if key != "" {
-			keys[key] = struct{}{}
-		}
-	}
-	return keys
-}
-
-func intersects(a, b map[string]struct{}) bool {
-	if len(a) > len(b) {
-		a, b = b, a
-	}
-	for key := range a {
-		if _, ok := b[key]; ok {
-			return true
-		}
-	}
-	return false
 }
 
 func matchKey(value string) string {
