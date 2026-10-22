@@ -305,6 +305,13 @@ func (s *Store) recoverMemoryLocked() {
 	// 重置为 failed 以允许 §9.3 的"失败后续跑"。
 	s.resetOrphanInitStateLocked()
 
+	// 运行号基线续接（docs/issues.md #18）：init_state.runId 是上次授权的运行号，
+	// 重启后以其为基线继续递增，保证运行号跨进程单调、不与历史任务撞号。
+	if state, stateErr := s.loadMemoryInitStateLocked(); stateErr == nil && state.RunID > s.initRunCounter {
+		s.initRunCounter = state.RunID
+		s.initCurrentRun = state.RunID
+	}
+
 	if len(commits) == 0 {
 		return
 	}

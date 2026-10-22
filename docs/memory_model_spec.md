@@ -495,7 +495,7 @@ POST /api/memory/initialize 时按序检查，任一不满足则**不启动**：
 
 ### 9.2 初始化状态机
 
-`memory/init_state.json`：`{status, startedAt, finishedAt, lastError, preconditions{migrated, knowledgeReady}, stats{mappedEvents, mappedStates, skippedInvalid, skippedManualProtected}}`
+`memory/init_state.json`：`{status, startedAt, finishedAt, lastError, runId, preconditions{migrated, knowledgeReady}, stats{mappedEvents, mappedStates, skippedInvalid, skippedManualProtected}}`
 
 ```
 not_started → mapping → ready
@@ -503,6 +503,21 @@ not_started → mapping → ready
                  └→ failed（保存 lastError）
 failed / partial --重试--> mapping（续跑）
 ```
+
+**任务代次与在途任务失效（R12 冻结）**：初始化任务是异步执行体，可能与"导入新书"并发。系统维护两级凭据，任一不符即判定任务失效：
+
+| 凭据 | 载体 | 递增时机 | 作用 |
+|---|---|---|---|
+| **记忆代次** `memoryGeneration` | 进程内 | 每次导入新书（记忆子系统重置） | 识别"书籍已被替换"，旧书快照作废 |
+| **运行号** `initCurrentRun` | 进程内 + `init_state.runId` | 每次授权新的初始化任务 | 识别"同代次下的新任务"，旧任务作废 |
+
+失效任务的行为约束（**硬性**）：
+
+1. 旧任务**不得**写入任何记忆记录（旧书事件/人物状态不得进入新书）；
+2. 旧任务**不得**回写 `init_state`（既不得把新书置为 ready/partial，也不得把新书置为 failed）；
+3. 校验点必须在**快照读取之后**、**提交之前**，以及**终态回写之前**——快照读取与提交分属不同的锁域，仅在提交点校验不足以覆盖"快照已过期"。
+
+> 不可依赖 `memoryRevision` 判别：导入会把 `memoryRevision` 归零，新旧任务可能读到相同 revision（docs/issues.md #18）。
 
 ### 9.3 重复请求语义（V1.2 修订，R6 冻结——三种场景分开）
 
@@ -749,5 +764,6 @@ failed / partial --重试--> mapping（续跑）
 | R9 | P2 | **章节收尾钩子契约具体化（复审补齐）**：废弃"Store 方法形可替换扩展点"表述，改为 store 包级回调变量 `onChapterOrderChanged` + 锁释放后调用点；定义注册方（#7）、生命周期（一次性赋值、本期无反注册）、失败处理（仅记日志，不阻断/不回滚章节操作）、死锁防护（回调不得调用 Store 公共加锁方法）；U17 更新 | §4.1.4、§7、§13.3 |
 | R10 | P1 | **回调错误契约统一（#3 实现审查）**：回调签名改为携带 error 返回（`func(oldIndexes, newIndexes map[string]int) error`），调用方对返回 error 与 panic 统一仅记日志不阻断，与 U34 验收要求对齐 | §4.1.4、§7、U34 |
 | R11 | P2 | **短路路径过期 meta 修复 + 注册并发保护（#3 实现审查）**：SaveChapter 无变化短路前以文件值修复 meta 缓存（冻结决策 28，U35）；钩子注册/读取经 sync.RWMutex 互斥保护，注册约定限启动阶段 | §4.1.4、§7、§13.1 |
+| R12 | P1 | **在途初始化任务失效契约（第二复审 S01）**：初始化任务与"导入新书"存在合法交错——任务在 `store.mu` 下读旧书 knowledge 快照，导入在 `memoryMu` 下重置记忆子系统并清空 knowledge，任务随后用旧快照向新书提交人物状态。新增两级凭据：**记忆代次**（每次导入递增）+ **运行号**（每次授权递增，落 `init_state.runId`）；校验点覆盖快照读取后、提交前、终态回写前三处；失效任务不得写记忆记录、不得回写 init_state。明确禁止以 `memoryRevision` 判别（导入归零致新旧同值） | §9.2、§9.3 |
 
 **当前状态：V1.2（含复审补齐 R7–R9）已冻结。进入 #3 Chapter.Revision。**

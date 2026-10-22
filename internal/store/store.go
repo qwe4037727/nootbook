@@ -120,6 +120,18 @@ type Store struct {
 	// 置位后拒绝一切记忆写操作，读取不受影响。
 	memorySafe      bool
 	memorySafeError string
+	// memoryGeneration 为"记忆代次"（memoryMu 守护）：
+	//   - 每次导入新书（resetMemoryLocked）递增 → 属于旧书的在途初始化任务立即失效；
+	//   - 初始化任务启动时捕获当前代次，提交与状态回写前核对，
+	//     代次不一致即放弃本次任务（防止旧书数据写入新书，docs/issues.md #18）。
+	// 与 memoryRevision 不同：memoryRevision 每次提交 +1（导入会归零），
+	// 代次只随"书籍替换"变化，专用于在途异步任务的有效性判定。
+	memoryGeneration uint64
+	// initRunCounter/initCurrentRun 为初始化运行号（memoryMu 守护）：
+	// 每次授权一次初始化任务即递增 initRunCounter 并写入 initCurrentRun；
+	// 新任务一经授权，同代次下的旧任务立即失效（区分"同代次的不同任务"）。
+	initRunCounter  uint64
+	initCurrentRun uint64
 }
 
 func New(dir string) (*Store, error) {
@@ -130,6 +142,8 @@ func New(dir string) (*Store, error) {
 		return nil, fmt.Errorf("store: create data directory: %w", err)
 	}
 	s := &Store{dir: dir}
+	// 代次从 1 起：0 保留为"未初始化/无效代次"哨兵值。
+	s.memoryGeneration = 1
 	if err := s.migrateLegacy(); err != nil {
 		return nil, err
 	}

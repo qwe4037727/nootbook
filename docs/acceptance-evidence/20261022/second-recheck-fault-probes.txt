@@ -1,0 +1,18 @@
+=== RUN   TestAcceptanceSecondRecheckRealPartialWrite
+--- PASS: TestAcceptanceSecondRecheckRealPartialWrite (0.09s)
+=== RUN   TestAcceptanceSecondRecheckImportDuringMapping
+    acceptance_second_recheck_test.go:131: old mapper populated new book with old character state: {ID:state_02a50cc82b6aa9d140 MemoryMeta:{WorkID:work_001 RecordVersion:1 CreatedAt:2026-10-22 07:27:03.2596174 +0000 UTC UpdatedAt:2026-10-22 07:27:03.2596174 +0000 UTC SourceRefs:[] Confidence:0.5 NeedsReview:true ReviewReason:backfill_unverified Origin:{Type:backfill Chapter: Kind:character_state} LastSource:backfill} Status:active SubjectID:c_old Category:general Attribute:profile Value:old state ValidFromEvent: LastConfirmedChapter:}
+--- FAIL: TestAcceptanceSecondRecheckImportDuringMapping (0.32s)
+=== RUN   TestAcceptanceSecondRecheckRealPartialWrite
+--- PASS: TestAcceptanceSecondRecheckRealPartialWrite (0.07s)
+=== RUN   TestAcceptanceSecondRecheckImportDuringMapping
+    acceptance_second_recheck_test.go:131: old mapper populated new book with old character state: {ID:state_c39af7596240a9cf14 MemoryMeta:{WorkID:work_001 RecordVersion:1 CreatedAt:2026-10-22 07:27:03.655928 +0000 UTC UpdatedAt:2026-10-22 07:27:03.655928 +0000 UTC SourceRefs:[] Confidence:0.5 NeedsReview:true ReviewReason:backfill_unverified Origin:{Type:backfill Chapter: Kind:character_state} LastSource:backfill} Status:active SubjectID:c_old Category:general Attribute:profile Value:old state ValidFromEvent: LastConfirmedChapter:}
+--- FAIL: TestAcceptanceSecondRecheckImportDuringMapping (0.33s)
+=== RUN   TestAcceptanceSecondRecheckRealPartialWrite
+--- PASS: TestAcceptanceSecondRecheckRealPartialWrite (0.06s)
+=== RUN   TestAcceptanceSecondRecheckImportDuringMapping
+    acceptance_second_recheck_test.go:131: old mapper populated new book with old character state: {ID:state_b852d2ebe413bf595a MemoryMeta:{WorkID:work_001 RecordVersion:1 CreatedAt:2026-10-22 07:27:04.0821058 +0000 UTC UpdatedAt:2026-10-22 07:27:04.0821058 +0000 UTC SourceRefs:[] Confidence:0.5 NeedsReview:true ReviewReason:backfill_unverified Origin:{Type:backfill Chapter: Kind:character_state} LastSource:backfill} Status:active SubjectID:c_old Category:general Attribute:profile Value:old state ValidFromEvent: LastConfirmedChapter:}
+--- FAIL: TestAcceptanceSecondRecheckImportDuringMapping (0.36s)
+FAIL
+FAIL	novelagent/internal/store	1.335s
+FAIL

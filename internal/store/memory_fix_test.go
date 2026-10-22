@@ -537,3 +537,116 @@ func TestImportResetConcurrentWithMemoryOps(t *testing.T) {
 		t.Errorf("final memory = %+v, want all zero after reset", overview)
 	}
 }
+
+// ---- P1 修复 #18：导入重置使在途初始化任务失效 ----
+
+// TestImportInvalidatesInFlightInitTask 覆盖 P1-1（第二复审 S01）：
+// 旧初始化任务已读取旧书 knowledge 快照 → 导入新书（代次递增）→
+// 旧任务提交前核对代次失败 → 旧角色状态不得写入新书，新书 init_state 保持 not_started。
+func TestImportInvalidatesInFlightInitTask(t *testing.T) {
+	st, dir := newTestStore(t)
+	if _, err := st.ImportChapters("旧书", []novel.Chapter{{Title: "一", Content: "旧。"}}); err != nil {
+		t.Fatalf("import old: %v", err)
+	}
+	writeKnowledgeDirect(t, st, novel.Knowledge{
+		Characters: []novel.Character{{ID: "c_old", Name: "旧角色", State: "旧状态"}},
+		Summaries:  []novel.ChapterSummary{{ChapterID: "ch_old", Index: 1, Summary: "旧摘要"}},
+	})
+
+	// 捕获任务令牌（模拟旧任务已获授权、已读取旧书快照的时刻）
+	st.memoryMu.Lock()
+	st.initRunCounter++
+	runID := st.initRunCounter
+	st.initCurrentRun = runID
+	token := initTaskToken{Generation: st.memoryGeneration, RunID: runID}
+	st.memoryMu.Unlock()
+
+	// 导入新书 → 代次递增、旧运行号失效
+	if _, err := st.ImportChapters("新书", []novel.Chapter{{Title: "新", Content: "新。"}}); err != nil {
+		t.Fatalf("import new: %v", err)
+	}
+
+	// 旧任务继续执行：应因代次不符而放弃，不得写入任何旧书数据
+	st.runMemoryMappingFor(token)
+
+	states := loadStatesForTest(t, dir)
+	for _, state := range states {
+		if state.SubjectID == "c_old" {
+			t.Fatalf("old task wrote stale character state into new book: %+v", state)
+		}
+	}
+	events := loadEventsForTest(t, dir)
+	for _, event := range events {
+		if event.ChapterID == "ch_old" {
+			t.Fatalf("old task wrote stale event into new book: %+v", event)
+		}
+	}
+	// 新书初始化状态不得被旧任务改写（不得 ready/partial/failed）
+	initState, err := st.LoadMemoryInitState()
+	if err != nil {
+		t.Fatalf("init state: %v", err)
+	}
+	if initState.Status != InitNotStarted {
+		t.Errorf("new-book init status = %q (%s), want not_started (stale task must not write back)", initState.Status, initState.LastError)
+	}
+}
+
+// TestInitTokenGuardsTerminalWrite 覆盖 P1-1 的第二道防线：
+// 代次失效的任务即使走到终态回写前，也不得覆盖新书的 init_state。
+func TestInitTokenGuardsTerminalWrite(t *testing.T) {
+	st, _ := newTestStore(t)
+	st.memoryMu.Lock()
+	st.initRunCounter++
+	runID := st.initRunCounter
+	st.initCurrentRun = runID
+	token := initTaskToken{Generation: st.memoryGeneration, RunID: runID}
+	st.memoryMu.Unlock()
+
+	// 令牌失效：运行号被新任务接管
+	st.memoryMu.Lock()
+	st.initRunCounter++
+	st.initCurrentRun = st.initRunCounter
+	st.memoryMu.Unlock()
+
+	if st.initTokenValidLocked(token) {
+		t.Fatal("token with superseded run id must be invalid")
+	}
+
+	// 失效任务调用 failMemoryInit → 不得写任何状态
+	st.memoryMu.Lock()
+	_ = st.writeMemoryInitStateLocked(MemoryInitState{Status: InitMapping})
+	st.memoryMu.Unlock()
+	st.failMemoryInit(token, errors.New("boom"))
+	initState, err := st.LoadMemoryInitState()
+	if err != nil {
+		t.Fatalf("init state: %v", err)
+	}
+	if initState.Status != InitMapping {
+		t.Errorf("init status = %q, want mapping (invalidated task must not write failed)", initState.Status)
+	}
+}
+
+// TestInitGenerationInvalidatedByImport 覆盖代次机制本身：
+// 导入递增代次 → 旧令牌失效；新令牌有效。
+func TestInitGenerationInvalidatedByImport(t *testing.T) {
+	st, _ := newTestStore(t)
+	st.memoryMu.Lock()
+	st.initRunCounter++
+	runID := st.initRunCounter
+	st.initCurrentRun = runID
+	token := initTaskToken{Generation: st.memoryGeneration, RunID: runID}
+	st.memoryMu.Unlock()
+
+	if !st.initTokenValidLocked(token) {
+		t.Fatal("fresh token must be valid")
+	}
+	if _, err := st.ImportChapters("新书", []novel.Chapter{{Title: "一", Content: "一。"}}); err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	st.memoryMu.Lock()
+	valid := st.initTokenValidLocked(token)
+	st.memoryMu.Unlock()
+	if valid {
+		t.Error("token must be invalid after import (generation incremented)")
+	}
+}

@@ -54,11 +54,14 @@ type MemoryInitStats struct {
 }
 
 // MemoryInitState 为 memory/init_state.json 的磁盘结构。
+// RunID 为本次初始化任务的运行号（授权时分配，docs/issues.md #18）：
+// 导入新书或新任务授权后，旧在途任务凭此判定失效，不得写入新书记忆。
 type MemoryInitState struct {
 	Status        string                  `json:"status"`
 	StartedAt     time.Time               `json:"startedAt,omitempty"`
 	FinishedAt    time.Time               `json:"finishedAt,omitempty"`
 	LastError     string                  `json:"lastError,omitempty"`
+	RunID         uint64                  `json:"runId,omitempty"`
 	Preconditions MemoryInitPreconditions `json:"preconditions"`
 	Stats         MemoryInitStats         `json:"stats"`
 }
@@ -183,37 +186,81 @@ func (s *Store) InitializeMemory() (string, error) {
 	}
 
 	now := time.Now().UTC()
+	// 授权新的初始化运行号（docs/issues.md #18）：旧的在途任务凭此判定失效，
+	// 不得把旧书快照写入新书，也不得覆盖新任务的 init_state。
+	s.initRunCounter++
+	runID := s.initRunCounter
+	s.initCurrentRun = runID
+	token := initTaskToken{Generation: s.memoryGeneration, RunID: runID}
+
 	state.Status = InitMapping
 	state.StartedAt = now
 	state.FinishedAt = time.Time{}
 	state.LastError = ""
+	state.RunID = runID
 	state.Preconditions = pre
 	if err := s.writeMemoryInitStateLocked(state); err != nil {
 		return "", err
 	}
-	go s.runMemoryMapping()
+	go s.runMemoryMappingFor(token)
 	return InitMapping, nil
 }
 
-// runMemoryMapping 执行映射（异步；不持任何锁进入）。panic 转为 failed 状态而非带崩进程。
+// initTaskToken 标识一次初始化任务的归属（docs/issues.md #18）：
+//   - Generation：任务开始时的记忆代次——导入新书会递增代次，旧任务据此失效；
+//   - RunID：授权该任务的运行号——新任务授权后，旧任务据此失效。
+//
+// 校验点在"提交前"与"终态/失败回写前"两处：任一不符即放弃本次任务，
+// 旧书快照不得写入新书记忆，也不得覆盖新书/新任务的 init_state。
+type initTaskToken struct {
+	Generation uint64
+	RunID      uint64
+}
+
+// initTokenValidLocked 校验任务归属是否仍然有效（调用方须持 memoryMu）：
+// 代次一致（期间未发生导入重置）且运行号仍为当前授权（未被新任务接管）。
+func (s *Store) initTokenValidLocked(token initTaskToken) bool {
+	return s.memoryGeneration == token.Generation && s.initCurrentRun == token.RunID
+}
+
+// runMemoryMapping 为兼容入口（外部直接置位 mapping 状态时使用，如验收探针）：
+// 以"当前代次 + 当前运行号"认领任务后执行映射。
+// 生产路径由 InitializeMemory 显式携带令牌（runMemoryMappingFor），
+// 避免"授权后、任务真正启动前"发生导入时误用新代次。
 func (s *Store) runMemoryMapping() {
+	s.memoryMu.Lock()
+	state, err := s.loadMemoryInitStateLocked()
+	token := initTaskToken{Generation: s.memoryGeneration, RunID: s.initCurrentRun}
+	s.memoryMu.Unlock()
+	if err != nil {
+		return
+	}
+	if state.Status != InitMapping && state.Status != InitDeepExtracting {
+		return
+	}
+	s.runMemoryMappingFor(token)
+}
+
+// runMemoryMappingFor 执行映射（异步；不持任何锁进入）。panic 转为 failed 状态而非带崩进程。
+// token 为任务归属凭据：快照读取后、提交前、终态回写前均需核对（docs/issues.md #18）。
+func (s *Store) runMemoryMappingFor(token initTaskToken) {
 	defer func() {
 		if r := recover(); r != nil {
-			s.failMemoryInit(fmt.Errorf("mapping panicked: %v", r))
+			s.failMemoryInit(token, fmt.Errorf("mapping panicked: %v", r))
 		}
 	}()
 	knowledge, err := s.LoadKnowledge()
 	if err != nil {
-		s.failMemoryInit(fmt.Errorf("load knowledge: %w", err))
+		s.failMemoryInit(token, fmt.Errorf("load knowledge: %w", err))
 		return
 	}
 	if _, err := s.LoadProject(); err != nil {
-		s.failMemoryInit(fmt.Errorf("load project: %w", err))
+		s.failMemoryInit(token, fmt.Errorf("load project: %w", err))
 		return
 	}
 	chapters, err := s.LoadChapters()
 	if err != nil {
-		s.failMemoryInit(fmt.Errorf("load chapters: %w", err))
+		s.failMemoryInit(token, fmt.Errorf("load chapters: %w", err))
 		return
 	}
 	indexByChapter := make(map[string]int, len(chapters))
@@ -221,22 +268,34 @@ func (s *Store) runMemoryMapping() {
 		indexByChapter[chapter.ID] = chapter.Index
 	}
 
+	// 持锁区段独立成方法：panic 展开时由 defer 释放 memoryMu，
+	// 避免外层 recover 调用 failMemoryInit 时二次获取同一把非重入锁而自死锁。
+	if err := s.mapMemoryUnderLock(token, knowledge, indexByChapter); err != nil {
+		s.failMemoryInit(token, err)
+	}
+}
+
+// mapMemoryUnderLock 在持有 memoryMu 的前提下完成映射与提交（docs/issues.md #18）：
+// 快照读取后、提交前、终态回写前三处核对任务代次；任务已失效时不写任何数据。
+func (s *Store) mapMemoryUnderLock(token initTaskToken, knowledge novel.Knowledge, indexByChapter map[string]int) error {
+	s.memoryMu.Lock()
+	defer s.memoryMu.Unlock()
+
 	now := time.Now().UTC()
 	stats := MemoryInitStats{}
 
-	// ---- 第一步（持 memoryMu）：origin 查重 + 构造新记录 + L-S 过滤 ----
-	s.memoryMu.Lock()
+	// 关键校验点（docs/issues.md #18）：knowledge/chapters 快照是在 store.mu 下读取的，
+	// 其间可能已发生导入重置——快照已属旧书，立即放弃本次任务。
+	if !s.initTokenValidLocked(token) {
+		return errors.New("init task invalidated: book replaced before mapping")
+	}
 	events, err := s.loadMemoryEventsLocked()
 	if err != nil {
-		s.memoryMu.Unlock()
-		s.failMemoryInit(err)
-		return
+		return err
 	}
 	states, err := s.loadMemoryStatesLocked()
 	if err != nil {
-		s.memoryMu.Unlock()
-		s.failMemoryInit(err)
-		return
+		return err
 	}
 	existingTotal := len(events) + len(states)
 
@@ -347,9 +406,7 @@ func (s *Store) runMemoryMapping() {
 
 	state, err := s.loadMemoryInitStateLocked()
 	if err != nil {
-		s.memoryMu.Unlock()
-		s.failMemoryInit(err)
-		return
+		return err
 	}
 
 	// R5 红线：零结果不得 ready（U28）
@@ -358,22 +415,19 @@ func (s *Store) runMemoryMapping() {
 		state.FinishedAt = time.Now().UTC()
 		state.LastError = "no_mappable_input"
 		state.Stats = stats
-		if err := s.writeMemoryInitStateLocked(state); err != nil {
-			s.memoryMu.Unlock()
-			s.failMemoryInit(err)
-			return
-		}
-		s.memoryMu.Unlock()
-		return
+		return s.writeMemoryInitStateLocked(state)
 	}
 
 	// ---- 第二步：有新记录 → initialize 提交（memoryRevision+1，§8.3）----
 	if stats.MappedEvents+stats.MappedStates > 0 {
+		// 提交前再核对任务代次（docs/issues.md #18）：快照构造期间可能发生导入，
+		// 此时提交会把旧书人物状态写入新书。
+		if !s.initTokenValidLocked(token) {
+			return errors.New("init task invalidated: book replaced before commit")
+		}
 		meta, err := s.ensureMemoryMetaLocked()
 		if err != nil {
-			s.memoryMu.Unlock()
-			s.failMemoryInit(err)
-			return
+			return err
 		}
 		payload := map[string]any{}
 		if len(newEvents) > 0 {
@@ -383,9 +437,7 @@ func (s *Store) runMemoryMapping() {
 			payload["states.json"] = append(states, newStates...)
 		}
 		if _, err := s.commitMemoryLocked(CommitInitialize, meta.MemoryRevision, payload); err != nil {
-			s.memoryMu.Unlock()
-			s.failMemoryInit(err)
-			return
+			return err
 		}
 	}
 
@@ -400,17 +452,21 @@ func (s *Store) runMemoryMapping() {
 	state.FinishedAt = time.Now().UTC()
 	state.LastError = ""
 	state.Stats = stats
-	if err := s.writeMemoryInitStateLocked(state); err != nil {
-		s.memoryMu.Unlock()
-		s.failMemoryInit(err)
-		return
+	// 终态回写前核对任务代次（docs/issues.md #18）：旧任务不得覆盖新书/新任务的 init_state。
+	if !s.initTokenValidLocked(token) {
+		return nil
 	}
-	s.memoryMu.Unlock()
+	return s.writeMemoryInitStateLocked(state)
 }
 
-func (s *Store) failMemoryInit(err error) {
+// failMemoryInit 将初始化任务标记为 failed；任务代次已失效时不写任何状态
+// （docs/issues.md #18：旧任务不得覆盖新书/新任务的 init_state）。
+func (s *Store) failMemoryInit(token initTaskToken, err error) {
 	s.memoryMu.Lock()
 	defer s.memoryMu.Unlock()
+	if !s.initTokenValidLocked(token) {
+		return
+	}
 	state, err2 := s.loadMemoryInitStateLocked()
 	if err2 != nil {
 		return
@@ -472,9 +528,18 @@ func (s *Store) resetMemoryLocked() error {
 	}); err != nil {
 		return err
 	}
-	if err := s.writeMemoryInitStateLocked(MemoryInitState{Status: InitNotStarted}); err != nil {
+	// 运行号保留在 init_state 中（docs/issues.md #18）：跨重启续接基线，
+	// 保证运行号单调、不与历史任务撞号；Status 重置为 not_started 表示无在途任务。
+	if err := s.writeMemoryInitStateLocked(MemoryInitState{
+		Status: InitNotStarted,
+		RunID:  s.initRunCounter,
+	}); err != nil {
 		return err
 	}
+	// 递增记忆代次并失效当前运行号（docs/issues.md #18）：在途初始化任务凭此判定失效，
+	// 旧书快照不得写入新书记忆，旧任务也不得覆盖新书的 init_state。
+	s.memoryGeneration++
+	s.initCurrentRun = 0
 	// 记忆子系统已整体重建：旧数据触发的安全态随之解除。
 	s.memorySafe = false
 	s.memorySafeError = ""
