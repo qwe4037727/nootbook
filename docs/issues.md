@@ -16,5 +16,9 @@
 | 8 | 实现新增 | 回填遇"非 manual 的既有异值 active 状态"时跳过，递增表无对应计数 | #7 | ✅ 已裁决 | 新增 stats 字段 `SkippedExistingActive`（回填永不替代既有 active，保护语义） |
 | 9 | 实现细节 | 记忆字段截断总长需含省略号 ≤limit（project.go 的 truncateRunes 会到 limit+1） | #5 | ✅ 已解决 | novel/memory.go 新增 `memTruncate`（≤limit 含省略号），记忆模型全部使用 |
 | 10 | 实现新增 | 章节删除后事件处置（§13.2-1）落地取值 | #7 | ✅ 已裁决 | 事件置 needsReview=true、reviewReason="chapter_deleted"、storyOrder=0；invalidated 留用户/reconcile |
+| 11 | 阻塞缺陷 | **初始化中途重启后无法继续**：进程死亡遗留孤儿 mapping 状态，重启后 initialize 永远 409 already_running | #7/#8 | ✅ 已修复 | 启动恢复（recoverMemoryLocked）检测孤儿 mapping/deep_extracting → 重置 failed + lastError="interrupted_by_restart"，走 §9.3 失败续跑路径；runMemoryMapping 增加 panic→failed 防护。测试 TestRecoveryResetsOrphanMapping |
+| 12 | 阻塞缺陷 | **提交写入失败后重试造成提交链分叉**：prepared 落盘后失败不清理，重试 append 同 basedOn 记录 → 链校验判分叉进安全态 | #4 | ✅ 已修复 | 失败路径将 prepared 置 **aborted**（协议既有状态，实现遗漏）；链校验/恢复跳过 aborted；abort 写盘失败保留 prepared（恢复幂等重放，安全方向）；已 committed 但 meta 对齐失败保留 committed（崩溃点 5 收敛）。测试 TestCommitFailureAbortsPreparedNoFork |
+| 13 | 阻塞缺陷 | **恢复流程接受非法提交记录**：status/type/target/commitId/createdAt 未校验，非法值被静默跳过 | #4 | ✅ 已修复 | 恢复新增阶段 0 记录级校验：status∈{prepared,committed,aborted}、type∈五种、target==basedOn+1、commitId 过 ValidID、createdAt 非零——任一违反进安全态。测试 TestRecoveryRejectsInvalidCommitRecords（4 子用例） |
+| 14 | 阻塞缺陷 | **导入新书后保留旧书记忆并显示初始化完成**：ImportChapters 只重置 knowledge，memory/ 旧记录、commits、ready 状态全残留 | #7/#8 | ✅ 已修复 | importChaptersLocked 新增 resetMemoryLocked：五类记录/候选/提交日志/init_state 清空 + meta 归零；配套将 InitializeMemory 改为"先 store.mu 前置检查、释放后进 memoryMu"，使全仓库持序唯一为 store.mu→memoryMu（import 重置路径），消除反序死锁。测试 TestImportResetsMemory |
 
 （开发过程中新增问题持续追加于此表。）

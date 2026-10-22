@@ -1,0 +1,20 @@
+=== RUN   TestAcceptanceReviewInterruptedInitialization
+    acceptance_review_test.go:44: restart has no mapping worker, but retry is rejected: status=mapping err=store: memory initialization already running
+--- FAIL: TestAcceptanceReviewInterruptedInitialization (0.05s)
+=== RUN   TestAcceptanceReviewRetryAfterPayloadWriteFailure
+    acceptance_review_test.go:85: successful retry created an unrecoverable commit fork: commit chain broken at commit_a8ab8cdf8cc23743c2: basedOn=0 want=1 (commit_chain_broken)
+--- FAIL: TestAcceptanceReviewRetryAfterPayloadWriteFailure (0.08s)
+=== RUN   TestAcceptanceReviewMalformedCommitRecords
+=== RUN   TestAcceptanceReviewMalformedCommitRecords/revision_jump
+    acceptance_review_test.go:122: invalid commit accepted: target=9 status=committed info={SchemaVersion:1 MemoryRevision:9 LastCommitID:commit_invalid UpdatedAt:2026-10-22 06:42:00.7026922 +0000 UTC SafeState:false SafeStateError:}
+=== RUN   TestAcceptanceReviewMalformedCommitRecords/unknown_status
+    acceptance_review_test.go:122: invalid commit accepted: target=1 status=invalid_status info={SchemaVersion:1 MemoryRevision:0 LastCommitID: UpdatedAt:2026-10-22 06:42:00.7116994 +0000 UTC SafeState:false SafeStateError:}
+--- FAIL: TestAcceptanceReviewMalformedCommitRecords (0.07s)
+    --- FAIL: TestAcceptanceReviewMalformedCommitRecords/revision_jump (0.04s)
+    --- FAIL: TestAcceptanceReviewMalformedCommitRecords/unknown_status (0.04s)
+=== RUN   TestAcceptanceReviewReplacingBookDoesNotKeepReadyMemory
+    acceptance_review_test.go:145: new book is reported ready with old book states: {WorkID:work_001 SchemaVersion:1 MemoryRevision:2 LastCommitID:commit_799666eb9134a851e4 InitStatus:ready Counts:{Events:1 States:1 Cognitions:0 Threads:0 Plans:0} SafeState:false SafeStateError:}
+--- FAIL: TestAcceptanceReviewReplacingBookDoesNotKeepReadyMemory (0.14s)
+FAIL
+FAIL	novelagent/internal/store	0.458s
+FAIL

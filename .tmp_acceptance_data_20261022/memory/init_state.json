@@ -1,0 +1,16 @@
+{
+  "status": "ready",
+  "startedAt": "2026-10-22T06:32:57.8866683Z",
+  "finishedAt": "2026-10-22T06:32:58.1409665Z",
+  "preconditions": {
+    "migrated": true,
+    "knowledgeReady": true
+  },
+  "stats": {
+    "mappedEvents": 2,
+    "mappedStates": 1,
+    "skippedInvalid": 0,
+    "skippedManualProtected": 0,
+    "skippedExistingActive": 0
+  }
+}

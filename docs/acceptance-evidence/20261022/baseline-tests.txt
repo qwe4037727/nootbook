@@ -1,0 +1,8 @@
+	novelagent		coverage: 0.0% of statements
+	novelagent/cmd/probe		coverage: 0.0% of statements
+ok  	novelagent/internal/agent	0.219s	coverage: 89.1% of statements
+ok  	novelagent/internal/analysis	0.572s	coverage: 73.7% of statements
+ok  	novelagent/internal/llm	0.218s	coverage: 75.5% of statements
+ok  	novelagent/internal/novel	0.238s	coverage: 76.8% of statements
+ok  	novelagent/internal/server	1.249s	coverage: 67.8% of statements
+ok  	novelagent/internal/store	3.506s	coverage: 76.5% of statements

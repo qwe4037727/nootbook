@@ -88,6 +88,23 @@ func (s *Store) writeMemoryInitStateLocked(state MemoryInitState) error {
 	return s.writeMemoryFileLocked(memoryInitStateFile, state)
 }
 
+// resetOrphanInitStateLocked 为启动恢复附带动作（阻塞修复 #1）：
+// 进程重启后不可能存在在途映射，孤儿 mapping/deep_extracting 状态重置为 failed，
+// 使 §9.3 的"失败后续跑"路径可用（否则 initialize 将永远 409 already_running）。
+func (s *Store) resetOrphanInitStateLocked() {
+	state, err := s.loadMemoryInitStateLocked()
+	if err != nil {
+		return
+	}
+	if state.Status != InitMapping && state.Status != InitDeepExtracting {
+		return
+	}
+	state.Status = InitFailed
+	state.FinishedAt = time.Now().UTC()
+	state.LastError = "interrupted_by_restart"
+	_ = s.writeMemoryInitStateLocked(state)
+}
+
 // CheckMemoryPreconditions 执行 R5 前置检查（§9.0 第 1/2 项）。
 // 第 3 项（输入可解码）在映射阶段执行，失败置 failed（§12.3：202 先返回）。
 func (s *Store) CheckMemoryPreconditions() (MemoryInitPreconditions, error) {
@@ -138,7 +155,15 @@ func (s *Store) memoryPreconditionsLocked() (MemoryInitPreconditions, error) {
 //   - mapping/deep_extracting → (status, ErrAlreadyRunning)
 //   - not_started/failed/partial → 置 mapping 并异步映射，返回 ("mapping", nil)
 //   - 前置不满足 → ErrProjectNotMigrated / ErrKnowledgeNotReady（状态不变、零写入）
+//
+// 锁序（阻塞修复 #4 配套）：前置检查先独立取 store.mu，释放后才进 memoryMu——
+// 全仓库持序唯一为 store.mu→memoryMu（import 重置路径），杜绝死锁。
 func (s *Store) InitializeMemory() (string, error) {
+	pre, err := s.CheckMemoryPreconditions()
+	if err != nil {
+		return "", err
+	}
+
 	s.memoryMu.Lock()
 	defer s.memoryMu.Unlock()
 
@@ -156,11 +181,6 @@ func (s *Store) InitializeMemory() (string, error) {
 		return state.Status, ErrAlreadyRunning
 	}
 
-	pre, err := s.memoryPreconditionsLocked()
-	if err != nil {
-		return "", err
-	}
-
 	now := time.Now().UTC()
 	state.Status = InitMapping
 	state.StartedAt = now
@@ -174,8 +194,13 @@ func (s *Store) InitializeMemory() (string, error) {
 	return InitMapping, nil
 }
 
-// runMemoryMapping 执行映射（异步；不持任何锁进入）。
+// runMemoryMapping 执行映射（异步；不持任何锁进入）。panic 转为 failed 状态而非带崩进程。
 func (s *Store) runMemoryMapping() {
+	defer func() {
+		if r := recover(); r != nil {
+			s.failMemoryInit(fmt.Errorf("mapping panicked: %v", r))
+		}
+	}()
 	knowledge, err := s.LoadKnowledge()
 	if err != nil {
 		s.failMemoryInit(fmt.Errorf("load knowledge: %w", err))
@@ -412,6 +437,34 @@ func originDedupKey(origin novel.Origin, subjectID string) string {
 func stateTripleKey(subjectID, category, attribute string) string {
 	// §4.2 唯一键：(subjectId, category, attribute)
 	return subjectID + "|" + category + "|" + attribute
+}
+
+// resetMemoryLocked 为导入新书重置记忆子系统（阻塞修复 #4，与 knowledge 重置对称）：
+// 五类记录/候选/提交日志/init_state 全部清空，meta 归零——防止旧书记录混入新书面板
+// 或显示"初始化完成"。调用方持 store.mu 时获取 memoryMu（全仓库唯一持序方向 store.mu→memoryMu）。
+func (s *Store) resetMemoryLocked() error {
+	empties := map[string]any{
+		"events.json":            []novel.StoryEvent{},
+		"states.json":            []novel.StoryState{},
+		"cognitions.json":        []novel.Cognition{},
+		"threads.json":           []novel.StoryThread{},
+		"plans.json":             []novel.StoryPlan{},
+		"entity_candidates.json": []novel.EntityCandidate{},
+		"commits.json":           []CommitRecord{},
+	}
+	for name, value := range empties {
+		if err := s.writeMemoryFileLocked(name, value); err != nil {
+			return err
+		}
+	}
+	if err := s.writeMemoryMetaLocked(memoryMetaFile{
+		SchemaVersion:  memorySchemaVersion,
+		MemoryRevision: 0,
+		UpdatedAt:      time.Now().UTC(),
+	}); err != nil {
+		return err
+	}
+	return s.writeMemoryInitStateLocked(MemoryInitState{Status: InitNotStarted})
 }
 
 // ---- StoryOrder 重算（§4.1.4 / 冻结决策 16；钩子契约 R9–R11）----

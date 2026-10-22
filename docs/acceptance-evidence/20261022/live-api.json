@@ -1,0 +1,176 @@
+{
+  "time": "2026-10-22T14:42:30.7851785+08:00",
+  "projectBefore": {
+    "title": "验收测试作品",
+    "chapters": [
+      {
+        "id": "ch_54338173fd498512fb",
+        "index": 1,
+        "title": "第1章 开始",
+        "charCount": 13,
+        "revision": 1,
+        "updatedAt": "2026-10-22T05:47:55.7203323Z"
+      },
+      {
+        "id": "ch_fcaa09f742046a6c0e",
+        "index": 2,
+        "title": "第2章 转折（修订）",
+        "charCount": 19,
+        "revision": 2,
+        "updatedAt": "2026-10-22T05:48:27.2592486Z"
+      }
+    ],
+    "analysis": {
+      "status": "ready",
+      "analyzedCount": 2,
+      "totalCount": 2,
+      "updatedAt": "2026-10-22T06:33:18.9254052Z"
+    },
+    "updatedAt": "2026-10-22T06:33:18.9254052Z"
+  },
+  "memoryBefore": {
+    "workId": "work_001",
+    "schemaVersion": 1,
+    "memoryRevision": 1,
+    "lastCommitId": "commit_13f574e4e5314cab80",
+    "initStatus": "ready",
+    "counts": {
+      "events": 2,
+      "states": 1,
+      "cognitions": 0,
+      "threads": 0,
+      "plans": 0
+    },
+    "safeState": false
+  },
+  "saveStatus": 200,
+  "saveResponse": {
+    "chapter": {
+      "id": "ch_fcaa09f742046a6c0e",
+      "index": 2,
+      "title": "第2章 转折（修订）",
+      "content": "雨停了，他走出房门，回头看了一眼旧屋。",
+      "charCount": 19,
+      "revision": 2,
+      "updatedAt": "2026-10-22T05:48:27.2592486Z"
+    },
+    "project": {
+      "title": "验收测试作品",
+      "chapters": [
+        {
+          "id": "ch_54338173fd498512fb",
+          "index": 1,
+          "title": "第1章 开始",
+          "charCount": 13,
+          "revision": 1,
+          "updatedAt": "2026-10-22T05:47:55.7203323Z"
+        },
+        {
+          "id": "ch_fcaa09f742046a6c0e",
+          "index": 2,
+          "title": "第2章 转折（修订）",
+          "charCount": 19,
+          "revision": 2,
+          "updatedAt": "2026-10-22T05:48:27.2592486Z"
+        }
+      ],
+      "analysis": {
+        "status": "ready",
+        "analyzedCount": 2,
+        "totalCount": 2,
+        "updatedAt": "2026-10-22T06:33:18.9254052Z"
+      },
+      "updatedAt": "2026-10-22T06:33:18.9254052Z"
+    }
+  },
+  "initStatus": 200,
+  "initResponse": {
+    "alreadyInitialized": true,
+    "initStatus": "ready"
+  },
+  "projectAfter": {
+    "title": "验收测试作品",
+    "chapters": [
+      {
+        "id": "ch_54338173fd498512fb",
+        "index": 1,
+        "title": "第1章 开始",
+        "charCount": 13,
+        "revision": 1,
+        "updatedAt": "2026-10-22T05:47:55.7203323Z"
+      },
+      {
+        "id": "ch_fcaa09f742046a6c0e",
+        "index": 2,
+        "title": "第2章 转折（修订）",
+        "charCount": 19,
+        "revision": 2,
+        "updatedAt": "2026-10-22T05:48:27.2592486Z"
+      }
+    ],
+    "analysis": {
+      "status": "ready",
+      "analyzedCount": 2,
+      "totalCount": 2,
+      "updatedAt": "2026-10-22T06:33:18.9254052Z"
+    },
+    "updatedAt": "2026-10-22T06:33:18.9254052Z"
+  },
+  "memoryAfter": {
+    "workId": "work_001",
+    "schemaVersion": 1,
+    "memoryRevision": 1,
+    "lastCommitId": "commit_13f574e4e5314cab80",
+    "initStatus": "ready",
+    "counts": {
+      "events": 2,
+      "states": 1,
+      "cognitions": 0,
+      "threads": 0,
+      "plans": 0
+    },
+    "safeState": false
+  },
+  "memoryFilesUnchanged": true,
+  "character": {
+    "character": {
+      "id": "c_3e22051fb4cedf5be2",
+      "name": "林越",
+      "role": "本章主角",
+      "personality": "未明确",
+      "appearance": "未提及",
+      "relationships": "未提及",
+      "state": "雨停后走出房门，回头看旧屋。",
+      "evidence": [
+        "他走出房门，回头看了一眼旧屋。",
+        "林越醒来，发现窗外下着雨。"
+      ],
+      "confidence": 1,
+      "lastSeen": 2
+    },
+    "states": [
+      {
+        "id": "state_512265de0179fffb2a",
+        "workId": "work_001",
+        "recordVersion": 1,
+        "createdAt": "2026-10-22T06:32:57.9419555Z",
+        "updatedAt": "2026-10-22T06:32:57.9419555Z",
+        "confidence": 0.5,
+        "needsReview": true,
+        "reviewReason": "backfill_unverified",
+        "origin": {
+          "type": "backfill",
+          "kind": "character_state"
+        },
+        "lastSource": "backfill",
+        "status": "active",
+        "subjectId": "c_3e22051fb4cedf5be2",
+        "category": "general",
+        "attribute": "profile",
+        "value": "雨停后走出房门，回头看旧屋。"
+      }
+    ],
+    "cognitions": [],
+    "events": []
+  }
+}

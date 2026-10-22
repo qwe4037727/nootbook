@@ -250,6 +250,12 @@ func (s *Store) importChaptersLocked(title string, chapters []novel.Chapter) (no
 		project.Chapters = append(project.Chapters, chapter.Meta())
 	}
 	project.Normalize()
+	// 阻塞修复 #4：导入新书重置记忆子系统（与 knowledge 重置对称）。
+	// 此处持 store.mu 获取 memoryMu——全仓库唯一持序方向（store.mu→memoryMu），
+	// InitializeMemory 已改为先取 store.mu 做前置检查再进 memoryMu，无反序死锁。
+	if err := s.resetMemoryLocked(); err != nil {
+		return novel.Project{}, nil, nil, fmt.Errorf("store: reset memory for new import: %w", err)
+	}
 	if err := s.writeProjectLocked(project); err != nil {
 		return novel.Project{}, nil, nil, err
 	}

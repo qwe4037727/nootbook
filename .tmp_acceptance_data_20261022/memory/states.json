@@ -1,0 +1,22 @@
+[
+  {
+    "attribute": "profile",
+    "category": "general",
+    "confidence": 0.5,
+    "createdAt": "2026-10-22T06:32:57.9419555Z",
+    "id": "state_512265de0179fffb2a",
+    "lastSource": "backfill",
+    "needsReview": true,
+    "origin": {
+      "kind": "character_state",
+      "type": "backfill"
+    },
+    "recordVersion": 1,
+    "reviewReason": "backfill_unverified",
+    "status": "active",
+    "subjectId": "c_3e22051fb4cedf5be2",
+    "updatedAt": "2026-10-22T06:32:57.9419555Z",
+    "value": "雨停后走出房门，回头看旧屋。",
+    "workId": "work_001"
+  }
+]

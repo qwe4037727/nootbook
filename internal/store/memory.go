@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -43,20 +44,21 @@ const (
 	CommitEntityCheck = "entity_confirm"
 )
 
-// CommitStatus 枚举。
+// CommitStatus 枚举（aborted 为提交失败终态：链校验与恢复均跳过，防重试分叉）。
 const (
 	CommitPrepared  = "prepared"
 	CommitCommitted = "committed"
+	CommitAborted   = "aborted"
 )
 
 // MemoryInfo 为 GET /api/memory 的元信息载体（spec §12.1）。
 type MemoryInfo struct {
-	SchemaVersion  int    `json:"schemaVersion"`
-	MemoryRevision int64  `json:"memoryRevision"`
-	LastCommitID   string `json:"lastCommitId"`
+	SchemaVersion  int       `json:"schemaVersion"`
+	MemoryRevision int64     `json:"memoryRevision"`
+	LastCommitID   string    `json:"lastCommitId"`
 	UpdatedAt      time.Time `json:"updatedAt"`
-	SafeState      bool   `json:"safeState"`
-	SafeStateError string `json:"safeStateError,omitempty"`
+	SafeState      bool      `json:"safeState"`
+	SafeStateError string    `json:"safeStateError,omitempty"`
 }
 
 // memoryMetaFile 为 data/memory/meta.json 的磁盘结构（spec §8.2）。
@@ -103,7 +105,12 @@ func (s *Store) LoadMemoryInfo() (MemoryInfo, error) {
 // commitMemoryLocked 执行一次记忆提交（spec §11.2 全流程，调用方须已持有 memoryMu）：
 //  1. R7 基线校验：basedOn != 当前 memoryRevision → ErrRevisionConflict，零落盘；
 //  2. 写 prepared CommitRecord → 依次覆盖写目标文件 → 置 committed → 对齐 meta。
-func (s *Store) commitMemoryLocked(commitType string, basedOn int64, payload map[string]any) (CommitRecord, error) {
+//
+// 失败清理（阻塞修复 #2）：prepared 落盘后任何步骤失败，将本记录置 aborted——
+// 链校验与恢复均跳过 aborted，后续重试不会产生 basedOn 相同的分叉记录；
+// 若 abort 写盘也失败则保留 prepared（恢复流程会幂等重放，安全方向）；
+// 已 committed 但 meta 对齐失败的，保留 committed（重启恢复按崩溃点 5 收敛 meta）。
+func (s *Store) commitMemoryLocked(commitType string, basedOn int64, payload map[string]any) (record CommitRecord, err error) {
 	if s.memorySafe {
 		return CommitRecord{}, fmt.Errorf("%w: %s", ErrMemorySafeState, s.memorySafeError)
 	}
@@ -116,7 +123,7 @@ func (s *Store) commitMemoryLocked(commitType string, basedOn int64, payload map
 	}
 
 	now := time.Now().UTC()
-	record := CommitRecord{
+	record = CommitRecord{
 		CommitID:              novel.NewID("commit"),
 		Type:                  commitType,
 		Status:                CommitPrepared,
@@ -126,9 +133,9 @@ func (s *Store) commitMemoryLocked(commitType string, basedOn int64, payload map
 		CreatedAt:             now,
 	}
 	for name, value := range payload {
-		raw, err := json.Marshal(value)
-		if err != nil {
-			return CommitRecord{}, fmt.Errorf("store: encode commit payload %s: %w", name, err)
+		raw, marshalErr := json.Marshal(value)
+		if marshalErr != nil {
+			return CommitRecord{}, fmt.Errorf("store: encode commit payload %s: %w", name, marshalErr)
 		}
 		record.Payload[name] = raw
 	}
@@ -138,11 +145,28 @@ func (s *Store) commitMemoryLocked(commitType string, basedOn int64, payload map
 		return CommitRecord{}, err
 	}
 	commits = append(commits, record)
-	if err := s.writeCommitsLocked(commits); err != nil {
+	if err = s.writeCommitsLocked(commits); err != nil {
 		return CommitRecord{}, err
 	}
+	preparedIndex := len(commits) - 1
+	committedMarked := false
 
-	if err := s.applyCommitPayloadLocked(record); err != nil {
+	defer func() {
+		if err == nil {
+			return
+		}
+		if committedMarked {
+			log.Printf("store: commit %s marked committed but meta alignment failed (recovery will converge meta): %v", record.CommitID, err)
+			return
+		}
+		commits[preparedIndex].Status = CommitAborted
+		commits[preparedIndex].CompletedAt = time.Now().UTC()
+		if abortErr := s.writeCommitsLocked(commits); abortErr != nil {
+			log.Printf("store: abort prepared commit %s failed (kept prepared, recovery will replay): %v", record.CommitID, abortErr)
+		}
+	}()
+
+	if err = s.applyCommitPayloadLocked(record); err != nil {
 		return CommitRecord{}, err
 	}
 
@@ -153,16 +177,18 @@ func (s *Store) commitMemoryLocked(commitType string, basedOn int64, payload map
 			record = commits[i]
 		}
 	}
-	if err := s.writeCommitsLocked(commits); err != nil {
+	if err = s.writeCommitsLocked(commits); err != nil {
 		return CommitRecord{}, err
 	}
+	committedMarked = true
 
 	meta.MemoryRevision = record.TargetMemoryRevision
 	meta.LastCommitID = record.CommitID
 	meta.UpdatedAt = time.Now().UTC()
-	if err := s.writeMemoryMetaLocked(meta); err != nil {
+	if err = s.writeMemoryMetaLocked(meta); err != nil {
 		return CommitRecord{}, err
 	}
+	err = nil
 	return record, nil
 }
 
@@ -187,23 +213,56 @@ func (s *Store) applyCommitPayloadLocked(record CommitRecord) error {
 }
 
 // recoverMemoryLocked 为启动期崩溃恢复（spec §11.3，R7 两阶段：先验链、后收敛）。
-// 任何链损坏/日志损坏都进入安全态而非猜测修复。
+// 任何记录非法/链损坏/日志损坏都进入安全态而非猜测修复（阻塞修复 #3）。
 func (s *Store) recoverMemoryLocked() {
 	commits, err := s.loadCommitsLocked()
 	if err != nil {
 		s.enterMemorySafeStateLocked(err)
 		return
 	}
+
+	// 附带恢复（阻塞修复 #1）：进程重启后遗留的孤儿 mapping 状态不可能有在途映射，
+	// 重置为 failed 以允许 §9.3 的"失败后续跑"。
+	s.resetOrphanInitStateLocked()
+
 	if len(commits) == 0 {
 		return
 	}
 
 	sort.SliceStable(commits, func(i, j int) bool { return commits[i].CreatedAt.Before(commits[j].CreatedAt) })
 
-	// 阶段一：提交链校验——basedOn→target 首尾相接，无断链、无分叉。
+	// 阶段 0：提交记录级合法性校验（阻塞修复 #3）。
+	validTypes := map[string]bool{
+		CommitInitialize: true, CommitManualFix: true, CommitFormal: true,
+		CommitReconcile: true, CommitEntityCheck: true,
+	}
+	for _, record := range commits {
+		switch {
+		case record.CommitID == "" || !novel.ValidID(record.CommitID):
+			s.enterMemorySafeStateLocked(fmt.Errorf("invalid commit record: bad commitId %q (commit_chain_broken)", record.CommitID))
+			return
+		case record.Status != CommitPrepared && record.Status != CommitCommitted && record.Status != CommitAborted:
+			s.enterMemorySafeStateLocked(fmt.Errorf("invalid commit record %s: status %q (commit_chain_broken)", record.CommitID, record.Status))
+			return
+		case !validTypes[record.Type]:
+			s.enterMemorySafeStateLocked(fmt.Errorf("invalid commit record %s: type %q (commit_chain_broken)", record.CommitID, record.Type))
+			return
+		case record.CreatedAt.IsZero():
+			s.enterMemorySafeStateLocked(fmt.Errorf("invalid commit record %s: zero createdAt (commit_chain_broken)", record.CommitID))
+			return
+		case record.TargetMemoryRevision != record.BasedOnMemoryRevision+1 || record.TargetMemoryRevision <= 0:
+			s.enterMemorySafeStateLocked(fmt.Errorf("invalid commit record %s: basedOn=%d target=%d (commit_chain_broken)", record.CommitID, record.BasedOnMemoryRevision, record.TargetMemoryRevision))
+			return
+		}
+	}
+
+	// 阶段一：提交链校验——跳过 aborted 后 basedOn→target 首尾相接，无断链、无分叉。
 	expected := int64(0)
 	seenTargets := make(map[int64]string, len(commits))
 	for _, record := range commits {
+		if record.Status == CommitAborted {
+			continue // aborted 提交未生效，不参与链
+		}
 		if record.BasedOnMemoryRevision != expected {
 			s.enterMemorySafeStateLocked(fmt.Errorf("commit chain broken at %s: basedOn=%d want=%d (commit_chain_broken)", record.CommitID, record.BasedOnMemoryRevision, expected))
 			return
@@ -221,7 +280,10 @@ func (s *Store) recoverMemoryLocked() {
 	var tail *CommitRecord
 	for i := range commits {
 		record := &commits[i]
-		if record.Status == CommitPrepared {
+		switch record.Status {
+		case CommitAborted:
+			continue // 未生效，不重放、不计链尾
+		case CommitPrepared:
 			if err := s.applyCommitPayloadLocked(*record); err != nil {
 				s.enterMemorySafeStateLocked(fmt.Errorf("replay commit %s: %w", record.CommitID, err))
 				return

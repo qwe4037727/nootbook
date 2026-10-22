@@ -1,0 +1,44 @@
+[
+  {
+    "chapterId": "ch_54338173fd498512fb",
+    "confidence": 0.3,
+    "createdAt": "2026-10-22T06:32:57.9419555Z",
+    "eventType": "other",
+    "id": "evt_36f5cc95f21f1051f9",
+    "lastSource": "backfill",
+    "needsReview": true,
+    "origin": {
+      "chapterId": "ch_54338173fd498512fb",
+      "kind": "summary",
+      "type": "backfill"
+    },
+    "participantsKnown": false,
+    "recordVersion": 1,
+    "status": "proposed",
+    "storyOrder": 1,
+    "summary": "林越醒来，发现窗外正在下雨。",
+    "updatedAt": "2026-10-22T06:32:57.9419555Z",
+    "workId": "work_001"
+  },
+  {
+    "chapterId": "ch_fcaa09f742046a6c0e",
+    "confidence": 0.3,
+    "createdAt": "2026-10-22T06:32:57.9419555Z",
+    "eventType": "other",
+    "id": "evt_81289acef5f8d3f611",
+    "lastSource": "backfill",
+    "needsReview": true,
+    "origin": {
+      "chapterId": "ch_fcaa09f742046a6c0e",
+      "kind": "summary",
+      "type": "backfill"
+    },
+    "participantsKnown": false,
+    "recordVersion": 1,
+    "status": "proposed",
+    "storyOrder": 2,
+    "summary": "雨停后，林越走出房门，回头看了一眼旧屋。",
+    "updatedAt": "2026-10-22T06:32:57.9419555Z",
+    "workId": "work_001"
+  }
+]
