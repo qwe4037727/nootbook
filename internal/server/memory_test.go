@@ -1,10 +1,13 @@
 package server
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -231,4 +234,164 @@ func decodeErrorCode(t *testing.T, body string) string {
 		t.Fatalf("decode error body %q: %v", body, err)
 	}
 	return parsed.Code
+}
+
+func memoryDataSnapshot(t *testing.T, dir string) map[string][32]byte {
+	t.Helper()
+	files := make(map[string][32]byte)
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		name, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		files[name] = sha256.Sum256(raw)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
+}
+
+func TestMemoryInitializeRequestContract(t *testing.T) {
+	for _, ready := range []bool{false, true} {
+		name := "empty"
+		if ready {
+			name = "ready"
+		}
+		t.Run(name, func(t *testing.T) {
+			h, st, dir := newMemoryTestHandler(t)
+			if ready {
+				project, err := st.ImportChapters("book", []novel.Chapter{{Title: "one", Content: "text"}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeKnowledgeFile(t, dir, novel.Knowledge{
+					Characters: []novel.Character{{ID: "c_test", Name: "test", State: "active"}},
+					Summaries:  []novel.ChapterSummary{{ChapterID: project.Chapters[0].ID, Index: 1, Summary: "summary"}},
+				})
+				if _, err := st.InitializeMemory(); err != nil {
+					t.Fatal(err)
+				}
+				waitInitTerminal(t, st)
+				state, err := st.LoadMemoryInitState()
+				if err != nil || state.Status != store.InitReady {
+					t.Fatalf("fixture not ready: %+v %v", state, err)
+				}
+			}
+			cases := []struct {
+				name, body, code string
+				status           int
+			}{
+				{"reinitialize", `{"reinitialize":true}`, "reinit_not_supported", 400},
+				{"string", `{"reinitialize":"true"}`, "invalid_request", 400},
+				{"number", `{"reinitialize":1}`, "invalid_request", 400},
+				{"null_field", `{"reinitialize":null}`, "invalid_request", 400},
+				{"unknown", `{"force":true}`, "invalid_request", 400},
+				{"null_object", `null`, "invalid_request", 400},
+				{"array", `[]`, "invalid_request", 400},
+				{"malformed", `{"reinitialize":`, "invalid_request", 400},
+				{"trailing_object", `{} {}`, "invalid_request", 400},
+				{"trailing_garbage", `{} trailing`, "invalid_request", 400},
+				{"oversize", strings.Repeat(" ", 4097), "request_too_large", 413},
+			}
+			for _, tc := range cases {
+				t.Run(tc.name, func(t *testing.T) {
+					before := memoryDataSnapshot(t, dir)
+					rec := serveRaw(t, h, http.MethodPost, "/api/memory/initialize", strings.NewReader(tc.body))
+					if rec.Code != tc.status || decodeErrorCode(t, rec.Body.String()) != tc.code {
+						t.Fatalf("response = %d %s", rec.Code, rec.Body.String())
+					}
+					if !reflect.DeepEqual(before, memoryDataSnapshot(t, dir)) {
+						t.Fatal("rejected request changed stored data")
+					}
+				})
+			}
+			for _, body := range []string{"", " \n", "{}", `{"reinitialize":false}`} {
+				before := memoryDataSnapshot(t, dir)
+				rec := serveRaw(t, h, http.MethodPost, "/api/memory/initialize", strings.NewReader(body))
+				if ready {
+					var result struct {
+						AlreadyInitialized bool `json:"alreadyInitialized"`
+					}
+					if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil || rec.Code != 200 || !result.AlreadyInitialized {
+						t.Fatalf("ready retry %q = %d %s", body, rec.Code, rec.Body.String())
+					}
+				} else if rec.Code != 409 || decodeErrorCode(t, rec.Body.String()) != "knowledge_not_ready" {
+					t.Fatalf("empty input %q = %d %s", body, rec.Code, rec.Body.String())
+				}
+				if !reflect.DeepEqual(before, memoryDataSnapshot(t, dir)) {
+					t.Fatalf("retry %q changed stored data", body)
+				}
+			}
+		})
+	}
+}
+
+func TestMemoryReinitializeRejectedInEveryPhase(t *testing.T) {
+	for _, status := range []string{store.InitNotStarted, store.InitMapping, store.InitDeepExtracting, store.InitFailed, store.InitPartial, store.InitReady} {
+		t.Run(status, func(t *testing.T) {
+			h, _, dir := newMemoryTestHandler(t)
+			raw, err := json.Marshal(store.MemoryInitState{Status: status, RunID: 7})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "memory", "init_state.json"), raw, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			before := memoryDataSnapshot(t, dir)
+			rec := serveJSON(t, h, http.MethodPost, "/api/memory/initialize", map[string]bool{"reinitialize": true})
+			if rec.Code != 400 || decodeErrorCode(t, rec.Body.String()) != "reinit_not_supported" {
+				t.Fatalf("response = %d %s", rec.Code, rec.Body.String())
+			}
+			if !reflect.DeepEqual(before, memoryDataSnapshot(t, dir)) {
+				t.Fatal("reinitialization request changed stored data")
+			}
+		})
+	}
+}
+
+func TestMemoryInitializeJSONStartsAndResumes(t *testing.T) {
+	for _, phase := range []string{store.InitNotStarted, store.InitFailed, store.InitPartial} {
+		for _, body := range []string{"{}", `{"reinitialize":false}`} {
+			t.Run(phase+body, func(t *testing.T) {
+				h, st, dir := newMemoryTestHandler(t)
+				project, err := st.ImportChapters("book", []novel.Chapter{{Title: "one", Content: "text"}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeKnowledgeFile(t, dir, novel.Knowledge{
+					Characters: []novel.Character{{ID: "c_test", Name: "test", State: "active"}},
+					Summaries:  []novel.ChapterSummary{{ChapterID: project.Chapters[0].ID, Index: 1, Summary: "summary"}},
+				})
+				raw, err := json.Marshal(store.MemoryInitState{Status: phase})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(dir, "memory", "init_state.json"), raw, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				rec := serveRaw(t, h, http.MethodPost, "/api/memory/initialize", strings.NewReader(body))
+				if rec.Code != 202 {
+					t.Fatalf("response = %d %s", rec.Code, rec.Body.String())
+				}
+				waitInitTerminal(t, st)
+				state, err := st.LoadMemoryInitState()
+				if err != nil || state.Status != store.InitReady {
+					t.Fatalf("terminal = %+v %v", state, err)
+				}
+				info, err := st.LoadMemoryInfo()
+				if err != nil || info.MemoryRevision != 1 {
+					t.Fatalf("meta = %+v %v", info, err)
+				}
+			})
+		}
+	}
 }

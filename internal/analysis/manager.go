@@ -226,7 +226,9 @@ func (m *Manager) markFailed(revision int64, message string) bool {
 	return true
 }
 
-const analysisCallTimeout = 5 * time.Minute
+// 单次模型调用超时：需容纳 llm 客户端的瞬时故障重试窗口
+// （3 次尝试 × 120s 响应头超时 + 退避 + 正文传输，MODEL-01）。
+const analysisCallTimeout = 8 * time.Minute
 
 func completeWithTimeout(ctx context.Context, client *llm.Client, messages []llm.Message, temperature float64) (string, error) {
 	callCtx, cancel := context.WithTimeout(ctx, analysisCallTimeout)

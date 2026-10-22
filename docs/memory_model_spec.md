@@ -2,7 +2,7 @@
 
 > 任务：#2 数据模型与接口基线文档 ｜ 日期：2026-10-22
 > 版本：V1.2（按 yj 对 V1.1 的整体审查意见定点修订 R1–R6；V1.2 复审结论"修改后通过"，按复审意见补齐 R7–R9 后**正式冻结**；V1.1 有效内容原样保留，未重开任何已冻结架构决策；修改记录见 §17）
-> 范围：仅设计冻结。不实现 API、不改业务代码、不开始 #3–#9。
+> 范围：本文最初为 #2 设计冻结产物；当前已随 #3–#9 实现及发布复审更新。本期交付“V1.0 记忆基础设施”，以 `docs/acceptance.md` 的已通过/部分覆盖/后续边界为准；不表示原始详设全部交付。
 > 上游：`详设.md`(V1.0) → `docs/详设_review.md`(P1–P18) → `docs/详设_V1.1_核实与决策基线.md`(Q1–Q8) → 本文档
 > 事实来源：本会话对 `internal/novel/project.go`、`internal/novel/chapter.go`、`internal/store/store.go`、`internal/analysis/merge.go`、`internal/analysis/manager.go`、`internal/server/server.go` 的完整通读，及 `data/`、`.tmp_e2e/data/` 盘点。无法确认之处标注【待源码确认】。
 
@@ -526,7 +526,7 @@ failed / partial --重试--> mapping（续跑）
 | **首次/失败后续跑** | not_started / failed / partial | 202 `{initStatus:"mapping"}`，按 origin 查重续跑 |
 | **进行中重试**（相同任务仍在执行） | mapping / deep_extracting | 409 `already_running` |
 | **已完成操作重试**（幂等重放，无新副作用） | ready | **200** `{initStatus:"ready", "alreadyInitialized":true}`——不重新执行、不产生任何写入 |
-| **请求全量重新初始化** | ready | 本期不支持：400 `reinit_not_supported`（显式拒绝；见待确认 §13.2-5） |
+| **请求全量重新初始化** | 任意状态 | JSON `{"reinitialize":true}`：400 `reinit_not_supported`，在前置检查之前拒绝，零落盘；见 §12.3 |
 
 ### 9.4 幂等与保护（冻结）
 
@@ -534,7 +534,7 @@ failed / partial --重试--> mapping（续跑）
 2. 实体天然幂等（不新建实体）；
 3. **人工修订保护**：`lastSource=manual_edit` 回填跳过；深度提取遇人工记录→冲突提案，不覆盖；
 4. **不升级**：回填产物保持 `proposed`/needsReview=true，永不因写入成功变 confirmed；
-5. **部分成功恢复**：mapping 中断→停留 mapping，重试按 origin 查重续跑；未完成不得标 ready。
+5. **部分成功恢复**：进程内失败置 failed；重启将孤儿 mapping/deep_extracting 置 failed（interrupted_by_restart），重试按 origin 查重续跑；未完成不得标 ready。
 
 ---
 
@@ -546,7 +546,9 @@ failed / partial --重试--> mapping（续跑）
 4. 后台分析与提交同一写串行化；分析运行中禁止正式提交（409）+ 锁内二次校验；
 5. 单文件原子 Rename ≠ 跨文件事务；跨文件一致性唯一保障 = 提交日志协议。
 
-## 11. 提交日志协议（本期只冻结，不实现）
+## 11. 提交日志协议（本期实现 initialize/reconcile；正式正文联合提交属后续）
+
+本期已交付 memory 文件的提交与恢复。manual_fix/formal/entity_confirm 类型仅预留，不能据此宣称 Draft/ChangeSet、正文与记忆联合确认提交或实体确认入口已经交付。
 
 ### 11.1 CommitRecord
 
@@ -554,10 +556,11 @@ failed / partial --重试--> mapping（续跑）
 {
   "commitId": "commit_xxx",
   "type": "initialize | manual_fix | formal | reconcile | entity_confirm",
-  "status": "prepared | committed",
+  "status": "prepared | committed | aborted",
   "basedOnMemoryRevision": 20,
   "targetMemoryRevision": 21,
   "payload": { "…目标文件→完整目标内容（覆盖写语义）…" },
+  "revertPayload": { "…写前快照；null 表示原文件不存在…" },
   "createdAt": "…", "completedAt": "…"
 }
 ```
@@ -568,6 +571,8 @@ failed / partial --重试--> mapping（续跑）
 
 1. **基线校验（R7 冻结）**：锁内读取当前 `meta.memoryRevision`，校验本次提交 `basedOnMemoryRevision == meta.memoryRevision`；不匹配 → **拒绝提交**（错误码 `revision_conflict`），**不落盘任何 CommitRecord、不写目标文件**——写方须基于最新 revision 重建载荷后重试（与现有 `Project.Revision` 乐观锁同构）；
 2. 校验通过 → 写本记录(prepared, 含完整可重放载荷) → 依次覆盖写目标文件 → 置 committed → **对齐 meta（memoryRevision=targetMemoryRevision, lastCommitId=commitId）** → 解锁。
+
+当前实现补充（issues #15/#16）：prepared 前采集 revertPayload。committed 前失败，先持久化 aborted，再按写前快照回滚，回滚失败进安全态；abort 落盘失败保留 prepared。committed 后 meta 失败进安全态，运行期拒绝向未收敛链尾追加。恢复时跳过 aborted 验链，但对日志最后一条带快照的 aborted 补做回滚；非末条不重放旧快照，避免覆盖后续成功提交。此行为只保证当前 memory 文件协议，不代表正文联合提交已实现。
 
 ### 11.3 崩溃恢复矩阵（V1.2 重写，R4 冻结——六个崩溃点全覆盖）
 
@@ -594,7 +599,7 @@ failed / partial --重试--> mapping（续跑）
 
 ---
 
-## 12. API 基线（本期仅契约，不实现）
+## 12. API 基线（本期交付以下四个基础记忆接口）
 
 ### 12.1 `GET /api/memory`
 200：`{ "workId": "work_001", "schemaVersion": 1, "memoryRevision": N, "initStatus": "…", "counts": { events, states, cognitions, threads, plans } }`；文件不存在→全 0 + `not_started`；500 读失败。
@@ -604,8 +609,13 @@ failed / partial --重试--> mapping（续跑）
 
 ### 12.3 `POST /api/memory/initialize`
 
+请求体可省略或仅含空白，等同 `{}`。非空请求必须为单个 JSON 对象，唯一可选字段为布尔 `reinitialize`：缺省/false 表示首次初始化、失败续跑或 ready 幂等重试；true 表示明确要求全量重建，本期一律拒绝。布尔字段不接受 null、字符串或数字。先完整校验请求，再处理 reinitialize，最后检查项目/知识/初始化状态；所有输入拒绝均不调用 Store、不创建或修改数据文件。
+
+请求体上限 **4096 字节**，超限返回 413 `request_too_large`；JSON 损坏、未知字段、非对象、字段类型错误、尾随第二个 JSON 值或垃圾返回 400 `invalid_request`。错误响应统一为 `{code,error}`。历史空请求保持兼容。
+
 | 前置/状态 | 返回 |
 |---|---|
+| 合法对象 `{"reinitialize":true}`，任意状态（含未准备知识/运行中/ready） | 400 `reinit_not_supported`，零落盘 |
 | legacy 未迁移 | 409 `project_not_migrated` |
 | 知识不可用（全空） | 409 `knowledge_not_ready` |
 | not_started / failed / partial | 202 `{initStatus:"mapping"}` |
@@ -614,7 +624,7 @@ failed / partial --重试--> mapping（续跑）
 | 输入损坏 | 启动后 failed（202 先返回，状态经 /status 查询） |
 
 ### 12.4 `GET /api/memory/initialize/status`
-200：`{status, startedAt, finishedAt, lastError, preconditions, stats}`；500。
+200：`{status, startedAt, finishedAt, lastError, runId, preconditions, stats}`；500。
 
 ---
 
@@ -659,7 +669,7 @@ failed / partial --重试--> mapping（续跑）
 | 2 | 章内事件时序 | 迭代 2 | 引入章内序号字段，本期不做 |
 | 3 | StoryState.Value 枚举化 | 提取质量 | 本期自由文本 |
 | 4 | 单文件规模阈值 | 长期性能 | >5000 条或 >5MB 再拆 |
-| 5 | 全量重新初始化入口（显式参数/重置流程） | #8 | 本期 400 拒绝；删 memory 目录等效重置 |
+| 5 | 全量重新初始化入口（D02 已收敛） | #8 | 本期 `{"reinitialize":true}` 一律 400 `reinit_not_supported`（§12.3）。未提供保留正文的全量重建入口；导入新书会重置记忆，属于替换当前作品，不能当作无损重建。后续重建流程另行设计，不指导在线删除 memory 目录 |
 | 6 | `storyBudgetChars` 默认值/上下限 | #3+ | 建议 6000/上限 40000 |
 | 7 | 独立剧情线（storyline）作用域实体 | 迭代 3 | 本期 parentPlanID 近似；引入多剧情线时再评估独立实体 |
 
@@ -765,5 +775,9 @@ failed / partial --重试--> mapping（续跑）
 | R10 | P1 | **回调错误契约统一（#3 实现审查）**：回调签名改为携带 error 返回（`func(oldIndexes, newIndexes map[string]int) error`），调用方对返回 error 与 panic 统一仅记日志不阻断，与 U34 验收要求对齐 | §4.1.4、§7、U34 |
 | R11 | P2 | **短路路径过期 meta 修复 + 注册并发保护（#3 实现审查）**：SaveChapter 无变化短路前以文件值修复 meta 缓存（冻结决策 28，U35）；钩子注册/读取经 sync.RWMutex 互斥保护，注册约定限启动阶段 | §4.1.4、§7、§13.1 |
 | R12 | P1 | **在途初始化任务失效契约（第二复审 S01）**：初始化任务与"导入新书"存在合法交错——任务在 `store.mu` 下读旧书 knowledge 快照，导入在 `memoryMu` 下重置记忆子系统并清空 knowledge，任务随后用旧快照向新书提交人物状态。新增两级凭据：**记忆代次**（每次导入递增）+ **运行号**（每次授权递增，落 `init_state.runId`）；校验点覆盖快照读取后、提交前、终态回写前三处；失效任务不得写记忆记录、不得回写 init_state。明确禁止以 `memoryRevision` 判别（导入归零致新旧同值） | §9.2、§9.3 |
+| R13 | P2 | **D01/D02 发布契约收敛**：依据用户本轮明确要求，发布对象限定为 V1.0 记忆基础设施；§11/§12 改为实际交付范围，不再称本期不实现。定义 reinitialize 布尔请求、任意状态显式拒绝、输入校验及 4096 字节上限；验收矩阵不再将辅助函数或预留契约称为完整通过 | 范围、§9.3、§11、§12.3、§13.2-5、docs/acceptance.md |
+| R14 | P1 | **四类列表字段单条截断上限（BOUND-01）**：`StoryThread.KnownClues`/`StoryThread.ResolutionCriteria`/`StoryPlan.Constraints`/`StoryPlan.CandidateBeats` 列表项单条须 ≤100 字符（省略号计入总长）；一律使用 `memTruncate`（总长含省略号 ≤100），禁止复用 `truncateRunes`（保留 100 字符再追加 `…` = 101 rune） | §4.2、§5 |
+| R15 | P1 | **章节-事件对账自愈契约（HEAL-01）**：章节删除/集合变化后，事件 StoryOrder 必须以 store 自身 `project.json` 章节真源为准收敛。提供**不依赖全局钩子**的兜底通道：① 启动期 `New()` 恢复之后执行一次全量对账；② `AppendChapter` 追加不通知全局钩子（按 R9 不改变既有序号）但执行本地兜底对账；③ `DeleteChapter`/`ImportChapters` 统一收尾（先本地对账再通知钩子）。重算规则：来源章节已删 → needsReview=true、reviewReason="chapter_deleted"、StoryOrder=0、recordVersion++；纯重排不递增 recordVersion；**无变化不提交、不递增 `memoryRevision`**（no-op 语义，与 R7/R8 一致）。对账失败仅记日志，不阻断章节操作与启动 | §4.1.4、§7、§11.3 |
+| R16 | P2 | **大模型客户端瞬时故障重试（MODEL-01 代码侧）**：`internal/llm` 客户端对可重建的瞬时故障（408/429/5xx、响应头超时、连接拒绝/重置、EOF/unexpected EOF）做指数退避重试（默认 3 次、500ms→1s→2s、上限 5s，尊重 `Retry-After`）；4xx 业务错误、已向对端下发内容的回调错误（`callbackError`）、调用方主动取消/超时**不重试**。流式在已下发 delta 后不重试（避免重复内容）。后台分析调用超时由 5min 提至 8min 容纳重试窗口 | 调用点：`internal/analysis/manager.go`、`internal/server/server.go` |
 
-**当前状态：V1.2（含复审补齐 R7–R9）已冻结。进入 #3 Chapter.Revision。**
+**当前状态：V1.2（含复审补齐 R7–R9）已冻结；R14–R16 为第三轮复审发现的实现缺口修复所对应的契约补记（行为已在代码中落定，spec 仅作对齐登记，不改变既有冻结语义）。**

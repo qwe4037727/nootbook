@@ -152,6 +152,11 @@ func New(dir string) (*Store, error) {
 	s.memoryMu.Lock()
 	s.recoverMemoryLocked()
 	s.memoryMu.Unlock()
+	// 启动期章节-事件对账（HEAL-01 自愈，docs/issues.md #21）：
+	// 章节变更钩子失败（如 events.json 被占用导致 rename 失败）时，失效事件会残留；
+	// 重启后以当前章节真源全量对账一次，使"钩子失败 → 重启"闭环。
+	// 失败仅记日志，不阻断服务启动（与崩溃恢复的降级策略一致）。
+	s.reconcileStoryOrderOnStartup()
 	// 注册章节序号变化回调（R9/R11）：events.json 不存在/为空时重算自然 no-op，
 	// 行为等价于"记忆初始化完成后注册"且避免状态与注册时序耦合（docs/issues.md #3）。
 	RegisterChapterOrderHook(s.handleChapterOrderChanged)
@@ -186,7 +191,9 @@ func (s *Store) ImportChapters(title string, chapters []novel.Chapter) (novel.Pr
 	project, oldIndexes, newIndexes, err := s.importChaptersLocked(title, chapters)
 	s.mu.Unlock()
 	if err == nil && chapterOrderChanged(oldIndexes, newIndexes) {
-		notifyChapterOrderChanged(oldIndexes, newIndexes)
+		// HEAL-01：导入后同样走统一收尾通道（导入已重置记忆，对账自然 no-op），
+		// 保证章节集合变化后的记忆侧一律经由兜底对账 + 钩子通知。
+		s.afterChapterSetChanged(oldIndexes, newIndexes)
 	}
 	return project, err
 }
@@ -425,12 +432,25 @@ func (s *Store) SaveChapter(chapter novel.Chapter) (novel.Chapter, novel.Project
 
 func (s *Store) AppendChapter(title, content string) (novel.Chapter, novel.Project, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	chapter, project, oldIndexes, newIndexes, err := s.appendChapterLocked(title, content)
+	s.mu.Unlock()
+	if err == nil && chapterOrderChanged(oldIndexes, newIndexes) {
+		// HEAL-01（docs/issues.md #21）：章节集合变化后必须做一次全量对账。
+		// 追加只向尾部写入、既有章节序号不变，按 R9 不属于"序号变化"故不通知全局钩子；
+		// 但此前删除章节若因钩子失败而漏改，本地兜底对账仍可收敛失效事件。
+		if err := s.reconcileStoryOrderFromSource(); err != nil {
+			log.Printf("store: chapter appended but story order reconcile failed (ignored): %v", err)
+		}
+	}
+	return chapter, project, err
+}
 
+func (s *Store) appendChapterLocked(title, content string) (novel.Chapter, novel.Project, map[string]int, map[string]int, error) {
 	project, err := s.loadProjectLocked()
 	if err != nil {
-		return novel.Chapter{}, novel.Project{}, err
+		return novel.Chapter{}, novel.Project{}, nil, nil, err
 	}
+	oldIndexes := chapterIndexMap(project.Chapters)
 
 	now := time.Now().UTC()
 	index := len(project.Chapters) + 1
@@ -448,7 +468,7 @@ func (s *Store) AppendChapter(title, content string) (novel.Chapter, novel.Proje
 		UpdatedAt: now,
 	}
 	if err := s.writeChapterLocked(chapter); err != nil {
-		return novel.Chapter{}, novel.Project{}, err
+		return novel.Chapter{}, novel.Project{}, nil, nil, err
 	}
 
 	project.Chapters = append(project.Chapters, chapter.Meta())
@@ -464,9 +484,23 @@ func (s *Store) AppendChapter(title, content string) (novel.Chapter, novel.Proje
 	project.UpdatedAt = now
 	project.Normalize()
 	if err := s.writeProjectLocked(project); err != nil {
-		return novel.Chapter{}, novel.Project{}, err
+		return novel.Chapter{}, novel.Project{}, nil, nil, err
 	}
-	return chapter, project, nil
+	newIndexes := chapterIndexMap(project.Chapters)
+	return chapter, project, oldIndexes, newIndexes, nil
+}
+
+// afterChapterSetChanged 为章节集合变化后的记忆侧收尾（HEAL-01 自愈，docs/issues.md #21）：
+//  1. 本 store 自行以自身章节真源做一次全量对账——不依赖全局钩子是否注册、
+//     是否指向本 store，覆盖"钩子失败/被覆盖/未注册"三种自愈缺口；
+//  2. 通知全局钩子（R9/R10：返回 error 或 panic 仅记日志，不阻断、不回滚章节操作）。
+//
+// 调用点必须在 store.mu 释放之后。
+func (s *Store) afterChapterSetChanged(oldIndexes, newIndexes map[string]int) {
+	if err := s.reconcileStoryOrderFromSource(); err != nil {
+		log.Printf("store: chapter set changed but story order reconcile failed (ignored): %v", err)
+	}
+	notifyChapterOrderChanged(oldIndexes, newIndexes)
 }
 
 func (s *Store) DeleteChapter(id string) (novel.Project, error) {
@@ -475,7 +509,8 @@ func (s *Store) DeleteChapter(id string) (novel.Project, error) {
 	s.mu.Unlock()
 	if err == nil && chapterOrderChanged(oldIndexes, newIndexes) {
 		// R9：回调在锁释放后执行，失败不阻断、不回滚章节删除。
-		notifyChapterOrderChanged(oldIndexes, newIndexes)
+		// HEAL-01：先由 store 自身兜底对账（钩子失败/未注册时的自愈通道）。
+		s.afterChapterSetChanged(oldIndexes, newIndexes)
 	}
 	return project, err
 }

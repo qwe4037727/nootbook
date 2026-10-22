@@ -489,11 +489,15 @@ func dedupe(values []string) []string {
 	return result
 }
 
+// truncateList 截断列表：最多 limit 条、每条最多 itemLimit rune。
+// 单条截断使用 memTruncate（总长 ≤ itemLimit 且省略号计入上限）——
+// 不能用 project.go 的 truncateRunes（它保留 limit 字符再追加省略号，
+// 实际长度达 limit+1，会突破详设的单条 ≤100 上限，docs/issues.md #20）。
 func truncateList(values []string, limit, itemLimit int) []string {
 	result := make([]string, 0, min(len(values), limit))
 	seen := make(map[string]struct{}, len(values))
 	for _, value := range values {
-		value = truncateRunes(strings.TrimSpace(value), itemLimit)
+		value = memTruncate(strings.TrimSpace(value), itemLimit)
 		if value == "" {
 			continue
 		}

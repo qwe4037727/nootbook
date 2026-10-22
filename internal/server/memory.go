@@ -1,7 +1,10 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 
 	"novelagent/internal/store"
@@ -47,7 +50,40 @@ func (s *Server) handleGetMemoryInitStatus(w http.ResponseWriter, r *http.Reques
 //   - 202 mapping（首次/失败后续跑，异步执行）
 //   - 200 ready + alreadyInitialized（幂等重试，无副作用，U30）
 //   - 409 already_running / project_not_migrated / knowledge_not_ready
+//   - 400 reinit_not_supported（显式全量重建；先于状态检查、零落盘）
 func (s *Server) handlePostMemoryInitialize(w http.ResponseWriter, r *http.Request) {
+	const requestLimit = 4096
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, requestLimit))
+	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			writeMemoryError(w, http.StatusRequestEntityTooLarge, "request_too_large", "初始化请求不能超过 4096 字节")
+		} else {
+			writeMemoryError(w, http.StatusBadRequest, "invalid_request", "无法读取初始化请求")
+		}
+		return
+	}
+	if len(bytes.TrimSpace(raw)) > 0 {
+		var request *struct {
+			Reinitialize json.RawMessage `json:"reinitialize"`
+		}
+		dec := json.NewDecoder(bytes.NewReader(raw))
+		dec.DisallowUnknownFields()
+		var extra any
+		if err := dec.Decode(&request); err != nil || request == nil || dec.Decode(&extra) != io.EOF {
+			writeMemoryError(w, http.StatusBadRequest, "invalid_request", "初始化请求必须为单个 JSON 对象，仅支持 reinitialize 布尔字段")
+			return
+		}
+		value := bytes.TrimSpace(request.Reinitialize)
+		if len(value) > 0 && !bytes.Equal(value, []byte("true")) && !bytes.Equal(value, []byte("false")) {
+			writeMemoryError(w, http.StatusBadRequest, "invalid_request", "reinitialize 必须为布尔值")
+			return
+		}
+		if bytes.Equal(value, []byte("true")) {
+			writeMemoryError(w, http.StatusBadRequest, "reinit_not_supported", "本版本不支持全量重新初始化")
+			return
+		}
+	}
 	phase, err := s.store.InitializeMemory()
 	switch {
 	case err == nil:

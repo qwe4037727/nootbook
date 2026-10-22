@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -546,7 +547,7 @@ func (s *Store) resetMemoryLocked() error {
 	return nil
 }
 
-// ---- StoryOrder 重算（§4.1.4 / 冻结决策 16；钩子契约 R9–R11）----
+// ---- StoryOrder 重算（§4.1.4 / 冻结决策 16；钩子契约 R9–R11；自愈契约 R13）----
 
 // handleChapterOrderChanged 为章节序号变化回调（在 store.mu 释放后执行，持 memoryMu）：
 // 按 chapterId → 新 Index 批量重算事件 StoryOrder；来源章节被删除的事件置 needsReview
@@ -555,7 +556,42 @@ func (s *Store) resetMemoryLocked() error {
 func (s *Store) handleChapterOrderChanged(oldIndexes, newIndexes map[string]int) error {
 	s.memoryMu.Lock()
 	defer s.memoryMu.Unlock()
+	return s.reconcileStoryOrderLocked(newIndexes)
+}
 
+// reconcileStoryOrderFromSource 以 store 自身的章节真源（project.json）做一次全量对账
+// （HEAL-01 自愈主路径，docs/issues.md #21）：调用方不得持有 store.mu。
+//
+// 存在意义：章节变更收尾钩子是**包级全局回调**（spec R9/R10），可能被其他 Store 实例
+// 覆盖，也可能因文件占用等原因失败——两种情况都会让 events.json 残留旧 StoryOrder
+// 与"来源章节已删除"的失效事件。本函数是**不依赖钩子**的兜底通道：以 store 自己的
+// 章节真源为准，章节变更路径与启动期都会调用，保证记忆侧最终收敛。
+//
+// 失败仅返回 error，由调用方记日志——不阻断章节操作（R9/R10）。
+func (s *Store) reconcileStoryOrderFromSource() error {
+	s.mu.Lock()
+	project, err := s.loadProjectLocked()
+	s.mu.Unlock()
+	if err != nil {
+		return fmt.Errorf("store: load chapters for reconcile: %w", err)
+	}
+	return s.reconcileStoryOrder(chapterIndexMap(project.Chapters))
+}
+
+// reconcileStoryOrder 以给定章节索引真源做一次全量对账（调用方不得持有 store.mu，
+// 本函数自行取 memoryMu）。
+func (s *Store) reconcileStoryOrder(indexes map[string]int) error {
+	s.memoryMu.Lock()
+	defer s.memoryMu.Unlock()
+	return s.reconcileStoryOrderLocked(indexes)
+}
+
+// reconcileStoryOrderLocked 全量对账并按需留痕（调用方须持 memoryMu）：
+//   - 来源章节仍存在 → StoryOrder = 当前索引（纯重排不递增 recordVersion，R8 穷尽表未列）；
+//   - 来源章节已删除 → needsReview=true + reviewReason="chapter_deleted" +
+//     StoryOrder=0 + recordVersion++（§13.2-1）；
+//   - 无变化 → 不提交（no-op 不递增 memoryRevision）。
+func (s *Store) reconcileStoryOrderLocked(indexes map[string]int) error {
 	if s.memorySafe {
 		return fmt.Errorf("%w: %s", ErrMemorySafeState, s.memorySafeError)
 	}
@@ -574,7 +610,7 @@ func (s *Store) handleChapterOrderChanged(oldIndexes, newIndexes map[string]int)
 		if event.ChapterID == "" {
 			continue
 		}
-		index, ok := newIndexes[event.ChapterID]
+		index, ok := indexes[event.ChapterID]
 		if !ok {
 			// 来源章节被删除：标记待复核（needsReview 变化 → recordVersion+1，R8）
 			if !event.NeedsReview || event.ReviewReason != "chapter_deleted" {
@@ -603,6 +639,16 @@ func (s *Store) handleChapterOrderChanged(oldIndexes, newIndexes map[string]int)
 	}
 	_, err = s.commitMemoryLocked(CommitReconcile, meta.MemoryRevision, map[string]any{"events.json": events})
 	return err
+}
+
+// reconcileStoryOrderOnStartup 启动期章节-事件对账（HEAL-01 自愈，docs/issues.md #21）：
+// 章节变更钩子失败时（如 events.json 被占用导致 rename 失败），重启后若不对账则
+// 失效事件永久残留。本函数在启动期以当前章节真源全量对账一次，使"钩子失败 → 重启"闭环。
+// 失败仅记日志，不阻断服务启动（与崩溃恢复的降级策略一致）。
+func (s *Store) reconcileStoryOrderOnStartup() {
+	if err := s.reconcileStoryOrderFromSource(); err != nil {
+		log.Printf("store: startup story order reconcile failed (ignored): %v", err)
+	}
 }
 
 // ---- memory 数据文件访问（*Locked）----
