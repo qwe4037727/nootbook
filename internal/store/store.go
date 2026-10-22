@@ -138,6 +138,9 @@ func New(dir string) (*Store, error) {
 	s.memoryMu.Lock()
 	s.recoverMemoryLocked()
 	s.memoryMu.Unlock()
+	// 注册章节序号变化回调（R9/R11）：events.json 不存在/为空时重算自然 no-op，
+	// 行为等价于"记忆初始化完成后注册"且避免状态与注册时序耦合（docs/issues.md #3）。
+	RegisterChapterOrderHook(s.handleChapterOrderChanged)
 	return s, nil
 }
 
