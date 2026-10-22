@@ -48,6 +48,7 @@ func New(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNo
 	mux.HandleFunc("GET /api/config", s.handleGetConfig)
 	mux.HandleFunc("PUT /api/config", s.handlePutConfig)
 	mux.HandleFunc("POST /api/continue", s.handleContinue)
+	s.registerMemoryRoutes(mux)
 	mux.Handle("/", http.FileServer(http.FS(static)))
 
 	return withHeaders(mux)
