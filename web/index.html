@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>续写 · 小说续写 Agent</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-seal" aria-hidden="true">续</span>
+      <div class="brand-copy">
+        <p class="kicker">NOVEL CONTINUATION AGENT</p>
+        <h1 id="headerTitle">未命名小说</h1>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="modelBadge" class="model-badge" type="button" title="配置模型接口">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="modelBadgeText">模型未配置</span>
+      </button>
+      <span id="saveStatus" class="save-status is-saved" aria-live="polite">已保存</span>
+      <button id="settingsButton" class="btn btn-ghost" type="button">模型设置</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="sidebar">
+      <section class="side-section">
+        <div class="side-head">
+          <div>
+            <p class="kicker">WORK</p>
+            <h2>作品</h2>
+          </div>
+          <button id="importButton" class="btn btn-quiet" type="button">导入文稿</button>
+        </div>
+        <label class="field">
+          <span>书名</span>
+          <input id="titleInput" type="text" maxlength="120" autocomplete="off" placeholder="给这部小说起个名字">
+        </label>
+        <p class="side-note">导入 TXT / Markdown 后，系统会在后台自动阅读全文。分析结果只用于续写，不会显示具体设定。</p>
+      </section>
+
+      <section class="side-section">
+        <div class="side-head">
+          <div>
+            <p class="kicker">CHAPTERS</p>
+            <h2>章节 <span id="chapterTotalCount" class="count">0</span></h2>
+          </div>
+          <button id="addChapterButton" class="btn btn-quiet" type="button">＋ 新建</button>
+        </div>
+        <div id="chapterList" class="chapter-list"></div>
+        <p id="chapterEmpty" class="empty-state">还没有章节。先导入文稿，或新建一章开始写。</p>
+      </section>
+
+      <section class="side-section analysis-section" aria-live="polite">
+        <div class="side-head">
+          <div>
+            <p class="kicker">READING</p>
+            <h2>分析</h2>
+          </div>
+          <span id="analysisBadge" class="analysis-badge is-idle">未开始</span>
+        </div>
+        <p id="analysisText" class="analysis-text">导入文稿后会自动开始。</p>
+        <div id="analysisProgress" class="progress" hidden>
+          <div id="analysisBar" class="progress-bar"></div>
+        </div>
+        <button id="retryAnalysisButton" class="btn btn-quiet" type="button" hidden>重新分析</button>
+      </section>
+    </aside>
+
+    <section class="editor">
+      <div id="chapterEditor" class="editor-body">
+        <div class="editor-head">
+          <div class="chapter-heading">
+            <p class="kicker">CHAPTER</p>
+            <input id="chapterTitleInput" class="chapter-title-input" type="text" maxlength="120" autocomplete="off" placeholder="章节标题" aria-label="章节标题">
+          </div>
+          <div class="editor-tools">
+            <span id="chapterCharCount" class="muted">0 字</span>
+            <button id="saveButton" class="btn btn-ghost" type="button">保存</button>
+            <button id="deleteChapterButton" class="btn btn-quiet btn-delete" type="button">删除本章</button>
+          </div>
+        </div>
+
+        <div class="paper">
+          <textarea id="chapterContent" class="manuscript" spellcheck="false" placeholder="在这里写入或修改本章正文。续写会从全书最后一章的内容末尾开始。"></textarea>
+        </div>
+      </div>
+
+      <div id="noChapter" class="empty-stage" hidden>
+        <p class="kicker">EMPTY</p>
+        <h2>还没有可编辑的章节</h2>
+        <p>导入已有文稿，系统会自动拆分章节并在后台分析；也可以新建一章，从空白开始写。</p>
+        <div class="empty-actions">
+          <button id="emptyImportButton" class="btn btn-primary" type="button">导入文稿</button>
+          <button id="emptyAddChapterButton" class="btn btn-ghost" type="button">新建章节</button>
+        </div>
+      </div>
+
+      <section class="composer" aria-labelledby="composerTitle">
+        <div class="composer-head">
+          <div>
+            <p class="kicker">CONTINUE</p>
+            <h2 id="composerTitle">续写</h2>
+          </div>
+          <p id="contextInfo" class="context-info">导入文稿后开始</p>
+        </div>
+
+        <textarea id="direction" class="direction" rows="2" maxlength="2000" placeholder="接下来想写什么？例如：让林砚在雨夜撞见旧友，气氛更紧张。留空则顺着当前情节自然发展。"></textarea>
+
+        <div class="composer-controls">
+          <label class="inline-field">篇幅
+            <select id="targetChars">
+              <option value="500">约 500 字</option>
+              <option value="800" selected>约 800 字</option>
+              <option value="1200">约 1200 字</option>
+              <option value="2000">约 2000 字</option>
+            </select>
+          </label>
+          <label class="inline-field">创意度
+            <select id="temperature">
+              <option value="0.65">稳重</option>
+              <option value="0.85" selected>平衡</option>
+              <option value="1.05">发散</option>
+            </select>
+          </label>
+          <span class="key-hint">Ctrl / ⌘ + Enter 开始续写</span>
+          <button id="generateButton" class="btn btn-primary" type="button">开始续写</button>
+        </div>
+
+        <section id="draftPanel" class="draft" hidden aria-label="续写草稿">
+          <div class="draft-head">
+            <div>
+              <p class="kicker">DRAFT</p>
+              <h3>续写草稿</h3>
+            </div>
+            <span id="draftStatus" class="draft-status" aria-live="polite"></span>
+          </div>
+          <p id="draftTarget" class="draft-target" hidden></p>
+          <div id="draftText" class="draft-text"></div>
+          <div class="draft-actions">
+            <button id="appendButton" class="btn btn-primary" type="button" hidden>追加到本章</button>
+            <button id="newChapterButton" class="btn btn-ghost" type="button" hidden>存为新章节</button>
+            <button id="retryButton" class="btn btn-ghost" type="button" hidden>重新生成</button>
+            <button id="discardButton" class="btn btn-quiet" type="button" hidden>丢弃</button>
+            <button id="stopButton" class="btn btn-danger" type="button" hidden>停止</button>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <dialog id="settingsDialog" class="dialog" aria-labelledby="settingsTitle">
+    <form id="settingsForm" class="dialog-form" novalidate>
+      <div class="dialog-head">
+        <div>
+          <p class="kicker">PROVIDER</p>
+          <h2 id="settingsTitle">模型设置</h2>
+        </div>
+        <button type="button" class="icon-button" data-close-dialog="settingsDialog" aria-label="关闭">×</button>
+      </div>
+      <p class="dialog-note">同一个模型既用于后台阅读文稿，也用于续写。支持任意 OpenAI 兼容接口，例如 DeepSeek、通义千问、Kimi、智谱、Ollama。Base URL 一般以 <code>/v1</code> 结尾；本地模型服务可以不填 API Key。</p>
+      <label class="field">
+        <span>Base URL</span>
+        <input id="baseUrlInput" type="url" autocomplete="off" placeholder="https://api.deepseek.com/v1">
+      </label>
+      <label class="field">
+        <span>模型名</span>
+        <input id="modelInput" type="text" autocomplete="off" placeholder="deepseek-chat">
+      </label>
+      <label class="field">
+        <span>API Key</span>
+        <input id="apiKeyInput" type="password" autocomplete="new-password" placeholder="sk-…">
+        <small id="apiKeyHint" class="field-hint"></small>
+      </label>
+      <label class="checkbox-field">
+        <input id="clearKeyInput" type="checkbox">
+        <span>清除已保存的 API Key</span>
+      </label>
+      <label class="field">
+        <span>最近正文带入上限（字）</span>
+        <input id="contextCharsInput" type="number" min="1000" max="100000" step="1000" inputmode="numeric">
+        <small class="field-hint">只截取全书结尾部分。人物与相关设定会按当前情节自动挑选，无需手动维护。</small>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-quiet" data-close-dialog="settingsDialog">取消</button>
+        <button type="submit" class="btn btn-primary">保存设置</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="importDialog" class="dialog" aria-labelledby="importTitle">
+    <form id="importForm" class="dialog-form" novalidate>
+      <div class="dialog-head">
+        <div>
+          <p class="kicker">IMPORT</p>
+          <h2 id="importTitle">导入文稿</h2>
+        </div>
+        <button type="button" class="icon-button" data-close-dialog="importDialog" aria-label="关闭">×</button>
+      </div>
+      <p class="dialog-note">支持 TXT 与 Markdown，会按「第X章」等标题自动拆分章节。导入会替换当前全部章节，并在后台自动开始分析。文件较大时，分析会持续一段时间。</p>
+      <label class="field">
+        <span>选择文件</span>
+        <input id="importFile" class="file-input" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown">
+        <small class="field-hint">支持 UTF-8 与常见的 GBK 编码。</small>
+      </label>
+      <label class="field">
+        <span>书名（可选）</span>
+        <input id="importTitleInput" type="text" maxlength="120" autocomplete="off" placeholder="留空则从文稿中识别">
+      </label>
+      <label class="field">
+        <span>或粘贴正文</span>
+        <textarea id="importText" rows="10" spellcheck="false" placeholder="把整部小说粘贴到这里。可以包含书名、作者等开头信息，系统会忽略这些元数据。"></textarea>
+        <small id="importHint" class="field-hint">尚未读取内容。</small>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-quiet" data-close-dialog="importDialog">取消</button>
+        <button id="importSubmitButton" type="submit" class="btn btn-primary">导入并分析</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>

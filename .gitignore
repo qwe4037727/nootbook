@@ -1,0 +1,12 @@
+# Local runtime data can contain manuscripts and credentials.
+/data/
+/corpus/
+
+# Local scratch workspaces and generated binaries.
+/.tmp_e2e/
+/.tmp_fq/
+/.workbuddy/
+*.exe
+*.test
+*.out
+coverage.out
