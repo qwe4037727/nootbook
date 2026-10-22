@@ -4,6 +4,7 @@
 
 # Local scratch workspaces and generated binaries.
 /.tmp_e2e/
+/.tmp_acceptance_data_*/
 /.tmp_fq/
 /.workbuddy/
 *.exe

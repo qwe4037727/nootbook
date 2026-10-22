@@ -1,5 +1,0 @@
-{
-  "baseUrl": "https://ai.laodog.top/v1",
-  "model": "gpt-6-sol",
-  "contextChars": 30000
-}
