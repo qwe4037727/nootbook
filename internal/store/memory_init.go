@@ -13,10 +13,11 @@ import (
 // Memory Initializer（docs/memory_model_spec.md V1.2 冻结版 §9 / R5）。
 // 两级初始化的第一级：knowledge → 记忆骨架回填（幂等、origin 查重、manual_edit 保护）。
 //
-// 锁时序约定：本文件所有路径都遵循"store.mu 与 memoryMu 不嵌套"——
-// InitializeMemory 持 memoryMu 时调用 CheckMemoryPreconditions（内部取 store.mu）是
-// 全仓库唯一 memoryMu→store.mu 持序点；其余路径均为"先 store.mu 读、释放后 memoryMu 写"，
-// 不存在 store.mu→memoryMu 反序持锁，无死锁。
+// 锁时序约定（P1-3 阻塞修复后）：全仓库 store.mu 与 memoryMu 的唯一嵌套方向为
+// store.mu→memoryMu（ImportChapters 持 store.mu 时经 resetMemoryLocked 获取 memoryMu）。
+// InitializeMemory 的前置检查（内部取 store.mu）先执行并释放，之后才进 memoryMu，
+// 不存在 memoryMu→store.mu 反序持锁；runMemoryMapping 也是先释放 store.mu 类读取、
+// 后取 memoryMu 写。单向持序，无死锁。
 
 const memoryInitStateFile = "init_state.json"
 
@@ -440,9 +441,16 @@ func stateTripleKey(subjectID, category, attribute string) string {
 }
 
 // resetMemoryLocked 为导入新书重置记忆子系统（阻塞修复 #4，与 knowledge 重置对称）：
-// 五类记录/候选/提交日志/init_state 全部清空，meta 归零——防止旧书记录混入新书面板
-// 或显示"初始化完成"。调用方持 store.mu 时获取 memoryMu（全仓库唯一持序方向 store.mu→memoryMu）。
+// 五类记录/候选/提交日志/init_state 全部清空，meta 归零，并清除安全态标志——
+// 防止旧书记录混入新书面板或显示"初始化完成"。
+//
+// 锁语义（P1-3 阻塞修复）：本函数自行获取 memoryMu（P1-3 前"调用方持 store.mu 时
+// 获取 memoryMu"仅存在于注释、从未落实，重置可与记忆读写并发）——此处补上真正的
+// memoryMu 互斥；调用方持 store.mu，形成全仓库唯一持序方向 store.mu→memoryMu。
 func (s *Store) resetMemoryLocked() error {
+	s.memoryMu.Lock()
+	defer s.memoryMu.Unlock()
+
 	empties := map[string]any{
 		"events.json":            []novel.StoryEvent{},
 		"states.json":            []novel.StoryState{},
@@ -464,7 +472,13 @@ func (s *Store) resetMemoryLocked() error {
 	}); err != nil {
 		return err
 	}
-	return s.writeMemoryInitStateLocked(MemoryInitState{Status: InitNotStarted})
+	if err := s.writeMemoryInitStateLocked(MemoryInitState{Status: InitNotStarted}); err != nil {
+		return err
+	}
+	// 记忆子系统已整体重建：旧数据触发的安全态随之解除。
+	s.memorySafe = false
+	s.memorySafeError = ""
+	return nil
 }
 
 // ---- StoryOrder 重算（§4.1.4 / 冻结决策 16；钩子契约 R9–R11）----

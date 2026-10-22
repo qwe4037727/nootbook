@@ -1,0 +1,30 @@
+=== RUN   TestAcceptanceReviewInterruptedInitialization
+--- PASS: TestAcceptanceReviewInterruptedInitialization (0.10s)
+=== RUN   TestAcceptanceReviewRetryAfterPayloadWriteFailure
+--- PASS: TestAcceptanceReviewRetryAfterPayloadWriteFailure (0.04s)
+=== RUN   TestAcceptanceReviewMalformedCommitRecords
+=== RUN   TestAcceptanceReviewMalformedCommitRecords/revision_jump
+=== RUN   TestAcceptanceReviewMalformedCommitRecords/unknown_status
+--- PASS: TestAcceptanceReviewMalformedCommitRecords (0.03s)
+    --- PASS: TestAcceptanceReviewMalformedCommitRecords/revision_jump (0.01s)
+    --- PASS: TestAcceptanceReviewMalformedCommitRecords/unknown_status (0.02s)
+=== RUN   TestAcceptanceReviewReplacingBookDoesNotKeepReadyMemory
+--- PASS: TestAcceptanceReviewReplacingBookDoesNotKeepReadyMemory (0.16s)
+=== RUN   TestRecoveryResetsOrphanMapping
+--- PASS: TestRecoveryResetsOrphanMapping (0.11s)
+=== RUN   TestCommitFailureAbortsPreparedNoFork
+--- PASS: TestCommitFailureAbortsPreparedNoFork (0.03s)
+=== RUN   TestRecoveryRejectsInvalidCommitRecords
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/bogus_status
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/target_not_basedOn+1
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/bogus_type
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/empty_commitId
+--- PASS: TestRecoveryRejectsInvalidCommitRecords (0.11s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/bogus_status (0.02s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/target_not_basedOn+1 (0.03s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/bogus_type (0.03s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/empty_commitId (0.02s)
+=== RUN   TestImportResetsMemory
+--- PASS: TestImportResetsMemory (0.18s)
+PASS
+ok  	novelagent/internal/store	0.850s

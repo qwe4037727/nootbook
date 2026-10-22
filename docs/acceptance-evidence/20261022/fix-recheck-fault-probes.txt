@@ -1,0 +1,13 @@
+=== RUN   TestAcceptanceFollowupPartialPayloadAbort
+    acceptance_followup_test.go:46: aborted commit left changed events at old revision; restart reports healthy without rollback or replay
+--- FAIL: TestAcceptanceFollowupPartialPayloadAbort (0.05s)
+=== RUN   TestAcceptanceFollowupMetaFailureRetry
+2026/10/22 15:10:14 store: commit  marked committed but meta alignment failed (recovery will converge meta): store: save memory meta.json: rename C:\Users\004900~1\AppData\Local\Temp\TestAcceptanceFollowupMetaFailureRetry1087151531\001\memory\.meta.json.tmp-1990702180 C:\Users\004900~1\AppData\Local\Temp\TestAcceptanceFollowupMetaFailureRetry1087151531\001\memory\meta.json: Access is denied.
+    acceptance_followup_test.go:90: meta failure then successful retry still forks chain: commit chain broken at commit_d80e6a81c98afef8c7: basedOn=0 want=1 (commit_chain_broken)
+--- FAIL: TestAcceptanceFollowupMetaFailureRetry (0.07s)
+=== RUN   TestAcceptanceFollowupResetAcquiresMemoryLock
+    acceptance_followup_test.go:109: reset rewrote memory files while another operation owned memoryMu
+--- FAIL: TestAcceptanceFollowupResetAcquiresMemoryLock (0.05s)
+FAIL
+FAIL	novelagent/internal/store	0.236s
+FAIL

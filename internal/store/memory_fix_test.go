@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -253,5 +254,286 @@ func TestImportResetsMemory(t *testing.T) {
 	states := loadStatesForTest(t, dir)
 	if len(states) != 1 || states[0].SubjectID != "c_new1" {
 		t.Errorf("states after new-book init = %+v, want c_new1 only", states)
+	}
+}
+
+// ---- P1 修复 #15：aborted 回滚部分写入（RevertPayload）----
+
+// TestCommitFailureRevertsPartialWrites 覆盖 P1-1：
+// 多文件 payload 写入中途失败 → 已写入文件按写前快照回滚 → 数据与版本一致 → 重启健康。
+func TestCommitFailureRevertsPartialWrites(t *testing.T) {
+	st, dir := newTestStore(t)
+
+	// 第一次提交成功：events.json 落地为"旧内容"
+	st.memoryMu.Lock()
+	_, err := st.commitMemoryLocked(CommitInitialize, 0, map[string]any{
+		"events.json": []map[string]any{{"id": "evt_old"}},
+	})
+	st.memoryMu.Unlock()
+	if err != nil {
+		t.Fatalf("seed commit: %v", err)
+	}
+
+	// 第二次提交失败：events.json（旧文件，先写成功 = 部分写入）+ sub/dir.json（必失败）
+	st.memoryMu.Lock()
+	_, failErr := st.commitMemoryLocked(CommitFormal, 1, map[string]any{
+		"events.json":  []map[string]any{{"id": "evt_new"}},
+		"sub/dir.json": []map[string]any{{"id": "x"}},
+	})
+	st.memoryMu.Unlock()
+	if failErr == nil || errors.Is(failErr, ErrRevisionConflict) {
+		t.Fatalf("second commit should fail with io error, got %v", failErr)
+	}
+
+	// 记录应为 aborted，且携带写前快照
+	commits := decodeCommits(t, dir)
+	if len(commits) != 2 || commits[1].Status != CommitAborted {
+		t.Fatalf("commits = %+v, want [committed, aborted]", commits)
+	}
+	revert := commits[1].RevertPayload
+	if len(revert) != 2 {
+		t.Fatalf("revertPayload = %v, want 2 entries", revert)
+	}
+	if string(revert["sub/dir.json"]) != "null" {
+		t.Errorf("revert[sub/dir.json] = %s, want null (file absent before commit)", revert["sub/dir.json"])
+	}
+	var revertedOld []map[string]any
+	if err := json.Unmarshal(revert["events.json"], &revertedOld); err != nil || len(revertedOld) != 1 || revertedOld[0]["id"] != "evt_old" {
+		t.Errorf("revert[events.json] = %s, want snapshot of evt_old", revert["events.json"])
+	}
+
+	// 部分写入已被回滚：events.json 恢复为旧内容
+	events := loadEventsForTest(t, dir)
+	if len(events) != 1 || events[0].ID != "evt_old" {
+		t.Errorf("events.json after failure = %+v, want reverted to evt_old (partial write must be undone)", events)
+	}
+
+	// meta 未推进、无安全态
+	info, err := st.LoadMemoryInfo()
+	if err != nil {
+		t.Fatalf("info: %v", err)
+	}
+	if info.MemoryRevision != 1 || info.LastCommitID != commits[0].CommitID {
+		t.Errorf("meta after failure = rev %d / %s, want rev 1 / %s", info.MemoryRevision, info.LastCommitID, commits[0].CommitID)
+	}
+	if info.SafeState {
+		t.Errorf("unexpected safe state: %s", info.SafeStateError)
+	}
+
+	// 同 basedOn 重试成功 → 重启恢复健康且不分叉
+	st.memoryMu.Lock()
+	record, retryErr := st.commitMemoryLocked(CommitFormal, 1, map[string]any{
+		"events.json": []map[string]any{{"id": "evt_old"}, {"id": "evt_retry"}},
+	})
+	st.memoryMu.Unlock()
+	if retryErr != nil {
+		t.Fatalf("retry commit: %v", retryErr)
+	}
+	st2, err := New(dir)
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	info2, err := st2.LoadMemoryInfo()
+	if err != nil {
+		t.Fatalf("info after reopen: %v", err)
+	}
+	if info2.SafeState {
+		t.Errorf("safe state after recovery: %s", info2.SafeStateError)
+	}
+	if info2.MemoryRevision != record.TargetMemoryRevision {
+		t.Errorf("memoryRevision = %d, want %d", info2.MemoryRevision, record.TargetMemoryRevision)
+	}
+	final := loadEventsForTest(t, dir)
+	if len(final) != 2 || final[0].ID != "evt_old" || final[1].ID != "evt_retry" {
+		t.Errorf("events after retry+recovery = %+v, want [evt_old evt_retry]", final)
+	}
+}
+
+// TestRecoveryReplaysAbortedRevert 覆盖 P1-1 恢复路径：
+// "标记 aborted 落盘成功、回滚未执行"的崩溃间隙 → 重启恢复补做回滚。
+func TestRecoveryReplaysAbortedRevert(t *testing.T) {
+	st, dir := newTestStore(t)
+	st.memoryMu.Lock()
+	_, err := st.commitMemoryLocked(CommitInitialize, 0, map[string]any{
+		"events.json": []map[string]any{{"id": "evt_old"}},
+	})
+	st.memoryMu.Unlock()
+	if err != nil {
+		t.Fatalf("seed commit: %v", err)
+	}
+
+	// 手工构造崩溃残迹：aborted 记录 + 未回滚的"新内容"数据文件
+	rewriteCommits(t, dir, func(rs []CommitRecord) []CommitRecord {
+		aborted := CommitRecord{
+			CommitID:              novel.NewID("commit"),
+			Type:                  CommitFormal,
+			Status:                CommitAborted,
+			BasedOnMemoryRevision: 1,
+			TargetMemoryRevision:  2,
+			Payload: map[string]json.RawMessage{
+				"events.json": json.RawMessage(`[{"id":"evt_new"}]`),
+			},
+			RevertPayload: map[string]json.RawMessage{
+				"events.json": json.RawMessage(`[{"id":"evt_old"}]`),
+			},
+			CreatedAt: time.Now().UTC(),
+		}
+		return append(rs, aborted)
+	})
+	if err := os.WriteFile(filepath.Join(dir, memoryDirName, "events.json"),
+		[]byte(`[{"id":"evt_new"}]`), 0o644); err != nil {
+		t.Fatalf("simulate un-reverted partial write: %v", err)
+	}
+
+	// 重启 → 恢复补做回滚 → events.json 回到 evt_old，健康无安全态
+	st2, err := New(dir)
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	info, err := st2.LoadMemoryInfo()
+	if err != nil {
+		t.Fatalf("info: %v", err)
+	}
+	if info.SafeState {
+		t.Errorf("safe state after aborted-revert recovery: %s", info.SafeStateError)
+	}
+	if info.MemoryRevision != 1 {
+		t.Errorf("memoryRevision = %d, want 1 (aborted record must not advance)", info.MemoryRevision)
+	}
+	events := loadEventsForTest(t, dir)
+	if len(events) != 1 || events[0].ID != "evt_old" {
+		t.Errorf("events after recovery = %+v, want reverted to evt_old", events)
+	}
+}
+
+// ---- P1 修复 #16：运行期链尾一致性校验 ----
+
+// TestRuntimeMetaLagRejectedNoFork 覆盖 P1-2：
+// meta.json 写失败残留旧版本 → 同进程重试被拒绝进安全态、零新增记录 → 重启收敛健康。
+func TestRuntimeMetaLagRejectedNoFork(t *testing.T) {
+	st, dir := newTestStore(t)
+	st.memoryMu.Lock()
+	if _, err := st.commitMemoryLocked(CommitInitialize, 0, map[string]any{
+		"events.json": []map[string]any{{"id": "evt_1"}},
+	}); err != nil {
+		st.memoryMu.Unlock()
+		t.Fatalf("seed commit: %v", err)
+	}
+	st.memoryMu.Unlock()
+
+	// 模拟"meta 对齐写失败"：磁盘 meta 停留在 revision 0 / 空 lastCommitId
+	rewriteMeta(t, dir, 0, "")
+
+	// 同进程重试：链尾（rev 1）与 meta（rev 0）不对齐 → 拒绝 + 安全态
+	st.memoryMu.Lock()
+	_, retryErr := st.commitMemoryLocked(CommitInitialize, 0, map[string]any{
+		"events.json": []map[string]any{{"id": "evt_fork"}},
+	})
+	st.memoryMu.Unlock()
+	if !errors.Is(retryErr, ErrMemorySafeState) {
+		t.Fatalf("retry error = %v, want ErrMemorySafeState (fork must be impossible)", retryErr)
+	}
+	// 零新增记录：重试未追加任何分叉记录
+	if commits := decodeCommits(t, dir); len(commits) != 1 {
+		t.Errorf("commits after rejected retry = %d, want 1 (no fork records)", len(commits))
+	}
+
+	// 重启 → 恢复按链尾收敛 meta → 健康、revision=1
+	st2, err := New(dir)
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	info, err := st2.LoadMemoryInfo()
+	if err != nil {
+		t.Fatalf("info: %v", err)
+	}
+	if info.SafeState {
+		t.Errorf("safe state after recovery: %s", info.SafeStateError)
+	}
+	commits := decodeCommits(t, dir)
+	if info.MemoryRevision != 1 || info.LastCommitID != commits[0].CommitID {
+		t.Errorf("meta after recovery = rev %d / %s, want rev 1 / %s (converged to chain tail)",
+			info.MemoryRevision, info.LastCommitID, commits[0].CommitID)
+	}
+	// 收敛后重试成功：不会被安全态卡死
+	st2.memoryMu.Lock()
+	_, err = st2.commitMemoryLocked(CommitFormal, 1, map[string]any{
+		"events.json": []map[string]any{{"id": "evt_1"}, {"id": "evt_2"}},
+	})
+	st2.memoryMu.Unlock()
+	if err != nil {
+		t.Fatalf("commit after recovery: %v", err)
+	}
+}
+
+// ---- P1 修复 #17：导入重置实际持有 memoryMu ----
+
+// TestImportResetConcurrentWithMemoryOps 覆盖 P1-3：
+// 导入重置（store.mu→memoryMu）与记忆读并发 → 无 panic、无解码错误、终态一致。
+// 注：本机无 cgo，-race 不可用；本测试至少保证锁互斥路径不饿死、不崩溃。
+func TestImportResetConcurrentWithMemoryOps(t *testing.T) {
+	st, _ := newTestStore(t)
+	oldProject, err := st.ImportChapters("旧书", []novel.Chapter{{Title: "一", Content: "旧。"}})
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	writeKnowledgeDirect(t, st, novel.Knowledge{
+		Characters: []novel.Character{{ID: "c_1", Name: "角色", State: "状态"}},
+		Summaries:  []novel.ChapterSummary{{ChapterID: oldProject.Chapters[0].ID, Index: 1, Summary: "摘要"}},
+	})
+	if _, err := st.InitializeMemory(); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	waitForInitTerminal(t, st)
+
+	stop := make(chan struct{})
+	readerErr := make(chan error, 1)
+	go func() {
+		defer close(readerErr)
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			if _, err := st.LoadMemoryOverview(); err != nil {
+				readerErr <- fmt.Errorf("overview: %w", err)
+				return
+			}
+			if _, err := st.LoadMemoryInitState(); err != nil {
+				readerErr <- fmt.Errorf("init state: %w", err)
+				return
+			}
+			if _, err := st.LoadMemoryInfo(); err != nil {
+				readerErr <- fmt.Errorf("info: %w", err)
+				return
+			}
+		}
+	}()
+
+	for i := 0; i < 20; i++ {
+		if _, err := st.ImportChapters(fmt.Sprintf("书%d", i), []novel.Chapter{{Title: "章", Content: "正文。"}}); err != nil {
+			close(stop)
+			t.Fatalf("import %d: %v", i, err)
+		}
+	}
+	close(stop)
+
+	select {
+	case err := <-readerErr:
+		if err != nil {
+			t.Fatalf("concurrent memory read failed: %v", err)
+		}
+	case <-time.After(15 * time.Second):
+		t.Fatal("memory reads blocked > 15s during imports (lock deadlock suspected)")
+	}
+
+	// 终态：最后一次导入后记忆全零、init 未开始
+	overview, err := st.LoadMemoryOverview()
+	if err != nil {
+		t.Fatalf("final overview: %v", err)
+	}
+	if overview.MemoryRevision != 0 || overview.Counts.Events != 0 || overview.Counts.States != 0 {
+		t.Errorf("final memory = %+v, want all zero after reset", overview)
 	}
 }
