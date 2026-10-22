@@ -425,3 +425,104 @@ func loadStatesForTest(t *testing.T, dir string) []novel.StoryState {
 	}
 	return states
 }
+
+// TestInitAlreadyRunning 覆盖 U15：mapping 中重入 → 409 already_running 语义。
+func TestInitAlreadyRunning(t *testing.T) {
+	st, _ := newTestStore(t)
+	project, err := st.ImportChapters("书", []novel.Chapter{{Title: "一", Content: "一。"}})
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	writeKnowledgeDirect(t, st, novel.Knowledge{
+		Summaries: []novel.ChapterSummary{{ChapterID: project.Chapters[0].ID, Index: 1, Summary: "摘要"}},
+	})
+
+	// 人为置 mapping（模拟长映射进行中；InitializeMemory 读到 mapping 即拒绝重入）
+	st.memoryMu.Lock()
+	initState := MemoryInitState{Status: InitMapping, StartedAt: time.Now().UTC()}
+	if err := st.writeMemoryInitStateLocked(initState); err != nil {
+		st.memoryMu.Unlock()
+		t.Fatalf("write state: %v", err)
+	}
+	st.memoryMu.Unlock()
+	phase, err := st.InitializeMemory()
+	if phase != InitMapping || !errors.Is(err, ErrAlreadyRunning) {
+		t.Fatalf("reentry = (%s, %v), want (mapping, ErrAlreadyRunning)", phase, err)
+	}
+	// 状态未被破坏
+	st.memoryMu.Lock()
+	state, _ := st.loadMemoryInitStateLocked()
+	st.memoryMu.Unlock()
+	if state.Status != InitMapping {
+		t.Errorf("status = %q, want mapping", state.Status)
+	}
+}
+
+// TestLegacyToEndMemoryFlow 端到端集成冒烟：legacy 迁移 → 知识直写 → 回填 → 查询聚合。
+func TestLegacyToEndMemoryFlow(t *testing.T) {
+	dir := t.TempDir()
+	// 1. legacy 数据入库（New 自动迁移分章）
+	legacy := `{"title":"无边悔恨","manuscript":"第一章 起点\n他睁开眼。\n\n第二章 转折\n雨停了。","style":"冷峻","characters":[{"name":"林越","state":"重伤"}],"world":[]}`
+	if err := osWriteFileForTest(dir+"/project.json", []byte(legacy)); err != nil {
+		t.Fatalf("write legacy: %v", err)
+	}
+	st, err := New(dir)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	project, err := st.LoadProject()
+	if err != nil {
+		t.Fatalf("load project: %v", err)
+	}
+	if len(project.Chapters) != 2 {
+		t.Fatalf("migrated chapters = %d, want 2", len(project.Chapters))
+	}
+
+	// 2. 模拟分析产物：迁移产生的 c_ 实体 + 章节摘要
+	knowledge, err := st.LoadKnowledge()
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	if len(knowledge.Characters) == 0 {
+		t.Fatalf("migrated knowledge has no characters")
+	}
+	characterID := knowledge.Characters[0].ID
+	knowledge.Characters[0].State = "重伤" // 模拟分析提取到的角色状态（迁移产物 State 为空）
+	knowledge.Summaries = []novel.ChapterSummary{
+		{ChapterID: project.Chapters[0].ID, Index: 1, Summary: "第一章摘要"},
+		{ChapterID: project.Chapters[1].ID, Index: 2, Summary: "第二章摘要"},
+	}
+	writeKnowledgeDirect(t, st, knowledge)
+
+	// 3. 回填
+	if _, err := st.InitializeMemory(); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	state := waitForInitTerminal(t, st)
+	if state.Status != InitReady {
+		t.Fatalf("status = %s (%s), want ready", state.Status, state.LastError)
+	}
+
+	// 4. 查询聚合
+	overview, err := st.LoadMemoryOverview()
+	if err != nil {
+		t.Fatalf("overview: %v", err)
+	}
+	if overview.Counts.Events != 2 || overview.Counts.States != 1 || overview.MemoryRevision != 1 {
+		t.Errorf("overview = %+v", overview)
+	}
+	view, err := st.LoadCharacterMemory(characterID)
+	if err != nil {
+		t.Fatalf("character view: %v", err)
+	}
+	if len(view.States) != 1 || view.States[0].SubjectID != characterID {
+		t.Errorf("view states = %+v", view.States)
+	}
+	if view.Character.ID != characterID {
+		t.Errorf("view character = %+v", view.Character)
+	}
+}
+
+func osWriteFileForTest(path string, data []byte) error {
+	return os.WriteFile(path, data, 0o644)
+}

@@ -48,39 +48,39 @@
 
 ---
 
-## 二、规划中功能（🚧 本次开发主线：大纲规划模块）
+## 二、规划中功能（🚧 迭代 2：大纲规划模块 = StoryPlan，V1.2 冻结）
 
 > 前置：必须有知识库 `knowledge.json`（走 F1+F6 链路）。新书旧书通用。
+> **架构决策（冻结决策 1）**：不再独立建模 `outline.json`——大纲即 **StoryPlan**（唯一正式计划模型，V1.2 §4.5）；
+> 旧 `Outline 草案` 中的立意/分卷/结局/主题分别映射为 global 计划的 Title/Objective/CandidateBeats/Constraints。
 
 | 编号 | 功能 | 说明 | 计划实现 |
 |---|---|---|---|
-| F20 | 生成大纲 | 基于 knowledge + 可选参数 `endingTone`(结局基调)/`avoidTropes`(规避套路)/`volumeCount`(建议卷数)/`extra`(自由补充) → 产出结构化 `Outline` → 存 `outline.json` | `POST /api/outline`；新建 `internal/outline` 包（prompt + 容错 JSON 解析 + `Generate`） |
-| F21 | 查看大纲 | 读取已存大纲，无则返回空 | `GET /api/outline`；`store.LoadOutline/SaveOutline` |
-| F22 | 前端大纲面板 | 「生成大纲」按钮(loading 态) + 展示 立意/分卷分章大纲/大结局/主题 | `web/` 新面板 |
-| F23 | 大纲回灌续写 | 续写开关「对齐大纲」→ `agent.Build` 注入 `Outline`，续写遵循规划 | `agent.Build` 增加 `Outline` 参数；续写 prompt 加「大纲对齐」段 |
+| F20 | 生成大纲（=生成 StoryPlan） | 基于 knowledge + 可选参数 `endingTone`/`avoidTropes`/`volumeCount`/`extra` → 产出 **global + volume 级 `proposed` StoryPlan**（含 ParentPlanID 作用域）→ 经记忆提交入 `plans.json`（memoryRevision+1） | `POST /api/plans/generate`；`internal/plan` 包（prompt + 容错 JSON 解析 + 生成）；**不落 outline.json** |
+| F21 | 查看大纲（=计划树查询） | 按 `(level, parentPlanID)` 作用域返回计划树，无则返回空 | `GET /api/plans`；`store` 计划查询（复用 memory plans.json） |
+| F22 | 前端大纲面板 | 「生成大纲」按钮(loading 态) + 展示 计划树（global→volume→near_term）/状态徽标（proposed/active/…） | `web/` 新面板（数据源改 StoryPlan API） |
+| F23 | 计划回灌续写 | 续写开关「对齐计划」→ `agent.Build` 注入 **active 的 global/volume/near_term 计划**（含 CandidateBeats/Constraints），续写遵循规划 | `agent.Build` 增加 StoryPlan 参数；续写 prompt 加「计划对齐」段 |
 
-**Outline 数据结构（草案）**
+**StoryPlan 语义映射（替代旧 Outline 草案）**
 ```
-premise      核心立意（一句话故事内核）
-structure[]  { arc卷名, summary, chapters:[{title, summary, keyBeats[]}] }
-ending       大结局规划（文字）
-endingBeats[] 关键收束点（伏笔回收/人物弧光）
-themes[]     主题线索
-notes        写作提醒
+global 计划   premise → Title/Objective；themes/notes → Constraints
+volume 计划   structure[].arc → Title；summary → Objective；keyBeats → CandidateBeats（parent=global）
+ending        global 计划的 CandidateBeats 收束项（或专用 near_term 收束计划）
+状态流        生成→proposed；用户确认→active（同作用域旧 active 自动 superseded）
 ```
 
 ---
 
 ## 三、用户诉求中的缺口与说明
 
-- ❌ **规划中间大纲（分卷/分章）** —— 当前没有，由 **F20** 补上
-- ❌ **规划大结局** —— 当前没有，由 **F20** 补上
+- ❌ **规划中间大纲（分卷/分章）** —— 由 **F20**（global/volume StoryPlan）补上，迭代 2
+- ❌ **规划大结局** —— 由 **F20**（收束 CandidateBeats）补上，迭代 2
 - ℹ️ **「改掉现有结局继续写」不是独立功能**：系统续写只从最近正文末尾往后接，不回改前文。要做「改结局」= **F3（手动截改/删除末章）** + **F11（续写）** 的组合用法；保存后会自动重分析(F4/F9)使知识库跟随新正文。
 
 ---
 
 ## 四、潜在扩展（P2，本次不做）
-- 大纲修订迭代（基于已有大纲 + 用户反馈重新生成）
-- 分章细纲（把某卷展开成逐章细纲）
+- 大纲修订迭代（基于已有计划 + 用户反馈重新生成，走 ChangeSet/冲突提案）
+- 分章细纲（把某卷展开成逐章 near_term 计划）
 - 进度对齐（标记哪些章已写、哪些待写）
 - 流式大纲生成（SSE 边生成边显示）
