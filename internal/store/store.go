@@ -113,6 +113,13 @@ func (c Config) EffectiveAPIKey() (string, bool) {
 type Store struct {
 	dir string
 	mu  sync.Mutex
+	// memoryMu 独立守护 data/memory/（spec §10/§4.1.4：与 store.mu 无嵌套；
+	// 需要两者数据的操作先取 store.mu 读、释放后再取 memoryMu 写）。
+	memoryMu sync.Mutex
+	// memorySafe/memorySafeError：commits.json 损坏或提交链断链/分叉时的安全态（R4/R7），
+	// 置位后拒绝一切记忆写操作，读取不受影响。
+	memorySafe      bool
+	memorySafeError string
 }
 
 func New(dir string) (*Store, error) {
@@ -126,6 +133,11 @@ func New(dir string) (*Store, error) {
 	if err := s.migrateLegacy(); err != nil {
 		return nil, err
 	}
+	// 启动期记忆崩溃恢复（spec §11.3）：链校验 → 重放 prepared → meta 收敛；
+	// 失败仅进入安全态，不阻断服务启动。
+	s.memoryMu.Lock()
+	s.recoverMemoryLocked()
+	s.memoryMu.Unlock()
 	return s, nil
 }
 
