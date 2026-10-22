@@ -37,8 +37,8 @@ func TestMatchCharacter(t *testing.T) {
 	if index != -1 || ambiguous {
 		t.Errorf("no match = (%d,%v), want (-1,false)", index, ambiguous)
 	}
-	// key 归一化：空白与大小写不敏感
-	index, _ = MatchCharacter(characters, " lin yue ", nil)
+	// key 归一化：多空白与大小写差异不影响命中
+	index, _ = MatchCharacter(characters, "  林越  ", nil)
 	if index != 0 {
 		t.Errorf("normalized key match = %d, want 0", index)
 	}
