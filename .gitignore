@@ -6,8 +6,13 @@
 /.tmp_e2e/
 /.tmp_acceptance_data_*/
 /.tmp_fq/
+/.tmp_fixed/
+/.tmp_fixed_px/
+/output/
 /.workbuddy/
 *.exe
 *.test
 *.out
+*.log
+/data.bak.*
 coverage.out

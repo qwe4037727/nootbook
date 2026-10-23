@@ -1,0 +1,72 @@
+{
+  "status": "PASS",
+  "scope": "real HTTP backend smoke, empty isolated store; no UI or model-quality claim",
+  "observations": [
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/project",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/initialize/status",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/memory/initialize",
+      "status": 400,
+      "code": "reinit_not_supported",
+      "dataUnchanged": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/memory/initialize",
+      "status": 409,
+      "code": "knowledge_not_ready",
+      "dataUnchanged": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/memory/initialize",
+      "status": 409,
+      "code": "knowledge_not_ready",
+      "dataUnchanged": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/memory/initialize",
+      "status": 400,
+      "code": "invalid_request",
+      "dataUnchanged": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/memory/initialize",
+      "status": 400,
+      "code": "invalid_request",
+      "dataUnchanged": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/memory/initialize",
+      "status": 413,
+      "code": "request_too_large",
+      "dataUnchanged": true
+    }
+  ],
+  "baseline": {
+    "path": "memory\\meta.json",
+    "sha256": "C2071F1E13ABC9B4BCAA329935C9879B86F94AA0EAAF184B043FDE2903ACEFED"
+  }
+}

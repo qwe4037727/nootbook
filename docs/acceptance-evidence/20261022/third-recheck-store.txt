@@ -1,0 +1,258 @@
+=== RUN   TestAcceptanceFollowupPartialPayloadAbort
+--- PASS: TestAcceptanceFollowupPartialPayloadAbort (0.03s)
+=== RUN   TestAcceptanceFollowupMetaFailureRetry
+--- PASS: TestAcceptanceFollowupMetaFailureRetry (0.04s)
+=== RUN   TestAcceptanceFollowupResetAcquiresMemoryLock
+--- PASS: TestAcceptanceFollowupResetAcquiresMemoryLock (0.24s)
+=== RUN   TestAcceptanceReviewInterruptedInitialization
+--- PASS: TestAcceptanceReviewInterruptedInitialization (0.11s)
+=== RUN   TestAcceptanceReviewRetryAfterPayloadWriteFailure
+--- PASS: TestAcceptanceReviewRetryAfterPayloadWriteFailure (0.03s)
+=== RUN   TestAcceptanceReviewMalformedCommitRecords
+=== RUN   TestAcceptanceReviewMalformedCommitRecords/revision_jump
+=== RUN   TestAcceptanceReviewMalformedCommitRecords/unknown_status
+--- PASS: TestAcceptanceReviewMalformedCommitRecords (0.02s)
+    --- PASS: TestAcceptanceReviewMalformedCommitRecords/revision_jump (0.01s)
+    --- PASS: TestAcceptanceReviewMalformedCommitRecords/unknown_status (0.01s)
+=== RUN   TestAcceptanceReviewReplacingBookDoesNotKeepReadyMemory
+--- PASS: TestAcceptanceReviewReplacingBookDoesNotKeepReadyMemory (0.17s)
+=== RUN   TestAcceptanceSecondRecheckRealPartialWrite
+--- PASS: TestAcceptanceSecondRecheckRealPartialWrite (0.06s)
+=== RUN   TestAcceptanceSecondRecheckImportDuringMapping
+--- PASS: TestAcceptanceSecondRecheckImportDuringMapping (0.24s)
+=== RUN   TestRecoveryResetsOrphanMapping
+--- PASS: TestRecoveryResetsOrphanMapping (0.11s)
+=== RUN   TestCommitFailureAbortsPreparedNoFork
+--- PASS: TestCommitFailureAbortsPreparedNoFork (0.03s)
+=== RUN   TestRecoveryRejectsInvalidCommitRecords
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/bogus_status
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/target_not_basedOn+1
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/bogus_type
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/empty_commitId
+--- PASS: TestRecoveryRejectsInvalidCommitRecords (0.12s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/bogus_status (0.03s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/target_not_basedOn+1 (0.03s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/bogus_type (0.03s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/empty_commitId (0.03s)
+=== RUN   TestImportResetsMemory
+--- PASS: TestImportResetsMemory (0.21s)
+=== RUN   TestCommitFailureRevertsPartialWrites
+--- PASS: TestCommitFailureRevertsPartialWrites (0.05s)
+=== RUN   TestRecoveryReplaysAbortedRevert
+--- PASS: TestRecoveryReplaysAbortedRevert (0.03s)
+=== RUN   TestRuntimeMetaLagRejectedNoFork
+--- PASS: TestRuntimeMetaLagRejectedNoFork (0.04s)
+=== RUN   TestImportResetConcurrentWithMemoryOps
+--- PASS: TestImportResetConcurrentWithMemoryOps (1.21s)
+=== RUN   TestImportInvalidatesInFlightInitTask
+--- PASS: TestImportInvalidatesInFlightInitTask (0.11s)
+=== RUN   TestInitTokenGuardsTerminalWrite
+--- PASS: TestInitTokenGuardsTerminalWrite (0.01s)
+=== RUN   TestInitGenerationInvalidatedByImport
+--- PASS: TestInitGenerationInvalidatedByImport (0.07s)
+=== RUN   TestInitLegacyProjectRejected
+--- PASS: TestInitLegacyProjectRejected (0.01s)
+=== RUN   TestInitKnowledgeNotReady
+--- PASS: TestInitKnowledgeNotReady (0.07s)
+=== RUN   TestInitZeroResultPartial
+--- PASS: TestInitZeroResultPartial (0.07s)
+=== RUN   TestInitBackfillMapping
+--- PASS: TestInitBackfillMapping (0.12s)
+=== RUN   TestInitIdempotentRerun
+--- PASS: TestInitIdempotentRerun (0.11s)
+=== RUN   TestInitManualEditProtected
+--- PASS: TestInitManualEditProtected (0.11s)
+=== RUN   TestInitReadyIdempotentRetry
+--- PASS: TestInitReadyIdempotentRetry (0.10s)
+=== RUN   TestStoryOrderRecalcOnDelete
+--- PASS: TestStoryOrderRecalcOnDelete (0.13s)
+=== RUN   TestInitDecodeFailureFailed
+--- PASS: TestInitDecodeFailureFailed (0.07s)
+=== RUN   TestInitAlreadyRunning
+--- PASS: TestInitAlreadyRunning (0.06s)
+=== RUN   TestLegacyToEndMemoryFlow
+--- PASS: TestLegacyToEndMemoryFlow (0.07s)
+=== RUN   TestMemoryMetaInitializedOnFirstAccess
+--- PASS: TestMemoryMetaInitializedOnFirstAccess (0.01s)
+=== RUN   TestMemoryCommitProtocol
+--- PASS: TestMemoryCommitProtocol (0.03s)
+=== RUN   TestMemoryCommitBaselineConflict
+--- PASS: TestMemoryCommitBaselineConflict (0.05s)
+=== RUN   TestMemoryRecoveryPrepared
+--- PASS: TestMemoryRecoveryPrepared (0.05s)
+=== RUN   TestMemoryRecoveryCommittedMetaWindow
+--- PASS: TestMemoryRecoveryCommittedMetaWindow (0.04s)
+=== RUN   TestMemoryRecoveryIdempotent
+--- PASS: TestMemoryRecoveryIdempotent (0.03s)
+=== RUN   TestMemorySafeStateOnBrokenChain
+--- PASS: TestMemorySafeStateOnBrokenChain (0.03s)
+=== RUN   TestMemorySafeStateOnCorruptCommits
+--- PASS: TestMemorySafeStateOnCorruptCommits (0.01s)
+=== RUN   TestSaveChapterNoOpShortCircuit
+--- PASS: TestSaveChapterNoOpShortCircuit (0.05s)
+=== RUN   TestSaveChapterChangeIncrements
+--- PASS: TestSaveChapterChangeIncrements (0.08s)
+=== RUN   TestSaveChapterLegacyRevisionCompat
+--- PASS: TestSaveChapterLegacyRevisionCompat (0.07s)
+=== RUN   TestLoadRepairsMetaFromChapterFile
+--- PASS: TestLoadRepairsMetaFromChapterFile (0.07s)
+=== RUN   TestChapterOrderHookFiresOnDelete
+--- PASS: TestChapterOrderHookFiresOnDelete (0.08s)
+=== RUN   TestChapterOrderHookNoOpWhenUnregistered
+--- PASS: TestChapterOrderHookNoOpWhenUnregistered (0.07s)
+=== RUN   TestChapterOrderHookFailureNotBlocking
+2026/10/22 16:05:53 store: chapter order hook failed (ignored): memory module simulated failure
+--- PASS: TestChapterOrderHookFailureNotBlocking (0.09s)
+=== RUN   TestChapterOrderHookErrorNotBlocking
+2026/10/22 16:05:53 store: chapter order hook failed (ignored): memory module simulated error
+--- PASS: TestChapterOrderHookErrorNotBlocking (0.06s)
+=== RUN   TestChapterOrderHookRegisterRace
+--- PASS: TestChapterOrderHookRegisterRace (2.96s)
+=== RUN   TestSaveChapterNoOpRepairsStaleMeta
+--- PASS: TestSaveChapterNoOpRepairsStaleMeta (0.07s)
+=== RUN   TestAppendChapterRevisionBaseline
+--- PASS: TestAppendChapterRevisionBaseline (0.06s)
+=== RUN   TestImportAndLoadChapters
+--- PASS: TestImportAndLoadChapters (0.09s)
+=== RUN   TestImportReplacesPreviousChapters
+--- PASS: TestImportReplacesPreviousChapters (0.10s)
+=== RUN   TestSaveChapterInvalidatesAnalysis
+--- PASS: TestSaveChapterInvalidatesAnalysis (0.09s)
+=== RUN   TestAppendAndDeleteChapter
+--- PASS: TestAppendAndDeleteChapter (0.07s)
+=== RUN   TestAnalysisRevisionGuard
+--- PASS: TestAnalysisRevisionGuard (0.10s)
+=== RUN   TestConfigRoundTrip
+--- PASS: TestConfigRoundTrip (0.01s)
+=== RUN   TestMigrateLegacyProject
+--- PASS: TestMigrateLegacyProject (0.02s)
+=== RUN   TestAcceptanceFollowupPartialPayloadAbort
+--- PASS: TestAcceptanceFollowupPartialPayloadAbort (0.05s)
+=== RUN   TestAcceptanceFollowupMetaFailureRetry
+--- PASS: TestAcceptanceFollowupMetaFailureRetry (0.03s)
+=== RUN   TestAcceptanceFollowupResetAcquiresMemoryLock
+--- PASS: TestAcceptanceFollowupResetAcquiresMemoryLock (0.24s)
+=== RUN   TestAcceptanceReviewInterruptedInitialization
+--- PASS: TestAcceptanceReviewInterruptedInitialization (0.10s)
+=== RUN   TestAcceptanceReviewRetryAfterPayloadWriteFailure
+--- PASS: TestAcceptanceReviewRetryAfterPayloadWriteFailure (0.04s)
+=== RUN   TestAcceptanceReviewMalformedCommitRecords
+=== RUN   TestAcceptanceReviewMalformedCommitRecords/revision_jump
+=== RUN   TestAcceptanceReviewMalformedCommitRecords/unknown_status
+--- PASS: TestAcceptanceReviewMalformedCommitRecords (0.03s)
+    --- PASS: TestAcceptanceReviewMalformedCommitRecords/revision_jump (0.01s)
+    --- PASS: TestAcceptanceReviewMalformedCommitRecords/unknown_status (0.01s)
+=== RUN   TestAcceptanceReviewReplacingBookDoesNotKeepReadyMemory
+--- PASS: TestAcceptanceReviewReplacingBookDoesNotKeepReadyMemory (0.16s)
+=== RUN   TestAcceptanceSecondRecheckRealPartialWrite
+--- PASS: TestAcceptanceSecondRecheckRealPartialWrite (0.06s)
+=== RUN   TestAcceptanceSecondRecheckImportDuringMapping
+--- PASS: TestAcceptanceSecondRecheckImportDuringMapping (0.31s)
+=== RUN   TestRecoveryResetsOrphanMapping
+--- PASS: TestRecoveryResetsOrphanMapping (0.12s)
+=== RUN   TestCommitFailureAbortsPreparedNoFork
+--- PASS: TestCommitFailureAbortsPreparedNoFork (0.03s)
+=== RUN   TestRecoveryRejectsInvalidCommitRecords
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/bogus_status
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/target_not_basedOn+1
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/bogus_type
+=== RUN   TestRecoveryRejectsInvalidCommitRecords/empty_commitId
+--- PASS: TestRecoveryRejectsInvalidCommitRecords (0.10s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/bogus_status (0.02s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/target_not_basedOn+1 (0.02s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/bogus_type (0.02s)
+    --- PASS: TestRecoveryRejectsInvalidCommitRecords/empty_commitId (0.02s)
+=== RUN   TestImportResetsMemory
+--- PASS: TestImportResetsMemory (0.19s)
+=== RUN   TestCommitFailureRevertsPartialWrites
+--- PASS: TestCommitFailureRevertsPartialWrites (0.05s)
+=== RUN   TestRecoveryReplaysAbortedRevert
+--- PASS: TestRecoveryReplaysAbortedRevert (0.03s)
+=== RUN   TestRuntimeMetaLagRejectedNoFork
+--- PASS: TestRuntimeMetaLagRejectedNoFork (0.04s)
+=== RUN   TestImportResetConcurrentWithMemoryOps
+--- PASS: TestImportResetConcurrentWithMemoryOps (1.20s)
+=== RUN   TestImportInvalidatesInFlightInitTask
+--- PASS: TestImportInvalidatesInFlightInitTask (0.12s)
+=== RUN   TestInitTokenGuardsTerminalWrite
+--- PASS: TestInitTokenGuardsTerminalWrite (0.01s)
+=== RUN   TestInitGenerationInvalidatedByImport
+--- PASS: TestInitGenerationInvalidatedByImport (0.05s)
+=== RUN   TestInitLegacyProjectRejected
+--- PASS: TestInitLegacyProjectRejected (0.00s)
+=== RUN   TestInitKnowledgeNotReady
+--- PASS: TestInitKnowledgeNotReady (0.05s)
+=== RUN   TestInitZeroResultPartial
+--- PASS: TestInitZeroResultPartial (0.10s)
+=== RUN   TestInitBackfillMapping
+--- PASS: TestInitBackfillMapping (0.11s)
+=== RUN   TestInitIdempotentRerun
+--- PASS: TestInitIdempotentRerun (0.11s)
+=== RUN   TestInitManualEditProtected
+--- PASS: TestInitManualEditProtected (0.11s)
+=== RUN   TestInitReadyIdempotentRetry
+--- PASS: TestInitReadyIdempotentRetry (0.09s)
+=== RUN   TestStoryOrderRecalcOnDelete
+--- PASS: TestStoryOrderRecalcOnDelete (0.11s)
+=== RUN   TestInitDecodeFailureFailed
+--- PASS: TestInitDecodeFailureFailed (0.07s)
+=== RUN   TestInitAlreadyRunning
+--- PASS: TestInitAlreadyRunning (0.07s)
+=== RUN   TestLegacyToEndMemoryFlow
+--- PASS: TestLegacyToEndMemoryFlow (0.06s)
+=== RUN   TestMemoryMetaInitializedOnFirstAccess
+--- PASS: TestMemoryMetaInitializedOnFirstAccess (0.01s)
+=== RUN   TestMemoryCommitProtocol
+--- PASS: TestMemoryCommitProtocol (0.03s)
+=== RUN   TestMemoryCommitBaselineConflict
+--- PASS: TestMemoryCommitBaselineConflict (0.05s)
+=== RUN   TestMemoryRecoveryPrepared
+--- PASS: TestMemoryRecoveryPrepared (0.04s)
+=== RUN   TestMemoryRecoveryCommittedMetaWindow
+--- PASS: TestMemoryRecoveryCommittedMetaWindow (0.03s)
+=== RUN   TestMemoryRecoveryIdempotent
+--- PASS: TestMemoryRecoveryIdempotent (0.03s)
+=== RUN   TestMemorySafeStateOnBrokenChain
+--- PASS: TestMemorySafeStateOnBrokenChain (0.03s)
+=== RUN   TestMemorySafeStateOnCorruptCommits
+--- PASS: TestMemorySafeStateOnCorruptCommits (0.01s)
+=== RUN   TestSaveChapterNoOpShortCircuit
+--- PASS: TestSaveChapterNoOpShortCircuit (0.06s)
+=== RUN   TestSaveChapterChangeIncrements
+--- PASS: TestSaveChapterChangeIncrements (0.07s)
+=== RUN   TestSaveChapterLegacyRevisionCompat
+--- PASS: TestSaveChapterLegacyRevisionCompat (0.06s)
+=== RUN   TestLoadRepairsMetaFromChapterFile
+--- PASS: TestLoadRepairsMetaFromChapterFile (0.07s)
+=== RUN   TestChapterOrderHookFiresOnDelete
+--- PASS: TestChapterOrderHookFiresOnDelete (0.07s)
+=== RUN   TestChapterOrderHookNoOpWhenUnregistered
+--- PASS: TestChapterOrderHookNoOpWhenUnregistered (0.05s)
+=== RUN   TestChapterOrderHookFailureNotBlocking
+2026/10/22 16:06:01 store: chapter order hook failed (ignored): memory module simulated failure
+--- PASS: TestChapterOrderHookFailureNotBlocking (0.08s)
+=== RUN   TestChapterOrderHookErrorNotBlocking
+2026/10/22 16:06:01 store: chapter order hook failed (ignored): memory module simulated error
+--- PASS: TestChapterOrderHookErrorNotBlocking (0.07s)
+=== RUN   TestChapterOrderHookRegisterRace
+--- PASS: TestChapterOrderHookRegisterRace (2.97s)
+=== RUN   TestSaveChapterNoOpRepairsStaleMeta
+--- PASS: TestSaveChapterNoOpRepairsStaleMeta (0.07s)
+=== RUN   TestAppendChapterRevisionBaseline
+--- PASS: TestAppendChapterRevisionBaseline (0.06s)
+=== RUN   TestImportAndLoadChapters
+--- PASS: TestImportAndLoadChapters (0.05s)
+=== RUN   TestImportReplacesPreviousChapters
+--- PASS: TestImportReplacesPreviousChapters (0.10s)
+=== RUN   TestSaveChapterInvalidatesAnalysis
+--- PASS: TestSaveChapterInvalidatesAnalysis (0.10s)
+=== RUN   TestAppendAndDeleteChapter
+--- PASS: TestAppendAndDeleteChapter (0.06s)
+=== RUN   TestAnalysisRevisionGuard
+--- PASS: TestAnalysisRevisionGuard (0.07s)
+=== RUN   TestConfigRoundTrip
+--- PASS: TestConfigRoundTrip (0.01s)
+=== RUN   TestMigrateLegacyProject
+--- PASS: TestMigrateLegacyProject (0.02s)
+PASS
+ok  	novelagent/internal/store	16.424s

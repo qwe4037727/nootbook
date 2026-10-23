@@ -1,0 +1,86 @@
+=== RUN   TestMemoryOverviewEmpty
+--- PASS: TestMemoryOverviewEmpty (0.01s)
+=== RUN   TestMemoryInitializeStateMachine
+--- PASS: TestMemoryInitializeStateMachine (0.08s)
+=== RUN   TestMemoryCharacterEndpoint
+--- PASS: TestMemoryCharacterEndpoint (0.10s)
+=== RUN   TestMemoryInitializeRequestContract
+=== RUN   TestMemoryInitializeRequestContract/empty
+=== RUN   TestMemoryInitializeRequestContract/empty/reinitialize
+=== RUN   TestMemoryInitializeRequestContract/empty/string
+=== RUN   TestMemoryInitializeRequestContract/empty/number
+=== RUN   TestMemoryInitializeRequestContract/empty/null_field
+=== RUN   TestMemoryInitializeRequestContract/empty/unknown
+=== RUN   TestMemoryInitializeRequestContract/empty/null_object
+=== RUN   TestMemoryInitializeRequestContract/empty/array
+=== RUN   TestMemoryInitializeRequestContract/empty/malformed
+=== RUN   TestMemoryInitializeRequestContract/empty/trailing_object
+=== RUN   TestMemoryInitializeRequestContract/empty/trailing_garbage
+=== RUN   TestMemoryInitializeRequestContract/empty/oversize
+=== RUN   TestMemoryInitializeRequestContract/ready
+=== RUN   TestMemoryInitializeRequestContract/ready/reinitialize
+=== RUN   TestMemoryInitializeRequestContract/ready/string
+=== RUN   TestMemoryInitializeRequestContract/ready/number
+=== RUN   TestMemoryInitializeRequestContract/ready/null_field
+=== RUN   TestMemoryInitializeRequestContract/ready/unknown
+=== RUN   TestMemoryInitializeRequestContract/ready/null_object
+=== RUN   TestMemoryInitializeRequestContract/ready/array
+=== RUN   TestMemoryInitializeRequestContract/ready/malformed
+=== RUN   TestMemoryInitializeRequestContract/ready/trailing_object
+=== RUN   TestMemoryInitializeRequestContract/ready/trailing_garbage
+=== RUN   TestMemoryInitializeRequestContract/ready/oversize
+--- PASS: TestMemoryInitializeRequestContract (0.18s)
+    --- PASS: TestMemoryInitializeRequestContract/empty (0.02s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/reinitialize (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/string (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/number (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/null_field (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/unknown (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/null_object (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/array (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/malformed (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/trailing_object (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/trailing_garbage (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/empty/oversize (0.00s)
+    --- PASS: TestMemoryInitializeRequestContract/ready (0.16s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/reinitialize (0.01s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/string (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/number (0.01s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/null_field (0.01s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/unknown (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/null_object (0.01s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/array (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/malformed (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/trailing_object (0.00s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/trailing_garbage (0.01s)
+        --- PASS: TestMemoryInitializeRequestContract/ready/oversize (0.01s)
+=== RUN   TestMemoryReinitializeRejectedInEveryPhase
+=== RUN   TestMemoryReinitializeRejectedInEveryPhase/not_started
+=== RUN   TestMemoryReinitializeRejectedInEveryPhase/mapping
+=== RUN   TestMemoryReinitializeRejectedInEveryPhase/deep_extracting
+=== RUN   TestMemoryReinitializeRejectedInEveryPhase/failed
+=== RUN   TestMemoryReinitializeRejectedInEveryPhase/partial
+=== RUN   TestMemoryReinitializeRejectedInEveryPhase/ready
+--- PASS: TestMemoryReinitializeRejectedInEveryPhase (0.04s)
+    --- PASS: TestMemoryReinitializeRejectedInEveryPhase/not_started (0.01s)
+    --- PASS: TestMemoryReinitializeRejectedInEveryPhase/mapping (0.01s)
+    --- PASS: TestMemoryReinitializeRejectedInEveryPhase/deep_extracting (0.01s)
+    --- PASS: TestMemoryReinitializeRejectedInEveryPhase/failed (0.01s)
+    --- PASS: TestMemoryReinitializeRejectedInEveryPhase/partial (0.00s)
+    --- PASS: TestMemoryReinitializeRejectedInEveryPhase/ready (0.01s)
+=== RUN   TestMemoryInitializeJSONStartsAndResumes
+=== RUN   TestMemoryInitializeJSONStartsAndResumes/not_started{}
+=== RUN   TestMemoryInitializeJSONStartsAndResumes/not_started{"reinitialize":false}
+=== RUN   TestMemoryInitializeJSONStartsAndResumes/failed{}
+=== RUN   TestMemoryInitializeJSONStartsAndResumes/failed{"reinitialize":false}
+=== RUN   TestMemoryInitializeJSONStartsAndResumes/partial{}
+=== RUN   TestMemoryInitializeJSONStartsAndResumes/partial{"reinitialize":false}
+--- PASS: TestMemoryInitializeJSONStartsAndResumes (0.50s)
+    --- PASS: TestMemoryInitializeJSONStartsAndResumes/not_started{} (0.10s)
+    --- PASS: TestMemoryInitializeJSONStartsAndResumes/not_started{"reinitialize":false} (0.08s)
+    --- PASS: TestMemoryInitializeJSONStartsAndResumes/failed{} (0.08s)
+    --- PASS: TestMemoryInitializeJSONStartsAndResumes/failed{"reinitialize":false} (0.08s)
+    --- PASS: TestMemoryInitializeJSONStartsAndResumes/partial{} (0.08s)
+    --- PASS: TestMemoryInitializeJSONStartsAndResumes/partial{"reinitialize":false} (0.08s)
+PASS
+ok  	novelagent/internal/server	3.789s

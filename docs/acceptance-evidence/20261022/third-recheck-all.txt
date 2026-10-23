@@ -1,0 +1,8 @@
+?   	novelagent	[no test files]
+?   	novelagent/cmd/probe	[no test files]
+ok  	novelagent/internal/agent	0.120s
+ok  	novelagent/internal/analysis	0.740s
+ok  	novelagent/internal/llm	0.183s
+ok  	novelagent/internal/novel	0.073s
+ok  	novelagent/internal/server	1.459s
+ok  	novelagent/internal/store	7.753s
