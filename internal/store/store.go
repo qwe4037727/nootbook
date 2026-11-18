@@ -26,28 +26,10 @@ var (
 	ErrInvalidChapter  = errors.New("store: invalid chapter id")
 )
 
-// chapterOrderHook 为章节序号变化收尾回调（memory_model_spec.md §4.1.4 / R9 冻结，
-// 签名按 #3 审查意见 R10 携带 error 返回）：
-// 由记忆模块（#7）在服务启动阶段注册，默认 nil 零开销。
-// 调用点位于 store.mu 释放之后；回调返回 error 或 panic 均仅记录日志，
-// 不得阻断、不得回滚章节操作；回调内部不得调用 Store 的公共加锁方法（死锁防护）。
-// 注册与读取经 chapterOrderHookMu 互斥保护，避免运行期注册与章节写操作的数据竞争。
-var (
-	chapterOrderHookMu sync.RWMutex
-	chapterOrderHook   func(oldIndexes, newIndexes map[string]int) error
-)
-
-// RegisterChapterOrderHook 注册章节序号变化回调；约定仅在服务启动阶段（记忆模块初始化时）调用。
-func RegisterChapterOrderHook(fn func(oldIndexes, newIndexes map[string]int) error) {
-	chapterOrderHookMu.Lock()
-	defer chapterOrderHookMu.Unlock()
-	chapterOrderHook = fn
-}
-
-func notifyChapterOrderChanged(oldIndexes, newIndexes map[string]int) {
-	chapterOrderHookMu.RLock()
-	fn := chapterOrderHook
-	chapterOrderHookMu.RUnlock()
+// invokeChapterOrderHook 执行章节序号变化回调；返回 error 或 panic 均仅记录日志，
+// 不得阻断、不得回滚章节操作。调用点位于 store.mu 释放之后。
+// 回调内部不得调用 Store 的公共加锁方法（死锁防护）。
+func invokeChapterOrderHook(fn func(oldIndexes, newIndexes map[string]int) error, oldIndexes, newIndexes map[string]int) {
 	if fn == nil {
 		return
 	}
@@ -59,6 +41,20 @@ func notifyChapterOrderChanged(oldIndexes, newIndexes map[string]int) {
 	if err := fn(oldIndexes, newIndexes); err != nil {
 		log.Printf("store: chapter order hook failed (ignored): %v", err)
 	}
+}
+
+// notifyChapterOrderChanged 调用本 Store 的实例钩子；不同项目/Store 之间互不影响。
+func (s *Store) notifyChapterOrderChanged(oldIndexes, newIndexes map[string]int) {
+	s.orderHookMu.RLock()
+	local := s.orderHook
+	s.orderHookMu.RUnlock()
+	invokeChapterOrderHook(local, oldIndexes, newIndexes)
+}
+
+func (s *Store) setOrderHook(fn func(oldIndexes, newIndexes map[string]int) error) {
+	s.orderHookMu.Lock()
+	s.orderHook = fn
+	s.orderHookMu.Unlock()
 }
 
 // chapterOrderChanged 判断两次 ID→Index 映射是否存在差异（含新增/删除的 ID）。
@@ -113,6 +109,12 @@ func (c Config) EffectiveAPIKey() (string, bool) {
 type Store struct {
 	dir string
 	mu  sync.Mutex
+	// orderHook/orderHookMu 为实例级章节序号回调，避免多项目共享包级钩子串扰。
+	orderHookMu sync.RWMutex
+	orderHook   func(oldIndexes, newIndexes map[string]int) error
+	// changeHook/changeHookMu 为实例级章节变更事件钩子（Agent 运行时消费）。
+	changeHookMu sync.RWMutex
+	changeHook   ChapterChangeHook
 	// memoryMu 独立守护 data/memory/（spec §10/§4.1.4：与 store.mu 无嵌套；
 	// 需要两者数据的操作先取 store.mu 读、释放后再取 memoryMu 写）。
 	memoryMu sync.Mutex
@@ -161,9 +163,10 @@ func New(dir string) (*Store, error) {
 	// 重启后以当前章节真源全量对账一次，使"钩子失败 → 重启"闭环。
 	// 失败仅记日志，不阻断服务启动（与崩溃恢复的降级策略一致）。
 	s.reconcileStoryOrderOnStartup()
-	// 注册章节序号变化回调（R9/R11）：events.json 不存在/为空时重算自然 no-op，
-	// 行为等价于"记忆初始化完成后注册"且避免状态与注册时序耦合（docs/issues.md #3）。
-	RegisterChapterOrderHook(s.handleChapterOrderChanged)
+	// 章节序号变化的默认消费方为本 Store 实例（R9/R11）：events.json 不存在/为空时
+	// 重算自然 no-op，避免状态与注册时序耦合（docs/issues.md #3）。
+	// 实例级钩子保证多项目互不串扰。
+	s.orderHook = s.handleChapterOrderChanged
 	return s, nil
 }
 
@@ -198,6 +201,13 @@ func (s *Store) ImportChapters(title string, chapters []novel.Chapter) (novel.Pr
 		// HEAL-01：导入后同样走统一收尾通道（导入已重置记忆，对账自然 no-op），
 		// 保证章节集合变化后的记忆侧一律经由兜底对账 + 钩子通知。
 		s.afterChapterSetChanged(oldIndexes, newIndexes)
+	}
+	if err == nil {
+		s.notifyChapterChange(ChapterChange{
+			Kind:         ChaptersImported,
+			Title:        project.Title,
+			ChapterCount: len(project.Chapters),
+		})
 	}
 	return project, err
 }
@@ -366,7 +376,13 @@ func syncChapterMetaLocked(project *novel.Project, i int, chapter novel.Chapter)
 
 func (s *Store) SaveChapter(chapter novel.Chapter) (novel.Chapter, novel.Project, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	var change *ChapterChange
+	defer func() {
+		s.mu.Unlock()
+		if change != nil {
+			s.notifyChapterChange(*change)
+		}
+	}()
 
 	project, err := s.loadProjectLocked()
 	if err != nil {
@@ -436,6 +452,13 @@ func (s *Store) SaveChapter(chapter novel.Chapter) (novel.Chapter, novel.Project
 	if err := s.reconcileForChapter(chapter); err != nil {
 		log.Printf("store: chapter %s saved but evidence reconcile skipped (ignored): %v", chapter.ID, err)
 	}
+	change = &ChapterChange{
+		Kind:      ChapterSaved,
+		ChapterID: chapter.ID,
+		Title:     chapter.Title,
+		Index:     chapter.Index,
+		CharCount: chapter.CharCount,
+	}
 	return chapter, project, nil
 }
 
@@ -450,6 +473,16 @@ func (s *Store) AppendChapter(title, content string) (novel.Chapter, novel.Proje
 		if err := s.reconcileStoryOrderFromSource(); err != nil {
 			log.Printf("store: chapter appended but story order reconcile failed (ignored): %v", err)
 		}
+	}
+	if err == nil {
+		s.notifyChapterChange(ChapterChange{
+			Kind:         ChapterCreated,
+			ChapterID:    chapter.ID,
+			Title:        chapter.Title,
+			Index:        chapter.Index,
+			CharCount:    chapter.CharCount,
+			ChapterCount: len(project.Chapters),
+		})
 	}
 	return chapter, project, err
 }
@@ -509,7 +542,7 @@ func (s *Store) afterChapterSetChanged(oldIndexes, newIndexes map[string]int) {
 	if err := s.reconcileStoryOrderFromSource(); err != nil {
 		log.Printf("store: chapter set changed but story order reconcile failed (ignored): %v", err)
 	}
-	notifyChapterOrderChanged(oldIndexes, newIndexes)
+	s.notifyChapterOrderChanged(oldIndexes, newIndexes)
 }
 
 func (s *Store) DeleteChapter(id string) (novel.Project, error) {
@@ -520,6 +553,13 @@ func (s *Store) DeleteChapter(id string) (novel.Project, error) {
 		// R9：回调在锁释放后执行，失败不阻断、不回滚章节删除。
 		// HEAL-01：先由 store 自身兜底对账（钩子失败/未注册时的自愈通道）。
 		s.afterChapterSetChanged(oldIndexes, newIndexes)
+	}
+	if err == nil {
+		s.notifyChapterChange(ChapterChange{
+			Kind:         ChapterDeleted,
+			ChapterID:    id,
+			ChapterCount: len(project.Chapters),
+		})
 	}
 	return project, err
 }

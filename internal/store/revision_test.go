@@ -10,17 +10,6 @@ import (
 	"novelagent/internal/novel"
 )
 
-// resetHook 恢复包级钩子，避免测试间相互污染（chapterOrderHook 为包级全局，注册经互斥保护）。
-func resetHook(t *testing.T) {
-	t.Helper()
-	chapterOrderHookMu.RLock()
-	previous := chapterOrderHook
-	chapterOrderHookMu.RUnlock()
-	t.Cleanup(func() {
-		RegisterChapterOrderHook(previous)
-	})
-}
-
 // TestSaveChapterNoOpShortCircuit 覆盖 U2：无变化保存 → 零写入、版本全不递增、Analysis 不回退。
 func TestSaveChapterNoOpShortCircuit(t *testing.T) {
 	st, _ := newTestStore(t)
@@ -202,7 +191,6 @@ func TestLoadRepairsMetaFromChapterFile(t *testing.T) {
 
 // TestChapterOrderHookFiresOnDelete 覆盖 U17：删除中间章 → 回调收到 old/new ID→Index 快照。
 func TestChapterOrderHookFiresOnDelete(t *testing.T) {
-	resetHook(t)
 	st, _ := newTestStore(t)
 	project, err := st.ImportChapters("书", []novel.Chapter{
 		{Title: "一", Content: "一。"},
@@ -215,7 +203,7 @@ func TestChapterOrderHookFiresOnDelete(t *testing.T) {
 
 	var gotOld, gotNew map[string]int
 	called := false
-	RegisterChapterOrderHook(func(oldIndexes, newIndexes map[string]int) error {
+	st.setOrderHook(func(oldIndexes, newIndexes map[string]int) error {
 		called = true
 		gotOld = oldIndexes
 		gotNew = newIndexes
@@ -238,10 +226,8 @@ func TestChapterOrderHookFiresOnDelete(t *testing.T) {
 	}
 }
 
-// TestChapterOrderHookNoOpWhenUnregistered 覆盖 U17 零开销路径：未注册回调 → 章节操作不受影响。
+// TestChapterOrderHookNoOpWhenUnregistered 覆盖 U17 零开销路径：默认回调对无事件章节为 no-op → 章节操作不受影响。
 func TestChapterOrderHookNoOpWhenUnregistered(t *testing.T) {
-	resetHook(t)
-	RegisterChapterOrderHook(nil)
 	st, _ := newTestStore(t)
 	project, err := st.ImportChapters("书", []novel.Chapter{{Title: "一", Content: "一。"}, {Title: "二", Content: "二。"}})
 	if err != nil {
@@ -258,13 +244,12 @@ func TestChapterOrderHookNoOpWhenUnregistered(t *testing.T) {
 
 // TestChapterOrderHookFailureNotBlocking 覆盖 U34：回调 panic → 仅记日志，章节操作成功返回。
 func TestChapterOrderHookFailureNotBlocking(t *testing.T) {
-	resetHook(t)
 	st, _ := newTestStore(t)
 	project, err := st.ImportChapters("书", []novel.Chapter{{Title: "一", Content: "一。"}, {Title: "二", Content: "二。"}})
 	if err != nil {
 		t.Fatalf("import: %v", err)
 	}
-	RegisterChapterOrderHook(func(oldIndexes, newIndexes map[string]int) error {
+	st.setOrderHook(func(oldIndexes, newIndexes map[string]int) error {
 		panic("memory module simulated failure")
 	})
 	updated, err := st.DeleteChapter(project.Chapters[0].ID)
@@ -278,13 +263,12 @@ func TestChapterOrderHookFailureNotBlocking(t *testing.T) {
 
 // TestChapterOrderHookErrorNotBlocking 覆盖 U34（R10）：回调返回 error → 仅记日志，章节操作成功返回。
 func TestChapterOrderHookErrorNotBlocking(t *testing.T) {
-	resetHook(t)
 	st, _ := newTestStore(t)
 	project, err := st.ImportChapters("书", []novel.Chapter{{Title: "一", Content: "一。"}, {Title: "二", Content: "二。"}})
 	if err != nil {
 		t.Fatalf("import: %v", err)
 	}
-	RegisterChapterOrderHook(func(oldIndexes, newIndexes map[string]int) error {
+	st.setOrderHook(func(oldIndexes, newIndexes map[string]int) error {
 		return errors.New("memory module simulated error")
 	})
 	updated, err := st.DeleteChapter(project.Chapters[0].ID)
@@ -296,17 +280,48 @@ func TestChapterOrderHookErrorNotBlocking(t *testing.T) {
 	}
 }
 
+// TestChapterOrderHookIsPerStore 覆盖多项目隔离：一个 Store 的序号回调不会被另一个 Store 触发。
+func TestChapterOrderHookIsPerStore(t *testing.T) {
+	first, _ := newTestStore(t)
+	second, _ := newTestStore(t)
+	firstProject, err := first.ImportChapters("甲", []novel.Chapter{{Title: "一", Content: "一。"}, {Title: "二", Content: "二。"}})
+	if err != nil {
+		t.Fatalf("import first: %v", err)
+	}
+	if _, err := second.ImportChapters("乙", []novel.Chapter{{Title: "一", Content: "一。"}}); err != nil {
+		t.Fatalf("import second: %v", err)
+	}
+
+	firstCalls, secondCalls := 0, 0
+	first.setOrderHook(func(oldIndexes, newIndexes map[string]int) error {
+		firstCalls++
+		return nil
+	})
+	second.setOrderHook(func(oldIndexes, newIndexes map[string]int) error {
+		secondCalls++
+		return nil
+	})
+	if _, err := first.DeleteChapter(firstProject.Chapters[0].ID); err != nil {
+		t.Fatalf("delete first: %v", err)
+	}
+	if firstCalls != 1 {
+		t.Fatalf("first hook calls = %d, want 1", firstCalls)
+	}
+	if secondCalls != 0 {
+		t.Fatalf("second hook calls = %d, want 0", secondCalls)
+	}
+}
+
 // TestChapterOrderHookRegisterRace 覆盖 R11 并发保护：运行期注册与章节写操作并发无数据竞争（配合 -race 验证）。
 func TestChapterOrderHookRegisterRace(t *testing.T) {
-	resetHook(t)
 	st, _ := newTestStore(t)
-	RegisterChapterOrderHook(func(oldIndexes, newIndexes map[string]int) error { return nil })
+	st.setOrderHook(func(oldIndexes, newIndexes map[string]int) error { return nil })
 
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		for i := 0; i < 50; i++ {
-			RegisterChapterOrderHook(func(oldIndexes, newIndexes map[string]int) error { return nil })
+			st.setOrderHook(func(oldIndexes, newIndexes map[string]int) error { return nil })
 		}
 	}()
 	for i := 0; i < 50; i++ {

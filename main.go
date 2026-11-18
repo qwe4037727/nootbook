@@ -14,9 +14,8 @@ import (
 	"os/signal"
 	"time"
 
-	"novelagent/internal/analysis"
-	"novelagent/internal/server"
-	"novelagent/internal/store"
+	"novelagent/internal/app"
+	"novelagent/internal/project"
 )
 
 //go:embed web
@@ -39,7 +38,7 @@ func run(addr, dataDir string, logger *slog.Logger) error {
 	if err != nil {
 		return fmt.Errorf("load embedded web assets: %w", err)
 	}
-	st, err := store.New(dataDir)
+	projects, err := project.NewManager(dataDir, logger)
 	if err != nil {
 		return err
 	}
@@ -52,14 +51,13 @@ func run(addr, dataDir string, logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	manager := analysis.NewManager(st, logger)
-	manager.Start(ctx)
-	defer manager.Stop()
-
-	extractor := analysis.NewExtractLauncher(st, logger)
+	if err := projects.Start(ctx); err != nil {
+		return fmt.Errorf("start projects: %w", err)
+	}
+	defer projects.Stop()
 
 	httpServer := &http.Server{
-		Handler:           server.New(st, staticFS, logger, manager, extractor),
+		Handler:           app.NewRouter(projects, staticFS, logger),
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
