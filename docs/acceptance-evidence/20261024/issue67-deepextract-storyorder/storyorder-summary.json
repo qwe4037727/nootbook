@@ -1,0 +1,191 @@
+{
+  "sourceDirUntouched": true,
+  "probeDir": "output/storyorder-probe-data",
+  "port": "8097",
+  "binary": "./output/novelagent-storyorder.exe",
+  "chaptersInProject": 8,
+  "before": {
+    "revision": 5,
+    "commits": 5,
+    "deepExtract": [
+      {
+        "id": "evt_941aad80d53ae04ebd",
+        "storyOrder": 0,
+        "chapterId": "ch_c54e47d84c77d96ee9",
+        "origin": "deep_extract",
+        "status": "confirmed",
+        "needsReview": true,
+        "reviewReason": "evidence_stale",
+        "recordVersion": 2,
+        "summary": "林砚在县衙外握紧青玉符"
+      }
+    ]
+  },
+  "after": {
+    "revision": 6,
+    "commits": 6,
+    "deepExtract": [
+      {
+        "id": "evt_941aad80d53ae04ebd",
+        "storyOrder": 3,
+        "chapterId": "ch_c54e47d84c77d96ee9",
+        "origin": "deep_extract",
+        "status": "confirmed",
+        "needsReview": true,
+        "reviewReason": "evidence_stale",
+        "recordVersion": 2,
+        "summary": "林砚在县衙外握紧青玉符"
+      }
+    ]
+  },
+  "newCommits": [
+    {
+      "type": "reconcile",
+      "status": "committed"
+    }
+  ],
+  "apiMemoryKeys": [
+    "workId",
+    "schemaVersion",
+    "memoryRevision",
+    "lastCommitId",
+    "initStatus",
+    "counts",
+    "safeState"
+  ],
+  "apiStoryOrders": {},
+  "previewMeta": {
+    "records": 0
+  },
+  "stderr": "time=2026-11-02T15:47:42.317+08:00 level=INFO msg=\"novel agent is ready\" url=http://127.0.0.1:8097 data=output/storyorder-probe-data\n",
+  "afterFull": {
+    "revision": 6,
+    "commits": [
+      {
+        "type": "initialize",
+        "status": "committed"
+      },
+      {
+        "type": "formal",
+        "status": "committed"
+      },
+      {
+        "type": "formal",
+        "status": "committed"
+      },
+      {
+        "type": "manual_fix",
+        "status": "committed"
+      },
+      {
+        "type": "reconcile",
+        "status": "committed"
+      },
+      {
+        "type": "reconcile",
+        "status": "committed"
+      }
+    ],
+    "events": [
+      {
+        "id": "evt_95cc092569aac6ebc6",
+        "storyOrder": 1,
+        "chapterId": "ch_1a7bb416fccb27c35b",
+        "origin": "backfill",
+        "status": "proposed",
+        "needsReview": true,
+        "reviewReason": "",
+        "recordVersion": 1,
+        "summary": "本章里林砚在县衙外停留，握紧青玉符并想起三年前的旧案。"
+      },
+      {
+        "id": "evt_a64112dae12f7a3447",
+        "storyOrder": 2,
+        "chapterId": "ch_400e9af67c64eafb3b",
+        "origin": "backfill",
+        "status": "proposed",
+        "needsReview": true,
+        "reviewReason": "",
+        "recordVersion": 1,
+        "summary": "本章里林砚在县衙外停留，握紧青玉符并想起三年前的旧案。"
+      },
+      {
+        "id": "evt_a8aaef0556a4bb5f2e",
+        "storyOrder": 3,
+        "chapterId": "ch_c54e47d84c77d96ee9",
+        "origin": "backfill",
+        "status": "proposed",
+        "needsReview": true,
+        "reviewReason": "",
+        "recordVersion": 1,
+        "summary": "本章里林砚在县衙外停留，握紧青玉符并想起三年前的旧案。"
+      },
+      {
+        "id": "evt_437774e17bf9896aca",
+        "storyOrder": 4,
+        "chapterId": "ch_0102f81e6a9d3bb4ec",
+        "origin": "backfill",
+        "status": "proposed",
+        "needsReview": true,
+        "reviewReason": "",
+        "recordVersion": 1,
+        "summary": "本章里林砚在县衙外停留，握紧青玉符并想起三年前的旧案。"
+      },
+      {
+        "id": "evt_106894b93e3d39f517",
+        "storyOrder": 5,
+        "chapterId": "ch_9a31000fe69f8fadf2",
+        "origin": "backfill",
+        "status": "proposed",
+        "needsReview": true,
+        "reviewReason": "",
+        "recordVersion": 1,
+        "summary": "本章里林砚在县衙外停留，握紧青玉符并想起三年前的旧案。"
+      },
+      {
+        "id": "evt_f51260b8a536e09896",
+        "storyOrder": 6,
+        "chapterId": "ch_f828e2c32b3ab5a283",
+        "origin": "backfill",
+        "status": "proposed",
+        "needsReview": true,
+        "reviewReason": "",
+        "recordVersion": 1,
+        "summary": "本章里林砚在县衙外停留，握紧青玉符并想起三年前的旧案。"
+      },
+      {
+        "id": "evt_ae3981058e8e94b596",
+        "storyOrder": 7,
+        "chapterId": "ch_777fe07efbf14c7f0a",
+        "origin": "backfill",
+        "status": "proposed",
+        "needsReview": true,
+        "reviewReason": "",
+        "recordVersion": 1,
+        "summary": "本章里林砚在县衙外停留，握紧青玉符并想起三年前的旧案。"
+      },
+      {
+        "id": "evt_fb2e6928bedf210251",
+        "storyOrder": 8,
+        "chapterId": "ch_2b167c9c6e84fa1373",
+        "origin": "backfill",
+        "status": "proposed",
+        "needsReview": true,
+        "reviewReason": "",
+        "recordVersion": 1,
+        "summary": "本章里林砚在县衙外停留，握紧青玉符并想起三年前的旧案。"
+      },
+      {
+        "id": "evt_941aad80d53ae04ebd",
+        "storyOrder": 3,
+        "chapterId": "ch_c54e47d84c77d96ee9",
+        "origin": "deep_extract",
+        "status": "confirmed",
+        "needsReview": true,
+        "reviewReason": "evidence_stale",
+        "recordVersion": 2,
+        "summary": "林砚在县衙外握紧青玉符"
+      }
+    ]
+  }
+}

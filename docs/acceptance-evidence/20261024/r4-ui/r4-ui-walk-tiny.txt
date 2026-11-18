@@ -1,0 +1,7 @@
+tiny_forced_on_with_memory_headings => ["已激活计划（1 条，仅约束走向）","人物当前状态","人物认知","未解决伏笔","关键事件","近期计划"]
+tiny_forced_on_with_memory_recall_group => false
+tiny_forced_on_with_memory_foot => "已用 242 / 3,000 字 · 检索 7 条 · 待复核跳过 1 条 · revision 12 · 计划 1 条 · 已要求前文召回但无注入：旧章节没有命中片段，或正文窗口不让位"
+tiny_all_off_empty_text => "记忆注入与计划对齐均已关闭，前文也没有可召回的片段。 已要求前文召回但无注入：旧章节没有命中片段，或正文窗口不让位。"
+tiny_continue_note => "已连接 · 带入正文 2,166 字 · 记忆 7 条 · 242 字 · 待复核跳过 1 条 · 计划 1 条"
+tiny_continue_toasts => ["前文召回已强制开启；不满 20 章也会检索","已要求前文召回，但本次没有注入：旧章节没有命中片段，或正文窗口不让位"]
+console_errors => []

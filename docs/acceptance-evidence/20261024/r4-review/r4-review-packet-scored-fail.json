@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "caseId": "r4-review-selftest",
+  "title": "R4 召回开关盲评自测（合成）",
+  "axis": "recall",
+  "seed": 20261024,
+  "createdAt": "2026-10-24T03:34:49.6466715Z",
+  "instructions": "X/Y 为同一停点的两版续写，顺序随机，两版仅「前文相关片段」历史召回开关不同（记忆与其他设置一致）。请按 mustLand 三态（landed/summarized/missing）与 mustNot（clear/flagged）逐条评分，并填写人设崩坏、吞伏笔、失忆次数、未授权事实与偏好。评分完成前不要查看 key 文件。",
+  "stops": [
+    {
+      "name": "early",
+      "afterChapter": 22,
+      "direction": "继续追查青玉符的来历。",
+      "x": "雨还没停，林砚先把那半枚青玉符贴身收好。符上的旧朝年号被摩得发亮，像有人年年都在擦它。",
+      "y": "雨还没停，林砚在骑楼下站了半晌。街对面的当铺亮着灯，他把帽檐压低，先去看那扇半掩的门。",
+      "mustLand": [
+        {
+          "text": "青玉符",
+          "x": "landed",
+          "y": "missing"
+        }
+      ],
+      "mustNot": [
+        {
+          "text": "青玉符从未出现过",
+          "x": "clear",
+          "y": "flagged"
+        }
+      ],
+      "score": {
+        "preference": "y",
+        "xUnauthorized": [
+          "青玉符"
+        ]
+      }
+    },
+    {
+      "name": "middle",
+      "afterChapter": 31,
+      "direction": "让青玉符在第 3 章埋设的旧朝年号再次成为线索。",
+      "x": "当铺老板的目光落在他袖口——那里露出半枚青玉符，刻着旧朝年号。老板的手抖了一下，账本掉在柜台上。",
+      "y": "当铺老板听完他的来意，只把账本推过来。纸页间夹着一枚铜钱，年份被磨得看不清，像有人刻意刮过。",
+      "mustLand": [
+        {
+          "text": "青玉符",
+          "x": "landed",
+          "y": "missing"
+        }
+      ],
+      "mustNot": [
+        {
+          "text": "青玉符从未出现过",
+          "x": "clear",
+          "y": "flagged"
+        }
+      ],
+      "score": {
+        "preference": "y"
+      }
+    },
+    {
+      "name": "late",
+      "afterChapter": 40,
+      "direction": "继续追查青玉符的来历，让它在章末再次出现。",
+      "x": "拓片摊在灯下，缺角处被人剪得干净。他想起账房那句“器物另有登记”，便决定明日再去问一次。",
+      "y": "他把青玉符按在拓片上，年号的笔画严丝合缝。原来第 11 章那页被撕掉的账，记的就是同一批器物。",
+      "mustLand": [
+        {
+          "text": "青玉符",
+          "y": "landed",
+          "x": "missing"
+        }
+      ],
+      "mustNot": [
+        {
+          "text": "青玉符从未出现过",
+          "y": "clear",
+          "x": "flagged"
+        }
+      ],
+      "score": {
+        "preference": "x"
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "caseId": "g8-review-selftest",
+  "seed": 20261023,
+  "stops": [
+    {
+      "name": "early",
+      "memoryOn": "y"
+    },
+    {
+      "name": "middle",
+      "memoryOn": "y"
+    },
+    {
+      "name": "late",
+      "memoryOn": "x"
+    }
+  ]
+}

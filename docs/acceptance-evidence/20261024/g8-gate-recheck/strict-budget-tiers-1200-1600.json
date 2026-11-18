@@ -1,0 +1,349 @@
+{
+  "schemaVersion": 1,
+  "caseId": "longform-synthetic-v1",
+  "title": "长篇回归样例（合成 40 章）",
+  "description": "确定性合成长篇 + 记忆夹具；用于预算、成本与停点回归，不评价文笔。",
+  "mode": "dry_run",
+  "generatedAt": "2026-11-02T07:32:55.3001743Z",
+  "source": {
+    "kind": "synthetic",
+    "title": "长篇回归样例（合成 40 章）",
+    "chapters": 40,
+    "chars": 41520
+  },
+  "pricing": {
+    "inputPerMillion": 0,
+    "outputPerMillion": 0,
+    "currency": "USD"
+  },
+  "stops": [
+    {
+      "name": "early@ctx1200",
+      "afterChapter": 10,
+      "contextChars": 1200,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "早期停点用于验证正文截断与预算；记忆夹具是当前快照，不做历史回放。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 0,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "revision": 0
+      },
+      "recall": {
+        "requested": "auto",
+        "enabled": false,
+        "autoEligible": false,
+        "budgetChars": 0,
+        "injectedChars": 0,
+        "hits": 0,
+        "chapters": []
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 1143,
+        "totalChars": 1570,
+        "limitChars": 1200,
+        "manuscriptChars": 875,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 95.25,
+        "sections": {
+          "characters": 0,
+          "manuscript": 893,
+          "memories": 0,
+          "overview": 55,
+          "plans": 0,
+          "recall": 0,
+          "summaries": 0,
+          "world": 0
+        },
+        "inputTokens": 1544
+      },
+      "cost": {
+        "inputTokens": 1544,
+        "outputTokens": 800,
+        "inputCost": 0,
+        "outputCost": 0,
+        "totalCost": 0,
+        "currency": "USD",
+        "priced": false
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "左臂旧伤",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "unjudged",
+          "judgment": ""
+        }
+      ]
+    },
+    {
+      "name": "early@ctx1600",
+      "afterChapter": 10,
+      "contextChars": 1600,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "早期停点用于验证正文截断与预算；记忆夹具是当前快照，不做历史回放。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 0,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "revision": 0
+      },
+      "recall": {
+        "requested": "auto",
+        "enabled": false,
+        "autoEligible": false,
+        "budgetChars": 0,
+        "injectedChars": 0,
+        "hits": 0,
+        "chapters": []
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 1575,
+        "totalChars": 2002,
+        "limitChars": 1600,
+        "manuscriptChars": 1307,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 98.4375,
+        "sections": {
+          "characters": 0,
+          "manuscript": 1325,
+          "memories": 0,
+          "overview": 55,
+          "plans": 0,
+          "recall": 0,
+          "summaries": 0,
+          "world": 0
+        },
+        "inputTokens": 1970
+      },
+      "cost": {
+        "inputTokens": 1970,
+        "outputTokens": 800,
+        "inputCost": 0,
+        "outputCost": 0,
+        "totalCost": 0,
+        "currency": "USD",
+        "priced": false
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "左臂旧伤",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "unjudged",
+          "judgment": ""
+        }
+      ]
+    },
+    {
+      "name": "late@ctx1200",
+      "afterChapter": 40,
+      "contextChars": 1200,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "后期停点：正文窗口覆盖不到第 3 章时，应靠记忆与摘要维持设定。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 0,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "revision": 0
+      },
+      "recall": {
+        "requested": "auto",
+        "enabled": false,
+        "autoEligible": false,
+        "budgetChars": 0,
+        "injectedChars": 0,
+        "hits": 0,
+        "chapters": []
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 1164,
+        "totalChars": 1591,
+        "limitChars": 1200,
+        "manuscriptChars": 896,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 97,
+        "sections": {
+          "characters": 0,
+          "manuscript": 914,
+          "memories": 0,
+          "overview": 55,
+          "plans": 0,
+          "recall": 0,
+          "summaries": 0,
+          "world": 0
+        },
+        "inputTokens": 1566
+      },
+      "cost": {
+        "inputTokens": 1566,
+        "outputTokens": 800,
+        "inputCost": 0,
+        "outputCost": 0,
+        "totalCost": 0,
+        "currency": "USD",
+        "priced": false
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "青玉符",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_land",
+          "text": "左臂旧伤",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "沈青禾已经死亡",
+          "hint": "unjudged",
+          "judgment": ""
+        }
+      ]
+    },
+    {
+      "name": "late@ctx1600",
+      "afterChapter": 40,
+      "contextChars": 1600,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "后期停点：正文窗口覆盖不到第 3 章时，应靠记忆与摘要维持设定。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 0,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "revision": 0
+      },
+      "recall": {
+        "requested": "auto",
+        "enabled": false,
+        "autoEligible": false,
+        "budgetChars": 0,
+        "injectedChars": 0,
+        "hits": 0,
+        "chapters": []
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 1578,
+        "totalChars": 2005,
+        "limitChars": 1600,
+        "manuscriptChars": 1310,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 98.625,
+        "sections": {
+          "characters": 0,
+          "manuscript": 1328,
+          "memories": 0,
+          "overview": 55,
+          "plans": 0,
+          "recall": 0,
+          "summaries": 0,
+          "world": 0
+        },
+        "inputTokens": 1975
+      },
+      "cost": {
+        "inputTokens": 1975,
+        "outputTokens": 800,
+        "inputCost": 0,
+        "outputCost": 0,
+        "totalCost": 0,
+        "currency": "USD",
+        "priced": false
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "青玉符",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_land",
+          "text": "左臂旧伤",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "沈青禾已经死亡",
+          "hint": "unjudged",
+          "judgment": ""
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "stops": 4,
+    "inputTokens": 7055,
+    "outputTokens": 3200,
+    "totalCost": 0,
+    "currency": "USD",
+    "priced": false,
+    "maxUserBudgetPct": 98.625,
+    "memoryInjectedStops": 0,
+    "recallInjectedStops": 0,
+    "overBudgetStops": 0
+  }
+}

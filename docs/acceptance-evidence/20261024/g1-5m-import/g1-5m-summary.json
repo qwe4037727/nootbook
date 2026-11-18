@@ -1,0 +1,382 @@
+{
+  "harness": "output/g1_5m_harness.mjs",
+  "note": "Numbers only. Corpus is program-generated template prose, not any published work.",
+  "corpus": {
+    "chapters": 500,
+    "runes": 4966490,
+    "bytesUtf8": 14789682,
+    "targetRunes": 5000000
+  },
+  "steps": {
+    "import": {
+      "status": 200,
+      "ms": 20257,
+      "bytes": 72941,
+      "contentLengthHeader": null,
+      "json": {
+        "project": {
+          "title": "G1 五百万字合成长篇",
+          "chapters": {
+            "omitted": "500 条章节元数据原样存在于运行期响应中，此处只保留计数与极值",
+            "count": 500,
+            "charCountTotal": 4959708,
+            "minChars": 9900,
+            "maxChars": 9950,
+            "firstId": "ch_7da2a34bf0d68b8c75",
+            "lastId": "ch_71b131b8d9c1d75922",
+            "allRevisionOne": true
+          },
+          "analysis": {
+            "status": "pending",
+            "analyzedCount": 0,
+            "totalCount": 500,
+            "updatedAt": "2026-10-24T05:05:58.9107803Z"
+          },
+          "updatedAt": "2026-10-24T05:05:58.9107803Z"
+        },
+        "importedChapters": 500,
+        "importedChars": 4959708
+      }
+    },
+    "project": {
+      "status": 200,
+      "ms": 36,
+      "bytes": 72917,
+      "contentLengthHeader": null,
+      "json": {
+        "title": "G1 五百万字合成长篇",
+        "chapters": {
+          "omitted": "500 条章节元数据原样存在于运行期响应中，此处只保留计数与极值",
+          "count": 500,
+          "charCountTotal": 4959708,
+          "minChars": 9900,
+          "maxChars": 9950,
+          "firstId": "ch_7da2a34bf0d68b8c75",
+          "lastId": "ch_71b131b8d9c1d75922",
+          "allRevisionOne": true
+        },
+        "analysis": {
+          "status": "error",
+          "analyzedCount": 0,
+          "totalCount": 500,
+          "message": "请先完成模型设置",
+          "updatedAt": "2026-10-24T05:06:18.8080443Z"
+        },
+        "updatedAt": "2026-10-24T05:06:18.8080443Z"
+      }
+    },
+    "projectSummary": {
+      "status": 200,
+      "title": "G1 五百万字合成长篇",
+      "chapterCount": 500,
+      "charCountTotal": 4959708,
+      "analysisStatus": "error",
+      "firstChapterId": "ch_7da2a34bf0d68b8c75",
+      "firstChapterChars": 9920
+    },
+    "chapterOne": {
+      "status": 200,
+      "ms": 3,
+      "bytes": 29841,
+      "contentLengthHeader": null,
+      "json": {
+        "id": "ch_7da2a34bf0d68b8c75",
+        "index": 1,
+        "title": "第1章 抄本1",
+        "content": {
+          "omitted": "章节正文为程序合成模板句，不入库；只保留计量",
+          "chars": 9920,
+          "hasClue": false,
+          "head": "她把账册合上，指尖停在封口的绳结处久久没有动。雨"
+        },
+        "charCount": 9920,
+        "revision": 1,
+        "updatedAt": "2026-10-24T05:05:58.9107803Z"
+      }
+    },
+    "chapterClueOwner": {
+      "status": 200,
+      "ms": 4,
+      "bytes": 29931,
+      "contentLengthHeader": null,
+      "json": {
+        "id": "ch_89c8e5f5fd7a8ce79d",
+        "index": 7,
+        "title": "第7章 抄本7",
+        "content": {
+          "omitted": "章节正文为程序合成模板句，不入库；只保留计量",
+          "chars": 9950,
+          "hasClue": true,
+          "head": "码头的风把缆绳吹得笔直，船家蹲在船头默不作声。桥"
+        },
+        "charCount": 9950,
+        "revision": 1,
+        "updatedAt": "2026-10-24T05:05:58.9107803Z"
+      }
+    },
+    "chapterHit": {
+      "requestedIndex": 7,
+      "requestedTitle": "第7章 抄本7",
+      "bodyHasClue": true,
+      "bodyChars": 9950
+    },
+    "putConfig": {
+      "status": 200,
+      "ms": 99,
+      "bytes": 144,
+      "contentLengthHeader": "144",
+      "json": {
+        "baseUrl": "http://127.0.0.1:9/chapters/v1",
+        "model": "gpt-5.6-sol",
+        "contextChars": 12000,
+        "hasApiKey": false,
+        "apiKeyHint": "",
+        "apiKeyFromEnv": false
+      }
+    },
+    "previewRecallOn": {
+      "msEach": [
+        1531,
+        1393,
+        1146
+      ],
+      "status": 200,
+      "recallEnabled": true,
+      "recallBudgetChars": 800,
+      "recallUsedChars": 103,
+      "recallHits": 1,
+      "recallChapters": [
+        7
+      ],
+      "recallSectionHasClue": true,
+      "manuscriptChars": 8200,
+      "promptTotalChars": 8973,
+      "promptOverBudget": false,
+      "sections": {
+        "characters": 0,
+        "manuscript": 8218,
+        "memories": 0,
+        "overview": 0,
+        "plans": 0,
+        "recall": 103,
+        "summaries": 0,
+        "world": 0
+      },
+      "memoryEnabled": false,
+      "memoryBudgetChars": 3000,
+      "memoryUsedChars": 0,
+      "memoryCounts": {
+        "states": 0,
+        "events": 0,
+        "threads": 0,
+        "cognitions": 0,
+        "plans": 0
+      },
+      "memoryRevision": 0,
+      "planCount": 0,
+      "disabledReason": "memory_absent"
+    },
+    "previewRecallOff": {
+      "ms": 393,
+      "recallEnabled": false,
+      "recallUsedChars": 0,
+      "manuscriptChars": 9000,
+      "promptTotalChars": 9574
+    },
+    "previewVagueDirection": {
+      "ms": 1277,
+      "recallEnabled": false,
+      "recallUsedChars": 0,
+      "recallHits": 0,
+      "manuscriptChars": 9000
+    },
+    "overCapImport": {
+      "status": 400,
+      "ms": 223,
+      "bytes": 57,
+      "contentLengthHeader": "57",
+      "json": {
+        "error": "文稿太大，请控制在 500 万字以内"
+      }
+    },
+    "overCapReadBack": {
+      "status": 200,
+      "ms": 2,
+      "contentLengthHeader": null,
+      "json": {
+        "title": "G1 五百万字合成长篇",
+        "chapters": {
+          "omitted": "500 条章节元数据原样存在于运行期响应中，此处只保留计数与极值",
+          "count": 500,
+          "charCountTotal": 4959708,
+          "minChars": 9900,
+          "maxChars": 9950,
+          "firstId": "ch_7da2a34bf0d68b8c75",
+          "lastId": "ch_71b131b8d9c1d75922",
+          "allRevisionOne": true
+        },
+        "analysis": {
+          "status": "error",
+          "analyzedCount": 0,
+          "totalCount": 500,
+          "message": "分析中断，请检查模型设置后重试",
+          "updatedAt": "2026-10-24T05:06:19.3248066Z"
+        },
+        "updatedAt": "2026-10-24T05:06:19.3248066Z"
+      }
+    },
+    "overCap": {
+      "status": 400,
+      "message": "文稿太大，请控制在 500 万字以内",
+      "titleAfter": "G1 五百万字合成长篇",
+      "chapterCountAfter": 500
+    },
+    "dataDir": {
+      "total": 14975582,
+      "files": 514
+    }
+  },
+  "derived": {
+    "importThroughputRunesPerSecond": 245174,
+    "previewBaselineNoRecallMs": 393,
+    "previewWithRecallMs": [
+      1531,
+      1393,
+      1146
+    ],
+    "previewVagueDirectionMs": 1277,
+    "recallCostMsRange": [
+      753,
+      1138
+    ],
+    "manuscriptWindowLossChars": 800,
+    "promptCharsDeltaOnVsOff": -601,
+    "dataDirBytesPerRune": 3.02,
+    "noteOnVague": "模糊方向（0 注入）耗时 1277ms，接近开召回的 1146–1531ms：检索开销主要在建索引，闸门只省下注入字数，不省下时间。"
+  },
+  "tierSweep": {
+    "note": "同一份 5M 字数据目录，逐档改 ContextChars 后走真实 HTTP 预览；记忆仍为空（disabledReason=memory_absent），所以只测召回与正文窗口。",
+    "rows": [
+      {
+        "contextChars": 1600,
+        "runs": [
+          {
+            "ms": 498,
+            "recallBudget": 0,
+            "recallUsed": 0,
+            "recallHits": 0,
+            "recallChapters": [],
+            "memoryBudget": 0,
+            "manuscriptChars": 1453,
+            "promptTotalChars": 2027,
+            "promptOverBudget": false
+          },
+          {
+            "ms": 508,
+            "recallBudget": 0,
+            "recallUsed": 0,
+            "recallHits": 0,
+            "recallChapters": [],
+            "memoryBudget": 0,
+            "manuscriptChars": 1453,
+            "promptTotalChars": 2027,
+            "promptOverBudget": false
+          }
+        ]
+      },
+      {
+        "contextChars": 4000,
+        "runs": [
+          {
+            "ms": 1280,
+            "recallBudget": 800,
+            "recallUsed": 103,
+            "recallHits": 1,
+            "recallChapters": [
+              7
+            ],
+            "memoryBudget": 1000,
+            "manuscriptChars": 2200,
+            "promptTotalChars": 2973,
+            "promptOverBudget": false
+          },
+          {
+            "ms": 1242,
+            "recallBudget": 800,
+            "recallUsed": 103,
+            "recallHits": 1,
+            "recallChapters": [
+              7
+            ],
+            "memoryBudget": 1000,
+            "manuscriptChars": 2200,
+            "promptTotalChars": 2973,
+            "promptOverBudget": false
+          }
+        ]
+      },
+      {
+        "contextChars": 12000,
+        "runs": [
+          {
+            "ms": 1240,
+            "recallBudget": 800,
+            "recallUsed": 103,
+            "recallHits": 1,
+            "recallChapters": [
+              7
+            ],
+            "memoryBudget": 3000,
+            "manuscriptChars": 8200,
+            "promptTotalChars": 8973,
+            "promptOverBudget": false
+          },
+          {
+            "ms": 1191,
+            "recallBudget": 800,
+            "recallUsed": 103,
+            "recallHits": 1,
+            "recallChapters": [
+              7
+            ],
+            "memoryBudget": 3000,
+            "manuscriptChars": 8200,
+            "promptTotalChars": 8973,
+            "promptOverBudget": false
+          }
+        ]
+      },
+      {
+        "contextChars": 30000,
+        "runs": [
+          {
+            "ms": 1344,
+            "recallBudget": 800,
+            "recallUsed": 103,
+            "recallHits": 1,
+            "recallChapters": [
+              7
+            ],
+            "memoryBudget": 3000,
+            "manuscriptChars": 26200,
+            "promptTotalChars": 26973,
+            "promptOverBudget": false
+          },
+          {
+            "ms": 1174,
+            "recallBudget": 800,
+            "recallUsed": 103,
+            "recallHits": 1,
+            "recallChapters": [
+              7
+            ],
+            "memoryBudget": 3000,
+            "manuscriptChars": 26200,
+            "promptTotalChars": 26973,
+            "promptOverBudget": false
+          }
+        ]
+      }
+    ]
+  }
+}

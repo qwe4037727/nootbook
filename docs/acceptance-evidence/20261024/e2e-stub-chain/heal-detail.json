@@ -1,0 +1,470 @@
+{
+  "at": "2026-10-24T06:10:19.419Z",
+  "charId": "c_45301ad360063196d5",
+  "characterMemory": {
+    "path": "/api/memory/characters/c_45301ad360063196d5",
+    "status": 200,
+    "json": {
+      "character": {
+        "id": "c_45301ad360063196d5",
+        "name": "林砚",
+        "role": "县衙捕快",
+        "personality": "沉默克制",
+        "state": "左臂旧伤未愈",
+        "evidence": [
+          "握紧青玉符"
+        ],
+        "confidence": 0.9,
+        "lastSeen": 8
+      },
+      "states": [
+        {
+          "id": "state_8f3a39e6c64bd9a2a6",
+          "workId": "work_001",
+          "recordVersion": 1,
+          "createdAt": "2026-10-24T06:09:19.7582906Z",
+          "updatedAt": "2026-10-24T06:09:19.7582906Z",
+          "confidence": 0.5,
+          "needsReview": true,
+          "reviewReason": "backfill_unverified",
+          "origin": {
+            "type": "backfill",
+            "kind": "character_state"
+          },
+          "lastSource": "backfill",
+          "status": "active",
+          "subjectId": "c_45301ad360063196d5",
+          "category": "general",
+          "attribute": "profile",
+          "value": "左臂旧伤未愈"
+        },
+        {
+          "id": "state_fb69ac1f9b4073d884",
+          "workId": "work_001",
+          "recordVersion": 2,
+          "createdAt": "2026-10-24T06:09:20.233991Z",
+          "updatedAt": "2026-10-24T06:09:20.233991Z",
+          "sourceRefs": [
+            {
+              "chapterId": "ch_c54e47d84c77d96ee9",
+              "chapterRevision": 1,
+              "startOffset": 26,
+              "endOffset": 34,
+              "offsetUnit": "rune",
+              "quote": "左臂旧伤开始发凉"
+            }
+          ],
+          "needsReview": true,
+          "reviewReason": "evidence_stale",
+          "origin": {
+            "type": "deep_extract",
+            "chapterId": "ch_c54e47d84c77d96ee9"
+          },
+          "lastSource": "agent_extraction",
+          "status": "active",
+          "subjectId": "c_45301ad360063196d5",
+          "category": "身体",
+          "attribute": "伤势",
+          "value": "左臂旧伤开始发凉"
+        }
+      ],
+      "cognitions": [
+        {
+          "id": "cog_77fd8ba4c74e33100b",
+          "workId": "work_001",
+          "recordVersion": 2,
+          "createdAt": "2026-10-24T06:09:20.233991Z",
+          "updatedAt": "2026-10-24T06:09:20.233991Z",
+          "sourceRefs": [
+            {
+              "chapterId": "ch_c54e47d84c77d96ee9",
+              "chapterRevision": 1,
+              "startOffset": 20,
+              "endOffset": 25,
+              "offsetUnit": "rune",
+              "quote": "握紧青玉符"
+            }
+          ],
+          "needsReview": true,
+          "reviewReason": "evidence_stale",
+          "origin": {
+            "type": "deep_extract",
+            "chapterId": "ch_c54e47d84c77d96ee9"
+          },
+          "lastSource": "agent_extraction",
+          "status": "known",
+          "subjectId": "c_45301ad360063196d5",
+          "content": "认定青玉符能打开旧案缺口",
+          "knownSinceEvent": "evt_941aad80d53ae04ebd"
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_941aad80d53ae04ebd",
+          "summary": "林砚在县衙外握紧青玉符",
+          "status": "confirmed",
+          "storyOrder": 0,
+          "chapterId": "ch_c54e47d84c77d96ee9"
+        }
+      ]
+    }
+  },
+  "memory": {
+    "path": "/api/memory",
+    "status": 200,
+    "json": {
+      "workId": "work_001",
+      "schemaVersion": 1,
+      "memoryRevision": 5,
+      "lastCommitId": "commit_932ec57b8b257e5ae9",
+      "initStatus": "ready",
+      "counts": {
+        "events": 9,
+        "states": 2,
+        "cognitions": 1,
+        "threads": 1,
+        "plans": 2
+      },
+      "safeState": false
+    }
+  },
+  "plans": {
+    "path": "/api/plans",
+    "status": 200,
+    "json": {
+      "memoryRevision": 5,
+      "count": 2,
+      "roots": [
+        {
+          "plan": {
+            "id": "plan_35abe72b660eb7d5af",
+            "workId": "work_001",
+            "recordVersion": 2,
+            "createdAt": "2026-10-24T06:09:21.0105986Z",
+            "updatedAt": "2026-10-24T06:09:21.1505695Z",
+            "needsReview": false,
+            "origin": {
+              "type": "deep_extract"
+            },
+            "lastSource": "manual_edit",
+            "status": "active",
+            "level": "global",
+            "title": "旧案主线",
+            "objective": "让林砚沿青玉符追查三年前旧案，不提前揭露真凶。",
+            "constraints": [
+              "不提前收束",
+              "不改变已确认事实"
+            ],
+            "candidateBeats": [
+              "在县衙重验卷宗",
+              "沈青禾提出伤药线索"
+            ],
+            "involvedCharacters": [
+              "c_45301ad360063196d5",
+              "c_538d24a6b9839f63d7"
+            ],
+            "flexibility": "medium",
+            "createdFromCommit": "commit_fbc52a5e98de804ec0"
+          },
+          "children": [
+            {
+              "plan": {
+                "id": "plan_6976af3a2ac45b2d79",
+                "workId": "work_001",
+                "recordVersion": 1,
+                "createdAt": "2026-10-24T06:09:21.0105986Z",
+                "updatedAt": "2026-10-24T06:09:21.0105986Z",
+                "needsReview": false,
+                "origin": {
+                  "type": "deep_extract"
+                },
+                "lastSource": "agent_extraction",
+                "status": "proposed",
+                "level": "volume",
+                "parentPlanId": "plan_35abe72b660eb7d5af",
+                "title": "第一卷：符与伤",
+                "objective": "把青玉符与左臂旧伤绑成同一追查动机。",
+                "constraints": [
+                  "保留伏笔未解"
+                ],
+                "candidateBeats": [
+                  "夜访卷房",
+                  "雨夜对峙"
+                ],
+                "involvedCharacters": [
+                  "c_45301ad360063196d5"
+                ],
+                "flexibility": "medium",
+                "createdFromCommit": "commit_fbc52a5e98de804ec0"
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "changesets": {
+    "path": "/api/memory/changesets",
+    "status": 200,
+    "json": [
+      {
+        "id": "mcs_59fc5e40095f0557d7",
+        "workId": "work_001",
+        "status": "applied",
+        "proposer": "deep_extract",
+        "reason": "chapter ch_c54e47d84c77d96ee9 rev 1 深度提取",
+        "basedOnMemoryRevision": 1,
+        "opCount": 4,
+        "conflictCount": 0,
+        "commitId": "commit_fbc52a5e98de804ec0",
+        "createdAt": "2026-10-24T06:09:20.233991Z",
+        "appliedAt": "2026-10-24T06:09:20.9652522Z"
+      }
+    ]
+  },
+  "candidates": {
+    "path": "/api/memory/candidates",
+    "status": 200,
+    "json": [
+      {
+        "id": "cand_0c703bf18139c4b1a1",
+        "name": "黑衣人",
+        "reason": "unknown_entity",
+        "status": "pending",
+        "createdAt": "2026-10-24T06:09:20.233991Z",
+        "resolvedAt": "0001-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "preview": {
+    "status": 200,
+    "json": {
+      "memorySection": "",
+      "planSection": "\n【计划对齐（仅约束走向，不得覆盖已确认事实）】\n- 全书《旧案主线》｜目标：让林砚沿青玉符追查三年前旧案，不提前揭露真凶。\n  约束：不提前收束；不改变已确认事实\n  候选发展：在县衙重验卷宗；沈青禾提出伤药线索\n",
+      "seeds": [
+        {
+          "entityId": "c_45301ad360063196d5",
+          "entityName": "林砚",
+          "score": 10.4,
+          "reason": "recent_mention"
+        },
+        {
+          "entityId": "c_538d24a6b9839f63d7",
+          "entityName": "沈青禾",
+          "score": 7.8,
+          "reason": "recent_mention"
+        },
+        {
+          "entityId": "w_88b240f29d0dc43054",
+          "entityName": "县衙",
+          "score": 5.8,
+          "reason": "recent_mention"
+        }
+      ],
+      "records": [],
+      "budget": 3000,
+      "used": 0,
+      "counts": {
+        "states": 0,
+        "events": 0,
+        "threads": 0,
+        "cognitions": 0,
+        "plans": 0
+      },
+      "manuscriptChars": 290,
+      "memoryEnabled": false,
+      "planEnabled": true,
+      "planCount": 1,
+      "droppedByBudget": 0,
+      "skippedReview": 4,
+      "skippedAmbiguous": 0,
+      "memoryRevision": 5,
+      "promptTotalChars": 1181,
+      "promptOverBudget": false,
+      "sections": {
+        "characters": 59,
+        "manuscript": 308,
+        "memories": 0,
+        "overview": 45,
+        "plans": 108,
+        "recall": 0,
+        "summaries": 0,
+        "world": 32
+      },
+      "recallSection": "",
+      "recallEnabled": false,
+      "recallBudgetChars": 0,
+      "recallUsedChars": 0,
+      "recallHits": 0,
+      "recallChapters": []
+    }
+  },
+  "events.json": [
+    {
+      "id": "evt_95cc092569aac6ebc6",
+      "needsReview": true,
+      "recordVersion": 1,
+      "status": "proposed",
+      "refs": []
+    },
+    {
+      "id": "evt_a64112dae12f7a3447",
+      "needsReview": true,
+      "recordVersion": 1,
+      "status": "proposed",
+      "refs": []
+    },
+    {
+      "id": "evt_a8aaef0556a4bb5f2e",
+      "needsReview": true,
+      "recordVersion": 1,
+      "status": "proposed",
+      "refs": []
+    },
+    {
+      "id": "evt_437774e17bf9896aca",
+      "needsReview": true,
+      "recordVersion": 1,
+      "status": "proposed",
+      "refs": []
+    },
+    {
+      "id": "evt_106894b93e3d39f517",
+      "needsReview": true,
+      "recordVersion": 1,
+      "status": "proposed",
+      "refs": []
+    },
+    {
+      "id": "evt_f51260b8a536e09896",
+      "needsReview": true,
+      "recordVersion": 1,
+      "status": "proposed",
+      "refs": []
+    },
+    {
+      "id": "evt_ae3981058e8e94b596",
+      "needsReview": true,
+      "recordVersion": 1,
+      "status": "proposed",
+      "refs": []
+    },
+    {
+      "id": "evt_fb2e6928bedf210251",
+      "needsReview": true,
+      "recordVersion": 1,
+      "status": "proposed",
+      "refs": []
+    },
+    {
+      "id": "evt_941aad80d53ae04ebd",
+      "needsReview": true,
+      "reviewReason": "evidence_stale",
+      "recordVersion": 2,
+      "status": "confirmed",
+      "refs": [
+        {
+          "ch": "ch_c54e47d84c77d96ee9",
+          "rev": 1,
+          "quote": "握紧青玉符"
+        }
+      ]
+    }
+  ],
+  "states.json": [
+    {
+      "id": "state_8f3a39e6c64bd9a2a6",
+      "needsReview": true,
+      "reviewReason": "backfill_unverified",
+      "recordVersion": 1,
+      "status": "active",
+      "refs": []
+    },
+    {
+      "id": "state_fb69ac1f9b4073d884",
+      "needsReview": true,
+      "reviewReason": "evidence_stale",
+      "recordVersion": 2,
+      "status": "active",
+      "refs": [
+        {
+          "ch": "ch_c54e47d84c77d96ee9",
+          "rev": 1,
+          "quote": "左臂旧伤开始发凉"
+        }
+      ]
+    }
+  ],
+  "cognitions.json": [
+    {
+      "id": "cog_77fd8ba4c74e33100b",
+      "needsReview": true,
+      "reviewReason": "evidence_stale",
+      "recordVersion": 2,
+      "status": "known",
+      "refs": [
+        {
+          "ch": "ch_c54e47d84c77d96ee9",
+          "rev": 1,
+          "quote": "握紧青玉符"
+        }
+      ]
+    }
+  ],
+  "threads.json": [
+    {
+      "id": "thread_83ec6a9c5dfe6ef919",
+      "needsReview": true,
+      "reviewReason": "evidence_stale",
+      "recordVersion": 2,
+      "status": "open",
+      "refs": [
+        {
+          "ch": "ch_c54e47d84c77d96ee9",
+          "rev": 1,
+          "quote": "青玉符上的刻痕"
+        }
+      ]
+    }
+  ],
+  "plans.json": [
+    {
+      "id": "plan_35abe72b660eb7d5af",
+      "needsReview": false,
+      "recordVersion": 2,
+      "status": "active",
+      "refs": []
+    },
+    {
+      "id": "plan_6976af3a2ac45b2d79",
+      "needsReview": false,
+      "recordVersion": 1,
+      "status": "proposed",
+      "refs": []
+    }
+  ],
+  "meta.json": [],
+  "commits": [
+    {
+      "type": "initialize",
+      "files": []
+    },
+    {
+      "type": "formal",
+      "files": []
+    },
+    {
+      "type": "formal",
+      "files": []
+    },
+    {
+      "type": "manual_fix",
+      "files": []
+    },
+    {
+      "type": "reconcile",
+      "files": []
+    }
+  ]
+}

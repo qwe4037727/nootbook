@@ -1,0 +1,1478 @@
+{
+  "generatedAt": "2026-10-24T06:09:21.852Z",
+  "base": "http://127.0.0.1:8097",
+  "markers": {
+    "eventSummary": "林砚在县衙外握紧青玉符",
+    "stateValue": "左臂旧伤开始发凉",
+    "threadTitle": "青玉符的来历",
+    "cognitionContent": "认定青玉符能打开旧案缺口",
+    "planObjective": "让林砚沿青玉符追查三年前旧案，不提前揭露真凶。"
+  },
+  "steps": [
+    {
+      "name": "01_put_config",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "baseUrl": "http://127.0.0.1:8098/v1",
+        "model": "stub-model",
+        "contextChars": 12000,
+        "hasApiKey": true,
+        "apiKeyHint": "stu…cret",
+        "apiKeyFromEnv": false
+      }
+    },
+    {
+      "name": "02_import",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "project": {
+          "title": "桩模型链路测试稿",
+          "chapters": [
+            {
+              "id": "ch_1a7bb416fccb27c35b",
+              "index": 1,
+              "title": "第1章 值房",
+              "charCount": 46,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_400e9af67c64eafb3b",
+              "index": 2,
+              "title": "第2章 医者",
+              "charCount": 46,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_c54e47d84c77d96ee9",
+              "index": 3,
+              "title": "第3章 旧案",
+              "charCount": 81,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_0102f81e6a9d3bb4ec",
+              "index": 4,
+              "title": "第4章 卷房",
+              "charCount": 43,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_9a31000fe69f8fadf2",
+              "index": 5,
+              "title": "第5章 对峙",
+              "charCount": 34,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_f828e2c32b3ab5a283",
+              "index": 6,
+              "title": "第6章 伤药",
+              "charCount": 28,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_777fe07efbf14c7f0a",
+              "index": 7,
+              "title": "第7章 河水",
+              "charCount": 25,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_2b167c9c6e84fa1373",
+              "index": 8,
+              "title": "第8章 灯火",
+              "charCount": 26,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            }
+          ],
+          "analysis": {
+            "status": "pending",
+            "analyzedCount": 0,
+            "totalCount": 8,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          "updatedAt": "2026-10-24T06:09:17.8092644Z"
+        },
+        "importedChapters": 8,
+        "importedChars": 329
+      },
+      "importedChapters": 8,
+      "importedChars": 329
+    },
+    {
+      "name": "03_project_after_import",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "title": "桩模型链路测试稿",
+        "chapters": [
+          {
+            "id": "ch_1a7bb416fccb27c35b",
+            "index": 1,
+            "title": "第1章 值房",
+            "charCount": 46,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_400e9af67c64eafb3b",
+            "index": 2,
+            "title": "第2章 医者",
+            "charCount": 46,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_c54e47d84c77d96ee9",
+            "index": 3,
+            "title": "第3章 旧案",
+            "charCount": 81,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_0102f81e6a9d3bb4ec",
+            "index": 4,
+            "title": "第4章 卷房",
+            "charCount": 43,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_9a31000fe69f8fadf2",
+            "index": 5,
+            "title": "第5章 对峙",
+            "charCount": 34,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_f828e2c32b3ab5a283",
+            "index": 6,
+            "title": "第6章 伤药",
+            "charCount": 28,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_777fe07efbf14c7f0a",
+            "index": 7,
+            "title": "第7章 河水",
+            "charCount": 25,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_2b167c9c6e84fa1373",
+            "index": 8,
+            "title": "第8章 灯火",
+            "charCount": 26,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          }
+        ],
+        "analysis": {
+          "status": "analyzing",
+          "analyzedCount": 0,
+          "totalCount": 8,
+          "updatedAt": "2026-10-24T06:09:18.7250073Z"
+        },
+        "updatedAt": "2026-10-24T06:09:18.7250073Z"
+      },
+      "chapterCount": 8,
+      "targetChapterId": "ch_c54e47d84c77d96ee9"
+    },
+    {
+      "name": "04_post_analyze",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "title": "桩模型链路测试稿",
+        "chapters": [
+          {
+            "id": "ch_1a7bb416fccb27c35b",
+            "index": 1,
+            "title": "第1章 值房",
+            "charCount": 46,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_400e9af67c64eafb3b",
+            "index": 2,
+            "title": "第2章 医者",
+            "charCount": 46,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_c54e47d84c77d96ee9",
+            "index": 3,
+            "title": "第3章 旧案",
+            "charCount": 81,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_0102f81e6a9d3bb4ec",
+            "index": 4,
+            "title": "第4章 卷房",
+            "charCount": 43,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_9a31000fe69f8fadf2",
+            "index": 5,
+            "title": "第5章 对峙",
+            "charCount": 34,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_f828e2c32b3ab5a283",
+            "index": 6,
+            "title": "第6章 伤药",
+            "charCount": 28,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_777fe07efbf14c7f0a",
+            "index": 7,
+            "title": "第7章 河水",
+            "charCount": 25,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_2b167c9c6e84fa1373",
+            "index": 8,
+            "title": "第8章 灯火",
+            "charCount": 26,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          }
+        ],
+        "analysis": {
+          "status": "analyzing",
+          "analyzedCount": 0,
+          "totalCount": 8,
+          "updatedAt": "2026-10-24T06:09:18.7250073Z"
+        },
+        "updatedAt": "2026-10-24T06:09:18.7250073Z"
+      }
+    },
+    {
+      "name": "05_analysis_finished",
+      "status": 200,
+      "error": null,
+      "waitedMs": 894,
+      "timedOut": false,
+      "body": {
+        "title": "桩模型链路测试稿",
+        "chapters": [
+          {
+            "id": "ch_1a7bb416fccb27c35b",
+            "index": 1,
+            "title": "第1章 值房",
+            "charCount": 46,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_400e9af67c64eafb3b",
+            "index": 2,
+            "title": "第2章 医者",
+            "charCount": 46,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_c54e47d84c77d96ee9",
+            "index": 3,
+            "title": "第3章 旧案",
+            "charCount": 81,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_0102f81e6a9d3bb4ec",
+            "index": 4,
+            "title": "第4章 卷房",
+            "charCount": 43,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_9a31000fe69f8fadf2",
+            "index": 5,
+            "title": "第5章 对峙",
+            "charCount": 34,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_f828e2c32b3ab5a283",
+            "index": 6,
+            "title": "第6章 伤药",
+            "charCount": 28,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_777fe07efbf14c7f0a",
+            "index": 7,
+            "title": "第7章 河水",
+            "charCount": 25,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          },
+          {
+            "id": "ch_2b167c9c6e84fa1373",
+            "index": 8,
+            "title": "第8章 灯火",
+            "charCount": 26,
+            "revision": 1,
+            "updatedAt": "2026-10-24T06:09:17.8092644Z"
+          }
+        ],
+        "analysis": {
+          "status": "ready",
+          "analyzedCount": 8,
+          "totalCount": 8,
+          "updatedAt": "2026-10-24T06:09:19.4967469Z"
+        },
+        "updatedAt": "2026-10-24T06:09:19.4967469Z"
+      },
+      "analysis": {
+        "status": "ready",
+        "analyzedCount": 8,
+        "totalCount": 8,
+        "updatedAt": "2026-10-24T06:09:19.4967469Z"
+      }
+    },
+    {
+      "name": "06_get_knowledge",
+      "status": 404,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": "404 page not found\n"
+    },
+    {
+      "name": "07_post_initialize",
+      "status": 202,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "initStatus": "mapping"
+      }
+    },
+    {
+      "name": "08_initialize_status",
+      "status": 200,
+      "error": null,
+      "waitedMs": 415,
+      "timedOut": false,
+      "body": {
+        "status": "ready",
+        "startedAt": "2026-10-24T06:09:19.7070599Z",
+        "finishedAt": "2026-10-24T06:09:19.9905073Z",
+        "runId": 1,
+        "preconditions": {
+          "migrated": true,
+          "knowledgeReady": true
+        },
+        "stats": {
+          "mappedEvents": 8,
+          "mappedStates": 1,
+          "skippedInvalid": 0,
+          "skippedManualProtected": 0,
+          "skippedExistingActive": 0
+        }
+      },
+      "initStatus": "ready"
+    },
+    {
+      "name": "09_memory_after_initialize",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "workId": "work_001",
+        "schemaVersion": 1,
+        "memoryRevision": 1,
+        "lastCommitId": "commit_e22f4d2538b6f00d58",
+        "initStatus": "ready",
+        "counts": {
+          "events": 8,
+          "states": 1,
+          "cognitions": 0,
+          "threads": 0,
+          "plans": 0
+        },
+        "safeState": false
+      },
+      "counts": {
+        "events": 8,
+        "states": 1,
+        "cognitions": 0,
+        "threads": 0,
+        "plans": 0
+      },
+      "memoryRevision": 1,
+      "safeState": false
+    },
+    {
+      "name": "10_post_extract",
+      "status": 202,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "extractStatus": "extracting"
+      }
+    },
+    {
+      "name": "11_extract_status",
+      "status": 200,
+      "error": null,
+      "waitedMs": 442,
+      "timedOut": false,
+      "body": {
+        "status": "done",
+        "runId": 1,
+        "startedAt": "2026-10-24T06:09:20.1764251Z",
+        "finishedAt": "2026-10-24T06:09:20.365301Z",
+        "scope": [
+          "ch_c54e47d84c77d96ee9"
+        ],
+        "stats": {
+          "chaptersDone": 1,
+          "changeSetsCreated": 1,
+          "candidatesCreated": 1,
+          "opsTotal": 4,
+          "skippedUpToDate": 0,
+          "failedChapters": 0
+        }
+      },
+      "extractStats": {
+        "chaptersDone": 1,
+        "changeSetsCreated": 1,
+        "candidatesCreated": 1,
+        "opsTotal": 4,
+        "skippedUpToDate": 0,
+        "failedChapters": 0
+      }
+    },
+    {
+      "name": "12_changesets_proposed",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": [
+        {
+          "id": "mcs_59fc5e40095f0557d7",
+          "workId": "work_001",
+          "status": "proposed",
+          "proposer": "deep_extract",
+          "reason": "chapter ch_c54e47d84c77d96ee9 rev 1 深度提取",
+          "basedOnMemoryRevision": 1,
+          "opCount": 4,
+          "conflictCount": 0,
+          "createdAt": "2026-10-24T06:09:20.233991Z",
+          "appliedAt": "0001-01-01T00:00:00Z"
+        }
+      ],
+      "proposedCount": 1,
+      "ids": [
+        "mcs_59fc5e40095f0557d7"
+      ]
+    },
+    {
+      "name": "13_accept_changesets",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": [
+        {
+          "id": "mcs_59fc5e40095f0557d7",
+          "opCount": 4,
+          "acceptStatus": 200,
+          "result": {
+            "status": "applied",
+            "commitId": "commit_fbc52a5e98de804ec0",
+            "memoryRevision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "14_memory_after_accept",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "workId": "work_001",
+        "schemaVersion": 1,
+        "memoryRevision": 2,
+        "lastCommitId": "commit_fbc52a5e98de804ec0",
+        "initStatus": "ready",
+        "counts": {
+          "events": 9,
+          "states": 2,
+          "cognitions": 1,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false
+      },
+      "counts": {
+        "events": 9,
+        "states": 2,
+        "cognitions": 1,
+        "threads": 1,
+        "plans": 0
+      },
+      "memoryRevision": 2,
+      "initStatus": "ready",
+      "safeState": false
+    },
+    {
+      "name": "15_character_memory",
+      "status": 404,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "code": "character_not_found",
+        "error": "角色不存在"
+      },
+      "states": 0,
+      "events": 0,
+      "cognitions": 0,
+      "needsReview": 0
+    },
+    {
+      "name": "16_preview_after_accept",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "memorySection": "\n【已确认剧情记忆（来自正文抽取，效力低于下方最近正文）】\n人物当前状态：\n- 林砚｜伤势：左臂旧伤开始发凉\n人物认知：\n- 林砚｜认定青玉符能打开旧案缺口\n关键事件（近因优先）：\n- 林砚在县衙外握紧青玉符\n",
+        "planSection": "",
+        "seeds": [
+          {
+            "entityId": "c_45301ad360063196d5",
+            "entityName": "林砚",
+            "score": 10.4,
+            "reason": "recent_mention"
+          },
+          {
+            "entityId": "c_538d24a6b9839f63d7",
+            "entityName": "沈青禾",
+            "score": 7.8,
+            "reason": "recent_mention"
+          },
+          {
+            "entityId": "w_88b240f29d0dc43054",
+            "entityName": "县衙",
+            "score": 5.8,
+            "reason": "recent_mention"
+          }
+        ],
+        "records": [
+          {
+            "id": "state_fb69ac1f9b4073d884",
+            "kind": "state",
+            "subject": "林砚",
+            "text": "林砚｜伤势：左臂旧伤开始发凉",
+            "order": 0,
+            "priority": "P0"
+          },
+          {
+            "id": "cog_77fd8ba4c74e33100b",
+            "kind": "cognition",
+            "subject": "林砚",
+            "text": "林砚｜认定青玉符能打开旧案缺口",
+            "order": 0,
+            "priority": "P0"
+          },
+          {
+            "id": "evt_941aad80d53ae04ebd",
+            "kind": "event",
+            "subject": "",
+            "text": "林砚在县衙外握紧青玉符",
+            "order": 0,
+            "priority": "P1"
+          }
+        ],
+        "budget": 3000,
+        "used": 105,
+        "counts": {
+          "states": 1,
+          "events": 1,
+          "threads": 0,
+          "cognitions": 1,
+          "plans": 0
+        },
+        "manuscriptChars": 343,
+        "memoryEnabled": true,
+        "planEnabled": false,
+        "planCount": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 1,
+        "skippedAmbiguous": 0,
+        "memoryRevision": 2,
+        "promptTotalChars": 1251,
+        "promptOverBudget": false,
+        "sections": {
+          "characters": 59,
+          "manuscript": 361,
+          "memories": 105,
+          "overview": 45,
+          "plans": 0,
+          "recall": 0,
+          "summaries": 0,
+          "world": 32
+        },
+        "recallSection": "",
+        "recallEnabled": false,
+        "recallBudgetChars": 0,
+        "recallUsedChars": 0,
+        "recallHits": 0,
+        "recallChapters": []
+      },
+      "memoryEnabled": true,
+      "counts": {
+        "states": 1,
+        "events": 1,
+        "threads": 0,
+        "cognitions": 1,
+        "plans": 0
+      },
+      "skippedReview": 1,
+      "planCount": 0
+    },
+    {
+      "name": "17_post_plans_generate",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "plans": [
+          {
+            "id": "plan_35abe72b660eb7d5af",
+            "workId": "work_001",
+            "recordVersion": 1,
+            "createdAt": "2026-10-24T06:09:21.0105986Z",
+            "updatedAt": "2026-10-24T06:09:21.0105986Z",
+            "needsReview": false,
+            "origin": {
+              "type": "deep_extract"
+            },
+            "lastSource": "agent_extraction",
+            "status": "proposed",
+            "level": "global",
+            "title": "旧案主线",
+            "objective": "让林砚沿青玉符追查三年前旧案，不提前揭露真凶。",
+            "constraints": [
+              "不提前收束",
+              "不改变已确认事实"
+            ],
+            "candidateBeats": [
+              "在县衙重验卷宗",
+              "沈青禾提出伤药线索"
+            ],
+            "involvedCharacters": [
+              "c_45301ad360063196d5",
+              "c_538d24a6b9839f63d7"
+            ],
+            "flexibility": "medium",
+            "createdFromCommit": "commit_fbc52a5e98de804ec0"
+          },
+          {
+            "id": "plan_6976af3a2ac45b2d79",
+            "workId": "work_001",
+            "recordVersion": 1,
+            "createdAt": "2026-10-24T06:09:21.0105986Z",
+            "updatedAt": "2026-10-24T06:09:21.0105986Z",
+            "needsReview": false,
+            "origin": {
+              "type": "deep_extract"
+            },
+            "lastSource": "agent_extraction",
+            "status": "proposed",
+            "level": "volume",
+            "parentPlanId": "plan_35abe72b660eb7d5af",
+            "title": "第一卷：符与伤",
+            "objective": "把青玉符与左臂旧伤绑成同一追查动机。",
+            "constraints": [
+              "保留伏笔未解"
+            ],
+            "candidateBeats": [
+              "夜访卷房",
+              "雨夜对峙"
+            ],
+            "involvedCharacters": [
+              "c_45301ad360063196d5"
+            ],
+            "flexibility": "medium",
+            "createdFromCommit": "commit_fbc52a5e98de804ec0"
+          }
+        ],
+        "memoryRevision": 3,
+        "commitId": "commit_92a9d86f7a1eb4ec65"
+      }
+    },
+    {
+      "name": "18_get_plans",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "memoryRevision": 3,
+        "count": 2,
+        "roots": [
+          {
+            "plan": {
+              "id": "plan_35abe72b660eb7d5af",
+              "workId": "work_001",
+              "recordVersion": 1,
+              "createdAt": "2026-10-24T06:09:21.0105986Z",
+              "updatedAt": "2026-10-24T06:09:21.0105986Z",
+              "needsReview": false,
+              "origin": {
+                "type": "deep_extract"
+              },
+              "lastSource": "agent_extraction",
+              "status": "proposed",
+              "level": "global",
+              "title": "旧案主线",
+              "objective": "让林砚沿青玉符追查三年前旧案，不提前揭露真凶。",
+              "constraints": [
+                "不提前收束",
+                "不改变已确认事实"
+              ],
+              "candidateBeats": [
+                "在县衙重验卷宗",
+                "沈青禾提出伤药线索"
+              ],
+              "involvedCharacters": [
+                "c_45301ad360063196d5",
+                "c_538d24a6b9839f63d7"
+              ],
+              "flexibility": "medium",
+              "createdFromCommit": "commit_fbc52a5e98de804ec0"
+            },
+            "children": [
+              {
+                "plan": {
+                  "id": "plan_6976af3a2ac45b2d79",
+                  "workId": "work_001",
+                  "recordVersion": 1,
+                  "createdAt": "2026-10-24T06:09:21.0105986Z",
+                  "updatedAt": "2026-10-24T06:09:21.0105986Z",
+                  "needsReview": false,
+                  "origin": {
+                    "type": "deep_extract"
+                  },
+                  "lastSource": "agent_extraction",
+                  "status": "proposed",
+                  "level": "volume",
+                  "parentPlanId": "plan_35abe72b660eb7d5af",
+                  "title": "第一卷：符与伤",
+                  "objective": "把青玉符与左臂旧伤绑成同一追查动机。",
+                  "constraints": [
+                    "保留伏笔未解"
+                  ],
+                  "candidateBeats": [
+                    "夜访卷房",
+                    "雨夜对峙"
+                  ],
+                  "involvedCharacters": [
+                    "c_45301ad360063196d5"
+                  ],
+                  "flexibility": "medium",
+                  "createdFromCommit": "commit_fbc52a5e98de804ec0"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      "planCount": 2,
+      "rootCount": 1,
+      "firstPlanId": "plan_35abe72b660eb7d5af",
+      "firstStatus": "proposed"
+    },
+    {
+      "name": "19_activate_plan",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "memoryRevision": 4,
+        "commitId": "commit_33f03f281ff2823dc4",
+        "plans": [
+          {
+            "id": "plan_35abe72b660eb7d5af",
+            "workId": "work_001",
+            "recordVersion": 2,
+            "createdAt": "2026-10-24T06:09:21.0105986Z",
+            "updatedAt": "2026-10-24T06:09:21.1505695Z",
+            "needsReview": false,
+            "origin": {
+              "type": "deep_extract"
+            },
+            "lastSource": "manual_edit",
+            "status": "active",
+            "level": "global",
+            "title": "旧案主线",
+            "objective": "让林砚沿青玉符追查三年前旧案，不提前揭露真凶。",
+            "constraints": [
+              "不提前收束",
+              "不改变已确认事实"
+            ],
+            "candidateBeats": [
+              "在县衙重验卷宗",
+              "沈青禾提出伤药线索"
+            ],
+            "involvedCharacters": [
+              "c_45301ad360063196d5",
+              "c_538d24a6b9839f63d7"
+            ],
+            "flexibility": "medium",
+            "createdFromCommit": "commit_fbc52a5e98de804ec0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "20_preview_after_activate",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "memorySection": "\n【已确认剧情记忆（来自正文抽取，效力低于下方最近正文）】\n人物当前状态：\n- 林砚｜伤势：左臂旧伤开始发凉\n人物认知：\n- 林砚｜认定青玉符能打开旧案缺口\n关键事件（近因优先）：\n- 林砚在县衙外握紧青玉符\n",
+        "planSection": "\n【计划对齐（仅约束走向，不得覆盖已确认事实）】\n- 全书《旧案主线》｜目标：让林砚沿青玉符追查三年前旧案，不提前揭露真凶。\n  约束：不提前收束；不改变已确认事实\n  候选发展：在县衙重验卷宗；沈青禾提出伤药线索\n",
+        "seeds": [
+          {
+            "entityId": "c_45301ad360063196d5",
+            "entityName": "林砚",
+            "score": 10.4,
+            "reason": "recent_mention"
+          },
+          {
+            "entityId": "c_538d24a6b9839f63d7",
+            "entityName": "沈青禾",
+            "score": 7.8,
+            "reason": "recent_mention"
+          },
+          {
+            "entityId": "w_88b240f29d0dc43054",
+            "entityName": "县衙",
+            "score": 5.8,
+            "reason": "recent_mention"
+          }
+        ],
+        "records": [
+          {
+            "id": "state_fb69ac1f9b4073d884",
+            "kind": "state",
+            "subject": "林砚",
+            "text": "林砚｜伤势：左臂旧伤开始发凉",
+            "order": 0,
+            "priority": "P0"
+          },
+          {
+            "id": "cog_77fd8ba4c74e33100b",
+            "kind": "cognition",
+            "subject": "林砚",
+            "text": "林砚｜认定青玉符能打开旧案缺口",
+            "order": 0,
+            "priority": "P0"
+          },
+          {
+            "id": "evt_941aad80d53ae04ebd",
+            "kind": "event",
+            "subject": "",
+            "text": "林砚在县衙外握紧青玉符",
+            "order": 0,
+            "priority": "P1"
+          }
+        ],
+        "budget": 3000,
+        "used": 105,
+        "counts": {
+          "states": 1,
+          "events": 1,
+          "threads": 0,
+          "cognitions": 1,
+          "plans": 0
+        },
+        "manuscriptChars": 343,
+        "memoryEnabled": true,
+        "planEnabled": true,
+        "planCount": 1,
+        "droppedByBudget": 0,
+        "skippedReview": 1,
+        "skippedAmbiguous": 0,
+        "memoryRevision": 4,
+        "promptTotalChars": 1438,
+        "promptOverBudget": false,
+        "sections": {
+          "characters": 59,
+          "manuscript": 361,
+          "memories": 105,
+          "overview": 45,
+          "plans": 108,
+          "recall": 0,
+          "summaries": 0,
+          "world": 32
+        },
+        "recallSection": "",
+        "recallEnabled": false,
+        "recallBudgetChars": 0,
+        "recallUsedChars": 0,
+        "recallHits": 0,
+        "recallChapters": []
+      },
+      "planCount": 1,
+      "planEnabled": true,
+      "counts": {
+        "states": 1,
+        "events": 1,
+        "threads": 0,
+        "cognitions": 1,
+        "plans": 0
+      }
+    },
+    {
+      "name": "21_continue_sse",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "eventKinds": [
+          "meta",
+          "delta",
+          "done"
+        ],
+        "deltaChars": 68,
+        "meta": {
+          "analysisStatus": "ready",
+          "analyzedChapters": 8,
+          "characters": 2,
+          "contextChars": 343,
+          "droppedByBudget": 0,
+          "memoryBudgetChars": 3000,
+          "memoryDisabledReason": "",
+          "memoryEnabled": true,
+          "memoryRevision": 4,
+          "memoryUsedChars": 105,
+          "planAligned": true,
+          "planCount": 1,
+          "promptOverBudget": false,
+          "promptSections": {
+            "characters": 59,
+            "manuscript": 361,
+            "memories": 105,
+            "overview": 45,
+            "plans": 108,
+            "recall": 0,
+            "summaries": 0,
+            "world": 32
+          },
+          "promptTotalChars": 1438,
+          "recallBudgetChars": 0,
+          "recallChapters": [],
+          "recallEnabled": false,
+          "recallUsedChars": 0,
+          "recalledByKind": {
+            "states": 1,
+            "events": 1,
+            "threads": 0,
+            "cognitions": 1,
+            "plans": 0
+          },
+          "seeds": 3,
+          "skippedAmbiguous": 0,
+          "skippedReview": 1,
+          "summaries": 0,
+          "totalChapters": 8,
+          "truncated": false,
+          "worldEntries": 1
+        },
+        "done": {
+          "chars": 67,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "name": "22_edit_chapter3",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "chapter": {
+          "id": "ch_c54e47d84c77d96ee9",
+          "index": 3,
+          "title": "第3章 旧案",
+          "content": "夜里的县衙外头很静。林砚站在槐树下等雨停，什么也没有带。",
+          "charCount": 28,
+          "revision": 2,
+          "updatedAt": "2026-10-24T06:09:21.3336193Z"
+        },
+        "project": {
+          "title": "桩模型链路测试稿",
+          "chapters": [
+            {
+              "id": "ch_1a7bb416fccb27c35b",
+              "index": 1,
+              "title": "第1章 值房",
+              "charCount": 46,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_400e9af67c64eafb3b",
+              "index": 2,
+              "title": "第2章 医者",
+              "charCount": 46,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_c54e47d84c77d96ee9",
+              "index": 3,
+              "title": "第3章 旧案",
+              "charCount": 28,
+              "revision": 2,
+              "updatedAt": "2026-10-24T06:09:21.3336193Z"
+            },
+            {
+              "id": "ch_0102f81e6a9d3bb4ec",
+              "index": 4,
+              "title": "第4章 卷房",
+              "charCount": 43,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_9a31000fe69f8fadf2",
+              "index": 5,
+              "title": "第5章 对峙",
+              "charCount": 34,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_f828e2c32b3ab5a283",
+              "index": 6,
+              "title": "第6章 伤药",
+              "charCount": 28,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_777fe07efbf14c7f0a",
+              "index": 7,
+              "title": "第7章 河水",
+              "charCount": 25,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            },
+            {
+              "id": "ch_2b167c9c6e84fa1373",
+              "index": 8,
+              "title": "第8章 灯火",
+              "charCount": 26,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:09:17.8092644Z"
+            }
+          ],
+          "analysis": {
+            "status": "pending",
+            "analyzedCount": 2,
+            "totalCount": 8,
+            "updatedAt": "2026-10-24T06:09:21.3336193Z"
+          },
+          "updatedAt": "2026-10-24T06:09:21.3336193Z"
+        }
+      },
+      "newRevision": 2
+    },
+    {
+      "name": "23_memory_after_heal",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "workId": "work_001",
+        "schemaVersion": 1,
+        "memoryRevision": 5,
+        "lastCommitId": "commit_932ec57b8b257e5ae9",
+        "initStatus": "ready",
+        "counts": {
+          "events": 9,
+          "states": 2,
+          "cognitions": 1,
+          "threads": 1,
+          "plans": 2
+        },
+        "safeState": false
+      },
+      "memoryRevision": 5,
+      "counts": {
+        "events": 9,
+        "states": 2,
+        "cognitions": 1,
+        "threads": 1,
+        "plans": 2
+      },
+      "safeState": false
+    },
+    {
+      "name": "24_preview_after_heal",
+      "status": 200,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "memorySection": "",
+        "planSection": "\n【计划对齐（仅约束走向，不得覆盖已确认事实）】\n- 全书《旧案主线》｜目标：让林砚沿青玉符追查三年前旧案，不提前揭露真凶。\n  约束：不提前收束；不改变已确认事实\n  候选发展：在县衙重验卷宗；沈青禾提出伤药线索\n",
+        "seeds": [
+          {
+            "entityId": "c_45301ad360063196d5",
+            "entityName": "林砚",
+            "score": 10.4,
+            "reason": "recent_mention"
+          },
+          {
+            "entityId": "c_538d24a6b9839f63d7",
+            "entityName": "沈青禾",
+            "score": 7.8,
+            "reason": "recent_mention"
+          },
+          {
+            "entityId": "w_88b240f29d0dc43054",
+            "entityName": "县衙",
+            "score": 5.8,
+            "reason": "recent_mention"
+          }
+        ],
+        "records": [],
+        "budget": 3000,
+        "used": 0,
+        "counts": {
+          "states": 0,
+          "events": 0,
+          "threads": 0,
+          "cognitions": 0,
+          "plans": 0
+        },
+        "manuscriptChars": 290,
+        "memoryEnabled": false,
+        "planEnabled": true,
+        "planCount": 1,
+        "droppedByBudget": 0,
+        "skippedReview": 4,
+        "skippedAmbiguous": 0,
+        "memoryRevision": 5,
+        "promptTotalChars": 1181,
+        "promptOverBudget": false,
+        "sections": {
+          "characters": 59,
+          "manuscript": 308,
+          "memories": 0,
+          "overview": 45,
+          "plans": 108,
+          "recall": 0,
+          "summaries": 0,
+          "world": 32
+        },
+        "recallSection": "",
+        "recallEnabled": false,
+        "recallBudgetChars": 0,
+        "recallUsedChars": 0,
+        "recallHits": 0,
+        "recallChapters": []
+      },
+      "counts": {
+        "states": 0,
+        "events": 0,
+        "threads": 0,
+        "cognitions": 0,
+        "plans": 0
+      },
+      "skippedReview": 4,
+      "planCount": 1
+    },
+    {
+      "name": "25_character_memory_after_heal",
+      "status": 404,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "code": "character_not_found",
+        "error": "角色不存在"
+      },
+      "reviewReasons": []
+    },
+    {
+      "name": "26_g7_gate",
+      "status": 400,
+      "error": null,
+      "waitedMs": null,
+      "timedOut": false,
+      "body": {
+        "code": "reinit_not_supported",
+        "error": "本版本不支持全量重新初始化"
+      }
+    }
+  ],
+  "promptEvidence": {
+    "callCount": 15,
+    "streamCallCount": 1,
+    "continueCallFound": true,
+    "continuePromptChars": 833,
+    "contains": {
+      "eventSummary": true,
+      "stateValue": true,
+      "threadTitle": false,
+      "planObjective": true
+    },
+    "note": "captured prompt is from the LAST streaming call (continuation); earlier streaming calls overwritten by later marks because heal precedes nothing after 21"
+  },
+  "calls": [
+    {
+      "at": "2026-10-24T06:09:14.096Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "user"
+      ],
+      "chars": [
+        2
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:18.809Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        102
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:18.888Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        226
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:18.949Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        295
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:19.040Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        291
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:19.123Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        282
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:19.218Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        276
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:19.296Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        273
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:19.395Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        274
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:19.494Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        483,
+        394
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:20.233Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1487,
+        510
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:21.010Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        832,
+        429
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:21.331Z",
+      "path": "/v1/chat/completions",
+      "stream": true,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        605,
+        833
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:21.820Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        311
+      ]
+    },
+    {
+      "at": "2026-10-24T06:09:21.849Z",
+      "path": "/v1/chat/completions",
+      "stream": false,
+      "roles": [
+        "system",
+        "user"
+      ],
+      "chars": [
+        1164,
+        326
+      ]
+    }
+  ]
+}

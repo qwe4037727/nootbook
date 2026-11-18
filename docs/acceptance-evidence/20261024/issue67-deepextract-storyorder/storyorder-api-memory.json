@@ -1,0 +1,18 @@
+{
+  "status": 200,
+  "body": {
+    "workId": "work_001",
+    "schemaVersion": 1,
+    "memoryRevision": 6,
+    "lastCommitId": "commit_343ffcd0bfa854d2e3",
+    "initStatus": "ready",
+    "counts": {
+      "events": 9,
+      "states": 2,
+      "cognitions": 1,
+      "threads": 1,
+      "plans": 2
+    },
+    "safeState": false
+  }
+}

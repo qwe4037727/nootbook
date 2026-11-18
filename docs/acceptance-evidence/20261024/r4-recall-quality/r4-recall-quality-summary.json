@@ -1,0 +1,45 @@
+{
+  "note": "Numbers only. The planted probe terms are excerpts of a third-party novel kept in the gitignored corpus/ dir, so per-sample term strings are intentionally omitted.",
+  "corpus": {"chapters": 79, "importRunes": 177295, "encoding": "UTF-8", "grader": "output/r4_hit_probe.mjs against /api/continue/preview"},
+  "runs": [
+    {"label": "before-3g", "kernel": "tf≡1 存在性打分 + 全部词贡献相加 + 无注入闸", "gram": 3, "contextChars": 12000, "samples": 26, "targetChapterRecalled": 5, "plantedTermInSnippet": 4, "meanRecallUsedChars": 800, "meanManuscriptChars": 8181, "neutralDirectionChapters": [58, 75, 19], "distinctNeutralRankings": 1},
+    {"label": "after-3g", "kernel": "+ 真实 tf 饱和 + ScoreTermLimit=3 + 罕见词闸（块频 df≤5%）", "gram": 3, "contextChars": 12000, "samples": 26, "targetChapterRecalled": 23, "plantedTermInSnippet": 20, "meanRecallUsedChars": 800, "meanManuscriptChars": 8181, "neutralDirectionChapters": [22, 10, 32], "distinctNeutralRankings": 1},
+    {"label": "after3-3g", "kernel": "+ 罕见闸收紧为「方向里的罕见词」", "gram": 3, "contextChars": 12000, "samples": 26, "targetChapterRecalled": 23, "plantedTermInSnippet": 20, "meanRecallUsedChars": 800, "meanManuscriptChars": 8181, "neutralDirectionChapters": [22, 32], "distinctNeutralRankings": 1},
+    {"label": "after4-3g", "kernel": "+ 线索长度闸 MinClueRunes=3（无唯一性豁免）", "gram": 3, "contextChars": 12000, "samples": 26, "targetChapterRecalled": 25, "plantedTermInSnippet": 21, "meanRecallUsedChars": 800, "meanManuscriptChars": 8181, "neutralDirectionChapters": [], "distinctNeutralRankings": 1},
+    {"label": "after4-2g", "kernel": "同 after4-3g，两字线索被长度闸误杀", "gram": 2, "contextChars": 12000, "samples": 26, "targetChapterRecalled": 1, "plantedTermInSnippet": 1, "meanRecallUsedChars": 800, "meanManuscriptChars": 8181, "neutralDirectionChapters": [], "distinctNeutralRankings": 1},
+    {"label": "after5-2g", "kernel": "+ 长度—唯一性阶梯（两字词须全书唯一）", "gram": 2, "contextChars": 12000, "samples": 26, "targetChapterRecalled": 11, "plantedTermInSnippet": 5, "meanRecallUsedChars": 796, "meanManuscriptChars": 8181, "neutralDirectionChapters": [], "distinctNeutralRankings": 1},
+    {"label": "final-2g", "kernel": "+ 罕见度改按章节频判定", "gram": 2, "contextChars": 12000, "samples": 26, "targetChapterRecalled": 11, "plantedTermInSnippet": 5, "meanRecallUsedChars": 796, "meanManuscriptChars": 8181, "neutralDirectionChapters": [], "distinctNeutralRankings": 1},
+    {"label": "final-3g", "kernel": "同上（定稿内核）", "gram": 3, "contextChars": 12000, "samples": 26, "targetChapterRecalled": 25, "plantedTermInSnippet": 21, "meanRecallUsedChars": 800, "meanManuscriptChars": 8181, "neutralDirectionChapters": [], "distinctNeutralRankings": 1},
+    {"label": "final-3g-ctx4000", "kernel": "定稿内核，正文窗口 4000", "gram": 3, "contextChars": 4000, "samples": 25, "targetChapterRecalled": 25, "plantedTermInSnippet": 24, "meanRecallUsedChars": 800, "meanManuscriptChars": 2198, "neutralDirectionChapters": [], "distinctNeutralRankings": 1},
+    {"label": "final-2g-ctx4000", "kernel": "定稿内核，正文窗口 4000", "gram": 2, "contextChars": 4000, "samples": 29, "targetChapterRecalled": 11, "plantedTermInSnippet": 4, "meanRecallUsedChars": 800, "meanManuscriptChars": 2198, "neutralDirectionChapters": [], "distinctNeutralRankings": 1}
+  ],
+  "gateCheck": {
+    "directionWithoutClue": {"recallEnabled": false, "recallUsedChars": 0, "recallHits": 0, "manuscriptChars": 8973},
+    "directionWithClue": {"recallEnabled": true, "recallUsedChars": 191, "recallHits": 1, "manuscriptChars": 8181, "plantedTermInSnippet": true}
+  },
+  "vagueDirectionTermAudit": {
+    "chapterCount": 79,
+    "directionTermCount": 33,
+    "rareByDf": 28,
+    "absentFromCorpus": 27,
+    "actuallyOccurringInCorpus": 1,
+    "occurringTerm": "现有",
+    "occurringTermRunes": 2,
+    "occurringTermChapterFrequency": 2,
+    "chaptersContainingIt": [22, 32]
+  },
+  "regressionThresholdsProposed": {
+    "plantedThreeRuneClueTargetRecall": ">= 0.90 (measured 0.96 at contextChars 12000, 1.00 at 4000)",
+    "plantedTwoRuneClueTargetRecall": ">= 0.40 (measured 0.42 at 12000, 0.38 at 4000)",
+    "vagueDirectionInjectedChars": "== 0",
+    "sameInputRankingsIdentical": "true (distinctNeutralRankings == 1 in every run above)",
+    "gatedChaptersPerCluedDirection": "== 1 on the synthetic fixture (rate alone is blind to gate loosening)"
+  },
+  "committedGuard": {
+    "test": "internal/recall/recall_test.go::TestSearchPlantedClueRateOnSyntheticCorpus",
+    "fixture": {"chapters": 60, "runesApprox": 36000, "structure": "cross-chapter boilerplate + mid-frequency motifs + last 5 chapters with chapter-unique prose used as the query window", "plantedUniqueThreeRuneClues": 20, "clueCharacterPoolsDisjointFromCorpus": true},
+    "assertions": ["target-chapter recall >= 0.90 (measured 20/20)", "len(hits) == 1 per clued direction", "snippet still contains the planted line", "two identical runs agree item by item", "vague direction sharing only a 2-chapter 2-rune fragment -> 0 hits", "direction sharing no corpus term -> 0 hits", "fixture premise self-check: the vague direction's only rare shared token is 现有 with chapter df 2"],
+    "negativeControl": {"change": "defaultMinClueRunes 3 -> 1 (temporary, reverted)", "plantedClueRecallRate": "still 1.00 - ranking did not collapse", "gatedHitsPerDirection": "2 for all 20 probes - the 2-rune prefix of each clue is shared with the sibling clue planted 10 slots away (chapter df 2)", "conclusion": "the rate metric alone cannot see gate loosening when clue families overlap; the gated-hit-count invariant is what alarms"},
+    "suiteAfterGuard": "gofmt clean; go vet ./... ok; go test ./... -count=1 9 pkgs ok; CGO_ENABLED=1 go test -race ./... -count=1 9 pkgs ok (see ../r4-race.txt section 6)"
+  }
+}

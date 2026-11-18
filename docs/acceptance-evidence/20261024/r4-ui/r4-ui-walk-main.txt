@@ -1,0 +1,24 @@
+auto_recall_heading => "前文相关片段（来自第 25、3、31 章）"
+auto_recall_chars => 763
+auto_recall_border => "2px solid rgb(178, 58, 42)"
+auto_recall_maxheight => "220px / overflowY=auto"
+auto_headings => ["已激活计划（1 条，仅约束走向）","人物当前状态","人物认知","未解决伏笔","关键事件","近期计划","前文相关片段（来自第 25、3、31 章）"]
+auto_foot => "已用 242 / 3,000 字 · 检索 7 条 · 待复核跳过 1 条 · revision 12 · 计划 1 条 · 前文召回 3 段 · 763/800 字"
+on_recall_chars => 763
+on_foot => "已用 242 / 3,000 字 · 检索 7 条 · 待复核跳过 1 条 · revision 12 · 计划 1 条 · 前文召回 3 段 · 763/800 字"
+off_recall_present => false
+off_headings => ["已激活计划（1 条，仅约束走向）","人物当前状态","人物认知","未解决伏笔","关键事件","近期计划"]
+off_foot => "已用 242 / 3,000 字 · 检索 7 条 · 待复核跳过 1 条 · revision 12 · 计划 1 条 · 前文召回已关闭"
+toast_after_off => "前文召回已关闭，本次不会检索旧章节"
+recall_only_headings => ["已激活计划（1 条，仅约束走向）","前文相关片段（来自第 25、3、31 章）"]
+recall_only_foot => "计划 1 条 · 前文召回 3 段 · 763/800 字"
+recall_only_scrollable => true
+toast_after_on => "记忆注入已关闭，本次不会检索记忆"
+continue_note_off => "已连接 · 带入正文 8,940 字（截取结尾） · 计划 1 条"
+continue_status_log_off => ["正在连接模型…","已连接 · 带入正文 8,940 字（截取结尾） · 计划 1 条"]
+continue_note_on => "已连接 · 带入正文 8,176 字（截取结尾） · 计划 1 条 · 前文召回 3 段 · 763 字"
+continue_status_log_on => ["生成失败：模型调用失败：llm: upstream returned 502: {\"error\":{\"message\":\"stub-llm: no model channel (UI walk only)\"}}","正在连接模型…","已连接 · 带入正文 8,176 字（截取结尾） · 计划 1 条 · 前文召回 3 段 · 763 字"]
+continue_note_on_has_recall => true
+continue_note_off_has_recall => false
+api_requests => [{"api":"/api/continue/preview","body":"{\"direction\":\"继续追查青玉符的来历，让它在章末再次出现。\",\"targetChars\":800,\"useMemory\":true,\"usePlan\":true,\"useRecall\":null}"},{"api":"/api/continue/preview","body":"{\"direction\":\"继续追查青玉符的来历，让它在章末再次出现。\",\"targetChars\":800,\"useMemory\":true,\"usePlan\":true,\"useRecall\":true}"},{"api":"/api/continue/preview","body":"{\"direction\":\"继续追查青玉符的来历，让它在章末再次出现。\",\"targetChars\":800,\"useMemory\":true,\"usePlan\":true,\"useRecall\":false}"},{"api":"/api/continue/preview","body":"{\"direction\":\"继续追查青玉符的来历，让它在章末再次出现。\",\"targetChars\":800,\"useMemory\":false,\"usePlan\":true,\"useRecall\":true}"},{"api":"/api/continue/preview","body":"{\"direction\":\"继续追查青玉符的来历，让它在章末再次出现。\",\"targetChars\":800,\"useMemory\":false,\"usePlan\":true,\"useRecall\":false}"},{"api":"/api/continue","body":"{\"direction\":\"继续追查青玉符的来历，让它在章末再次出现。\",\"targetChars\":800,\"temperature\":0.85,\"useMemory\":false,\"usePlan\":true,\"useRecall\":false}"},{"api":"/api/continue/preview","body":"{\"direction\":\"继续追查青玉符的来历，让它在章末再次出现。\",\"targetChars\":800,\"useMemory\":false,\"usePlan\":true,\"useRecall\":true}"},{"api":"/api/continue","body":"{\"direction\":\"继续追查青玉符的来历，让它在章末再次出现。\",\"targetChars\":800,\"temperature\":0.85,\"useMemory\":false,\"usePlan\":true,\"useRecall\":true}"}]
+console_errors => []

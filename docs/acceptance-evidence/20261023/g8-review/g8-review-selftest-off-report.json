@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "caseId": "g8-review-selftest",
+  "title": "G8 盲评工具自测（合成 40 章）",
+  "description": "仅用于 evalreview 工具链自测；输出与评分均为 mock/合成，不代表真实模型或人评结论。",
+  "mode": "live",
+  "generatedAt": "2026-10-23T10:53:28.260364Z",
+  "source": {
+    "kind": "synthetic",
+    "title": "G8 盲评工具自测（合成 40 章）",
+    "chapters": 40,
+    "chars": 41520
+  },
+  "pricing": {
+    "inputPerMillion": 1,
+    "outputPerMillion": 2,
+    "currency": "USD",
+    "note": "示例价，仅用于演示度量口径；请替换为实际供应商的每百万 token 单价。"
+  },
+  "stops": [
+    {
+      "name": "early",
+      "afterChapter": 10,
+      "contextChars": 12000,
+      "targetChars": 800,
+      "useMemory": false,
+      "memory": {
+        "enabled": false,
+        "budgetChars": 3000,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "revision": 0
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 9396,
+        "totalChars": 9823,
+        "limitChars": 12000,
+        "manuscriptChars": 8968,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 78.3,
+        "sections": {
+          "characters": 89,
+          "manuscript": 8986,
+          "memories": 0,
+          "overview": 55,
+          "plans": 0,
+          "summaries": 32,
+          "world": 36
+        },
+        "inputTokens": 9686
+      },
+      "cost": {
+        "inputTokens": 9686,
+        "outputTokens": 32,
+        "inputCost": 0.009686,
+        "outputCost": 0.000064,
+        "totalCost": 0.00975,
+        "currency": "USD",
+        "priced": true
+      },
+      "live": {
+        "truncated": false,
+        "latencyMs": 3,
+        "outputChars": 32,
+        "outputTokens": 32,
+        "output": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。"
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "左臂旧伤",
+          "hint": "observed",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "clear",
+          "judgment": ""
+        }
+      ]
+    },
+    {
+      "name": "middle",
+      "afterChapter": 25,
+      "contextChars": 12000,
+      "targetChars": 800,
+      "useMemory": false,
+      "memory": {
+        "enabled": false,
+        "budgetChars": 3000,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "revision": 0
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 9446,
+        "totalChars": 9873,
+        "limitChars": 12000,
+        "manuscriptChars": 8969,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 78.716667,
+        "sections": {
+          "characters": 89,
+          "manuscript": 8987,
+          "memories": 0,
+          "overview": 55,
+          "plans": 0,
+          "summaries": 81,
+          "world": 36
+        },
+        "inputTokens": 9738
+      },
+      "cost": {
+        "inputTokens": 9738,
+        "outputTokens": 32,
+        "inputCost": 0.009738,
+        "outputCost": 0.000064,
+        "totalCost": 0.009802,
+        "currency": "USD",
+        "priced": true
+      },
+      "live": {
+        "truncated": false,
+        "latencyMs": 2,
+        "outputChars": 32,
+        "outputTokens": 32,
+        "output": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。"
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "青玉符",
+          "hint": "observed",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "clear",
+          "judgment": ""
+        }
+      ]
+    },
+    {
+      "name": "late",
+      "afterChapter": 40,
+      "contextChars": 12000,
+      "targetChars": 800,
+      "useMemory": false,
+      "memory": {
+        "enabled": false,
+        "budgetChars": 3000,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "revision": 0
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 9417,
+        "totalChars": 9844,
+        "limitChars": 12000,
+        "manuscriptChars": 8940,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 78.475,
+        "sections": {
+          "characters": 89,
+          "manuscript": 8958,
+          "memories": 0,
+          "overview": 55,
+          "plans": 0,
+          "summaries": 81,
+          "world": 36
+        },
+        "inputTokens": 9713
+      },
+      "cost": {
+        "inputTokens": 9713,
+        "outputTokens": 32,
+        "inputCost": 0.009713,
+        "outputCost": 0.000064,
+        "totalCost": 0.009777,
+        "currency": "USD",
+        "priced": true
+      },
+      "live": {
+        "truncated": false,
+        "latencyMs": 2,
+        "outputChars": 32,
+        "outputTokens": 32,
+        "output": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。"
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "青玉符",
+          "hint": "observed",
+          "judgment": ""
+        },
+        {
+          "kind": "must_land",
+          "text": "左臂旧伤",
+          "hint": "observed",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "clear",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "沈青禾已经死亡",
+          "hint": "clear",
+          "judgment": ""
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "stops": 3,
+    "inputTokens": 29137,
+    "outputTokens": 96,
+    "totalCost": 0.029329,
+    "currency": "USD",
+    "priced": true,
+    "maxUserBudgetPct": 78.716667,
+    "memoryInjectedStops": 0,
+    "overBudgetStops": 0
+  }
+}

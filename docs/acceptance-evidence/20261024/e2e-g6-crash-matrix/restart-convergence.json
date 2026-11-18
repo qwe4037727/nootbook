@@ -1,0 +1,88 @@
+{
+  "at": "2026-10-24T06:49:19.537Z",
+  "dir": "output/e2e-g6-rec-base",
+  "rounds": 4,
+  "rows": [
+    {
+      "round": 0,
+      "apiRevision": 8,
+      "apiRevisionAfterAnalysis": 8,
+      "counts": {
+        "events": 9,
+        "states": 2,
+        "cognitions": 3,
+        "threads": 1,
+        "plans": 0
+      },
+      "safeState": false,
+      "analysis": "timeout",
+      "commitDelta": [
+        {
+          "id": "commit_6a2747608d2851da99",
+          "type": "reconcile",
+          "status": "committed",
+          "basedOn": 7,
+          "target": 8,
+          "payload": [
+            "events.json"
+          ]
+        }
+      ],
+      "changedFiles": [
+        "memory/events.json",
+        "memory/meta.json",
+        "memory/commits.json",
+        "project.json",
+        "knowledge.json"
+      ]
+    },
+    {
+      "round": 1,
+      "apiRevision": 8,
+      "apiRevisionAfterAnalysis": 8,
+      "counts": {
+        "events": 9,
+        "states": 2,
+        "cognitions": 3,
+        "threads": 1,
+        "plans": 0
+      },
+      "safeState": false,
+      "analysis": "timeout",
+      "commitDelta": [],
+      "changedFiles": []
+    },
+    {
+      "round": 2,
+      "apiRevision": 8,
+      "apiRevisionAfterAnalysis": 8,
+      "counts": {
+        "events": 9,
+        "states": 2,
+        "cognitions": 3,
+        "threads": 1,
+        "plans": 0
+      },
+      "safeState": false,
+      "analysis": "timeout",
+      "commitDelta": [],
+      "changedFiles": []
+    },
+    {
+      "round": 3,
+      "apiRevision": 8,
+      "apiRevisionAfterAnalysis": 8,
+      "counts": {
+        "events": 9,
+        "states": 2,
+        "cognitions": 3,
+        "threads": 1,
+        "plans": 0
+      },
+      "safeState": false,
+      "analysis": "timeout",
+      "commitDelta": [],
+      "changedFiles": []
+    }
+  ]
+}

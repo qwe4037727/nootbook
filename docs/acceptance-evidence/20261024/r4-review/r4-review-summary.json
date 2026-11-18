@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "caseId": "r4-review-selftest",
+  "axis": "recall",
+  "stops": 3,
+  "onWins": 2,
+  "offWins": 0,
+  "ties": 1,
+  "onCoverage": 1,
+  "offCoverage": 0,
+  "onUnauthorized": 0,
+  "offUnauthorized": 1,
+  "onCharacterBreaks": 0,
+  "offCharacterBreaks": 0,
+  "onForeshadowMisses": 0,
+  "offForeshadowMisses": 0,
+  "onAmnesia": 0,
+  "offAmnesia": 0,
+  "pass": true,
+  "stopResults": [
+    {
+      "name": "early",
+      "onSide": "x",
+      "preference": "x",
+      "onCoverage": 1,
+      "offCoverage": 0,
+      "onUnauthorized": 0,
+      "offUnauthorized": 1
+    },
+    {
+      "name": "middle",
+      "onSide": "x",
+      "preference": "x",
+      "onCoverage": 1,
+      "offCoverage": 0,
+      "onUnauthorized": 0,
+      "offUnauthorized": 0
+    },
+    {
+      "name": "late",
+      "onSide": "y",
+      "preference": "tie",
+      "onCoverage": 1,
+      "offCoverage": 0,
+      "onUnauthorized": 0,
+      "offUnauthorized": 0
+    }
+  ]
+}

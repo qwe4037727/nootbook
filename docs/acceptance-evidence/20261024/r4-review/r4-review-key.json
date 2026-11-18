@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "caseId": "r4-review-selftest",
+  "axis": "recall",
+  "seed": 20261024,
+  "stops": [
+    {
+      "name": "early",
+      "memoryOn": "x"
+    },
+    {
+      "name": "middle",
+      "memoryOn": "x"
+    },
+    {
+      "name": "late",
+      "memoryOn": "y"
+    }
+  ]
+}

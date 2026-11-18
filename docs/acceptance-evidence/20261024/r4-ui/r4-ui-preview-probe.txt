@@ -1,0 +1,13 @@
+recall-auto 200 {"recallEnabled":true,"recallBudgetChars":800,"recallUsedChars":763,"recallHits":3,"recallChapters":[25,3,31],"memoryEnabled":true,"used":242,"budget":3000,"planEnabled":true,"planCount":1,"promptTotalChars":10391,"promptOverBudget":false}
+  recallSection.len=763
+  head="\n【前文相关片段】\n第25章 渡口：\n…了一下，陆行舟停住脚步。陆行舟没有立刻回答，目光落在旧宅的尽头。陆行舟和顾临川对视一眼，谁都没有先开口。夜里起风了，沈青禾替顾临川关上了窗。"
+recall-on-memory-off 200 {"recallEnabled":true,"recallBudgetChars":800,"recallUsedChars":763,"recallHits":3,"recallChapters":[25,3,31],"memoryEnabled":false,"used":0,"budget":0,"planEnabled":true,"planCount":1,"promptTotalChars":10050,"promptOverBudget":false}
+  recallSection.len=763
+  head="\n【前文相关片段】\n第25章 渡口：\n…了一下，陆行舟停住脚步。陆行舟没有立刻回答，目光落在旧宅的尽头。陆行舟和顾临川对视一眼，谁都没有先开口。夜里起风了，沈青禾替顾临川关上了窗。"
+recall-off-memory-off 200 {"recallEnabled":false,"recallBudgetChars":0,"recallUsedChars":0,"recallHits":0,"recallChapters":[],"memoryEnabled":false,"used":0,"budget":0,"planEnabled":true,"planCount":1,"promptTotalChars":9955,"promptOverBudget":false}
+  recallSection.len=0
+  head=""
+recall-on-memory-on 200 {"recallEnabled":true,"recallBudgetChars":800,"recallUsedChars":763,"recallHits":3,"recallChapters":[25,3,31],"memoryEnabled":true,"used":242,"budget":3000,"planEnabled":true,"planCount":1,"promptTotalChars":10391,"promptOverBudget":false}
+  recallSection.len=763
+  head="\n【前文相关片段】\n第25章 渡口：\n…了一下，陆行舟停住脚步。陆行舟没有立刻回答，目光落在旧宅的尽头。陆行舟和顾临川对视一眼，谁都没有先开口。夜里起风了，沈青禾替顾临川关上了窗。"
+config {"baseUrl":"http://127.0.0.1:8092/v1","model":"ui-walk-placeholder","contextChars":12000,"hasApiKey":false}

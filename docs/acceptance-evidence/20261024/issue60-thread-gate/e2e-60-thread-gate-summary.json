@@ -1,0 +1,319 @@
+{
+  "baseThread": {
+    "createdAt": "2026-10-24T06:25:39.7818557Z",
+    "id": "thread_7a0ae82d4381b18517",
+    "knownClues": [
+      "青玉符上的刻痕"
+    ],
+    "lastSource": "agent_extraction",
+    "needsReview": true,
+    "origin": {
+      "chapterId": "ch_4753905b0043763976",
+      "type": "deep_extract"
+    },
+    "recordVersion": 3,
+    "reviewReason": "evidence_unlocated",
+    "status": "open",
+    "title": "青玉符的来历",
+    "updatedAt": "2026-10-24T06:42:56.7838343Z",
+    "workId": "work_001"
+  },
+  "phrase": "沈青禾说这印属于",
+  "seedID": "c_9c9d6a711975f878fd",
+  "results": [
+    {
+      "variant": "V0_as_is",
+      "memoryRevision": 8,
+      "churnedDuringRun": false,
+      "safeState": false,
+      "counts_threads": 0,
+      "recalled_threads": 0,
+      "skippedReview": 3,
+      "skippedAmbiguous": 0,
+      "memoryUsedChars": 145,
+      "memorySectionChars": 145,
+      "memoryDisabledReason": null,
+      "charSeeds": [
+        {
+          "id": "c_9c9d6a711975f878fd",
+          "name": "林砚",
+          "score": 10.4,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "c_83f5c4d109e1a87b59",
+          "name": "沈青禾",
+          "score": 7.8,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "w_51a6b050392b58b46b",
+          "name": "县衙",
+          "score": 5.8,
+          "reason": "recent_mention"
+        }
+      ],
+      "threadRecordTexts": [],
+      "threadLinesInSection": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    },
+    {
+      "variant": "V1_title_verbatim_review_kept",
+      "memoryRevision": 8,
+      "churnedDuringRun": false,
+      "safeState": false,
+      "counts_threads": 0,
+      "recalled_threads": 0,
+      "skippedReview": 4,
+      "skippedAmbiguous": 0,
+      "memoryUsedChars": 145,
+      "memorySectionChars": 145,
+      "memoryDisabledReason": null,
+      "charSeeds": [
+        {
+          "id": "c_9c9d6a711975f878fd",
+          "name": "林砚",
+          "score": 10.4,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "c_83f5c4d109e1a87b59",
+          "name": "沈青禾",
+          "score": 7.8,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "w_51a6b050392b58b46b",
+          "name": "县衙",
+          "score": 5.8,
+          "reason": "recent_mention"
+        }
+      ],
+      "threadRecordTexts": [],
+      "threadLinesInSection": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    },
+    {
+      "variant": "V2_title_verbatim_review_cleared",
+      "memoryRevision": 8,
+      "churnedDuringRun": false,
+      "safeState": false,
+      "counts_threads": 1,
+      "recalled_threads": 1,
+      "skippedReview": 3,
+      "skippedAmbiguous": 0,
+      "memoryUsedChars": 176,
+      "memorySectionChars": 176,
+      "memoryDisabledReason": null,
+      "charSeeds": [
+        {
+          "id": "c_9c9d6a711975f878fd",
+          "name": "林砚",
+          "score": 10.4,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "c_83f5c4d109e1a87b59",
+          "name": "沈青禾",
+          "score": 7.8,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "w_51a6b050392b58b46b",
+          "name": "县衙",
+          "score": 5.8,
+          "reason": "recent_mention"
+        }
+      ],
+      "threadRecordTexts": [
+        "沈青禾说这印属于｜已知线索：青玉符上的刻痕"
+      ],
+      "threadLinesInSection": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "未解决伏笔：",
+        "- 沈青禾说这印属于｜已知线索：青玉符上的刻痕",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    },
+    {
+      "variant": "V3_orig_title_involvedID",
+      "memoryRevision": 8,
+      "churnedDuringRun": false,
+      "safeState": false,
+      "counts_threads": 1,
+      "recalled_threads": 1,
+      "skippedReview": 3,
+      "skippedAmbiguous": 0,
+      "memoryUsedChars": 174,
+      "memorySectionChars": 174,
+      "memoryDisabledReason": null,
+      "charSeeds": [
+        {
+          "id": "c_9c9d6a711975f878fd",
+          "name": "林砚",
+          "score": 10.4,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "c_83f5c4d109e1a87b59",
+          "name": "沈青禾",
+          "score": 7.8,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "w_51a6b050392b58b46b",
+          "name": "县衙",
+          "score": 5.8,
+          "reason": "recent_mention"
+        }
+      ],
+      "threadRecordTexts": [
+        "青玉符的来历｜已知线索：青玉符上的刻痕"
+      ],
+      "threadLinesInSection": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "未解决伏笔：",
+        "- 青玉符的来历｜已知线索：青玉符上的刻痕",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    },
+    {
+      "variant": "V4_orig_title_review_cleared_only",
+      "memoryRevision": 8,
+      "churnedDuringRun": false,
+      "safeState": false,
+      "counts_threads": 0,
+      "recalled_threads": 0,
+      "skippedReview": 3,
+      "skippedAmbiguous": 0,
+      "memoryUsedChars": 145,
+      "memorySectionChars": 145,
+      "memoryDisabledReason": null,
+      "charSeeds": [
+        {
+          "id": "c_9c9d6a711975f878fd",
+          "name": "林砚",
+          "score": 10.4,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "c_83f5c4d109e1a87b59",
+          "name": "沈青禾",
+          "score": 7.8,
+          "reason": "recent_mention"
+        },
+        {
+          "id": "w_51a6b050392b58b46b",
+          "name": "县衙",
+          "score": 5.8,
+          "reason": "recent_mention"
+        }
+      ],
+      "threadRecordTexts": [],
+      "threadLinesInSection": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    }
+  ],
+  "summary": [
+    {
+      "variant": "V0_as_is",
+      "counts_threads": 0,
+      "recalled_threads": 0,
+      "skippedReview": 3,
+      "used": 145,
+      "sectionChars": 145,
+      "churned": false,
+      "safeState": false,
+      "injectedThreadLines": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    },
+    {
+      "variant": "V1_title_verbatim_review_kept",
+      "counts_threads": 0,
+      "recalled_threads": 0,
+      "skippedReview": 4,
+      "used": 145,
+      "sectionChars": 145,
+      "churned": false,
+      "safeState": false,
+      "injectedThreadLines": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    },
+    {
+      "variant": "V2_title_verbatim_review_cleared",
+      "counts_threads": 1,
+      "recalled_threads": 1,
+      "skippedReview": 3,
+      "used": 176,
+      "sectionChars": 176,
+      "churned": false,
+      "safeState": false,
+      "injectedThreadLines": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "未解决伏笔：",
+        "- 沈青禾说这印属于｜已知线索：青玉符上的刻痕",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    },
+    {
+      "variant": "V3_orig_title_involvedID",
+      "counts_threads": 1,
+      "recalled_threads": 1,
+      "skippedReview": 3,
+      "used": 174,
+      "sectionChars": 174,
+      "churned": false,
+      "safeState": false,
+      "injectedThreadLines": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "未解决伏笔：",
+        "- 青玉符的来历｜已知线索：青玉符上的刻痕",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    },
+    {
+      "variant": "V4_orig_title_review_cleared_only",
+      "counts_threads": 0,
+      "recalled_threads": 0,
+      "skippedReview": 3,
+      "used": 145,
+      "sectionChars": 145,
+      "churned": false,
+      "safeState": false,
+      "injectedThreadLines": [
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 林砚｜认定青玉符能打开旧案缺口",
+        "- 第9章：林砚在县衙外握紧青玉符",
+        "- 第3章：林砚在县衙外握紧青玉符"
+      ]
+    }
+  ]
+}

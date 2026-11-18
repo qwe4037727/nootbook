@@ -1,0 +1,8 @@
+goos: windows
+goarch: amd64
+pkg: novelagent/internal/recall
+cpu: Intel(R) Core(TM) i7-7700 CPU @ 3.60GHz
+BenchmarkSearch200Chapters-8       	       1	 121404400 ns/op	32120560 B/op	  965083 allocs/op
+BenchmarkSearch5MChapterCorpus-8   	       1	 781257300 ns/op	257273832 B/op	 7518488 allocs/op
+PASS
+ok  	novelagent/internal/recall	1.077s

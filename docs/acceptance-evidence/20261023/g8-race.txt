@@ -1,0 +1,25 @@
+G8 / S6 race detector evidence
+Date: 2026-10-23
+Host: Windows 10 amd64
+Go: go1.25 windows/amd64
+CC: gcc.exe (x86_64-win32-seh-rev0, Built by MinGW-Builds project) 15.2.0
+Command:
+  export PATH="/d/tools/mingw64/bin:$PATH"
+  export CGO_ENABLED=1
+  go test -race ./... -count=1
+
+Result: PASS (no data races reported)
+
+?   	novelagent	[no test files]
+?   	novelagent/cmd/longeval	[no test files]
+?   	novelagent/cmd/probe	[no test files]
+ok  	novelagent/internal/agent	6.269s
+ok  	novelagent/internal/analysis	9.561s
+ok  	novelagent/internal/eval	17.972s
+ok  	novelagent/internal/llm	13.536s
+ok  	novelagent/internal/novel	11.024s
+ok  	novelagent/internal/plan	21.043s
+ok  	novelagent/internal/server	37.309s
+ok  	novelagent/internal/store	41.386s
+
+Note: this covers all packages reachable by `go test ./...`, including the G8 eval harness. It does not cover real-model runtime behavior, which remains blocked by the upstream gateway.

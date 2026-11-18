@@ -1,0 +1,70 @@
+{
+  "at": "2026-10-24T07:17:50.660Z",
+  "dir": "output/e2e-g6-so-probe",
+  "newEventId": "evt_5735fcc258546cf6a3",
+  "before": {
+    "revision": 8,
+    "afterConfirm": 9,
+    "commitId": "commit_4cbad63c2b2af763be",
+    "event": {
+      "storyOrder": 0,
+      "recordVersion": 1
+    },
+    "used": 177,
+    "order": [
+      "state:f8f130:",
+      "cognition:65d391:",
+      "cognition:450993:",
+      "cognition:55801c:",
+      "event:054be4:",
+      "event:cf5863:",
+      "event:6cf6a3:"
+    ],
+    "section": "\n【已确认剧情记忆（来自正文抽取，效力低于下方最近正文）】\n人物当前状态：\n- 林砚｜伤势：左臂旧伤开始发凉\n人物认知：\n- 林砚｜认定青玉符能打开旧案缺口\n- 林砚｜认定青玉符能打开旧案缺口\n- 林砚｜认定青玉符能打开旧案缺口\n关键事件（近因优先）：\n- 第9章：林砚在县衙外握紧青玉符\n- 第3章：林砚在县衙外握紧青玉符\n- 林砚在县衙外握紧青玉符\n"
+  },
+  "after": {
+    "revision": 10,
+    "event": {
+      "storyOrder": 10,
+      "recordVersion": 1
+    },
+    "used": 182,
+    "order": [
+      "state:f8f130:",
+      "cognition:65d391:",
+      "cognition:450993:",
+      "cognition:55801c:",
+      "event:6cf6a3:",
+      "event:054be4:",
+      "event:cf5863:"
+    ],
+    "section": "\n【已确认剧情记忆（来自正文抽取，效力低于下方最近正文）】\n人物当前状态：\n- 林砚｜伤势：左臂旧伤开始发凉\n人物认知：\n- 林砚｜认定青玉符能打开旧案缺口\n- 林砚｜认定青玉符能打开旧案缺口\n- 林砚｜认定青玉符能打开旧案缺口\n关键事件（近因优先）：\n- 第10章：林砚在县衙外握紧青玉符\n- 第9章：林砚在县衙外握紧青玉符\n- 第3章：林砚在县衙外握紧青玉符\n"
+  },
+  "sectionDiffLines": [
+    {
+      "line": 9,
+      "before": "- 第9章：林砚在县衙外握紧青玉符",
+      "after": "- 第10章：林砚在县衙外握紧青玉符"
+    },
+    {
+      "line": 10,
+      "before": "- 第3章：林砚在县衙外握紧青玉符",
+      "after": "- 第9章：林砚在县衙外握紧青玉符"
+    },
+    {
+      "line": 11,
+      "before": "- 林砚在县衙外握紧青玉符",
+      "after": "- 第3章：林砚在县衙外握紧青玉符"
+    }
+  ],
+  "summary": {
+    "usedBefore": 177,
+    "usedAfter": 182,
+    "delta": 5,
+    "sameRecordSet": false,
+    "storyOrderBefore": 0,
+    "storyOrderAfter": 10,
+    "revisionBefore": 9,
+    "revisionAfter": 10
+  }
+}

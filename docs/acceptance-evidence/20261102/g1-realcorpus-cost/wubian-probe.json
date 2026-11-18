@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "caseId": "corpus-wubian-v1",
+  "title": "无边悔恨（真实语料导入）",
+  "description": "用本地 511KB 真实文本验证导入分章与停点预算；未运行分析/记忆初始化，因此没有知识与记忆注入。",
+  "mode": "dry_run",
+  "generatedAt": "2026-11-02T08:05:43.4469101Z",
+  "source": {
+    "kind": "corpus",
+    "title": "无边悔恨（真实语料导入）",
+    "chapters": 79,
+    "chars": 163423
+  },
+  "pricing": {
+    "inputPerMillion": 1,
+    "outputPerMillion": 2,
+    "currency": "USD",
+    "note": "示例价，仅用于演示度量口径；请替换为实际供应商的每百万 token 单价。"
+  },
+  "stops": [
+    {
+      "name": "tail",
+      "afterChapter": 79,
+      "contextChars": 12000,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "全书最后一个停点；仅验证真实文本导入规模与 prompt 预算。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 3000,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "disabledReason": "memory_absent",
+        "revision": 0
+      },
+      "recall": {
+        "requested": "auto",
+        "enabled": true,
+        "autoEligible": true,
+        "budgetChars": 800,
+        "injectedChars": 550,
+        "hits": 2,
+        "chapters": [
+          47,
+          52
+        ]
+      },
+      "prompt": {
+        "systemChars": 523,
+        "userChars": 8903,
+        "totalChars": 9426,
+        "limitChars": 12000,
+        "manuscriptChars": 8181,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 74.191667,
+        "sections": {
+          "characters": 0,
+          "manuscript": 8199,
+          "memories": 0,
+          "overview": 0,
+          "plans": 0,
+          "recall": 550,
+          "summaries": 0,
+          "world": 0
+        },
+        "inputTokens": 8629
+      },
+      "cost": {
+        "inputTokens": 8629,
+        "outputTokens": 800,
+        "inputCost": 0.008629,
+        "outputCost": 0.0016,
+        "totalCost": 0.010229,
+        "currency": "USD",
+        "priced": true
+      }
+    }
+  ],
+  "totals": {
+    "stops": 1,
+    "inputTokens": 8629,
+    "outputTokens": 800,
+    "totalCost": 0.010229,
+    "currency": "USD",
+    "priced": true,
+    "maxUserBudgetPct": 74.191667,
+    "memoryInjectedStops": 0,
+    "recallInjectedStops": 1,
+    "overBudgetStops": 0
+  }
+}

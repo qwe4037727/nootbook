@@ -1,0 +1,8 @@
+case=longform-synthetic-v1 mode=dry_run source=synthetic chapters=40 chars=41520
+late                     chapter=40   input=953    user=543/400 (135.8%) memory=0/0 records=0 recall=auto 0/0 hits=0 []
+overBudgetStops=1
+total: stops=1 inputTokens=953 outputTokens=800 (unpriced) recallStops=0/1
+warning: late: prompt exceeds budget after shrink (543 > 400 runes)
+report: output/r4_tight_gorun.json
+longeval: 1 stop(s) exceed ContextChars after shrink
+exit status 3

@@ -1,0 +1,105 @@
+R4 召回 + 盲评轴落地后的全量回归
+日期：2026-10-24（含 `internal/eval/review.go` 轴改造与 `cmd/evalreview -axis`）
+环境：Windows 10.0.19045 / go1.25 / gcc 15.2.0 (x86_64-win32-seh-rev0, MinGW-Builds)
+
+1) 常规全量
+
+    go build ./...            # 通过
+    go vet ./...              # 通过
+    go test ./... -count=1    # 退出码 0
+
+    ?   	novelagent	[no test files]
+    ?   	novelagent/cmd/evalreview	[no test files]
+    ?   	novelagent/cmd/longeval	[no test files]
+    ?   	novelagent/cmd/probe	[no test files]
+    ok  	novelagent/internal/agent	0.773s
+    ok  	novelagent/internal/analysis	1.738s
+    ok  	novelagent/internal/eval	2.797s
+    ok  	novelagent/internal/llm	0.328s
+    ok  	novelagent/internal/novel	0.143s
+    ok  	novelagent/internal/plan	0.798s
+    ok  	novelagent/internal/recall	0.161s
+    ok  	novelagent/internal/server	5.489s
+    ok  	novelagent/internal/store	11.997s
+
+2) 竞争检测
+
+    export PATH="/d/tools/mingw64/bin:$PATH"; export CGO_ENABLED=1
+    go test -race ./... -count=1    # 退出码 0，无 DATA RACE 报告
+
+    ?   	novelagent	[no test files]
+    ?   	novelagent/cmd/evalreview	[no test files]
+    ?   	novelagent/cmd/longeval	[no test files]
+    ?   	novelagent/cmd/probe	[no test files]
+    ok  	novelagent/internal/agent	2.041s
+    ok  	novelagent/internal/analysis	2.436s
+    ok  	novelagent/internal/eval	8.629s
+    ok  	novelagent/internal/llm	1.268s
+    ok  	novelagent/internal/novel	1.100s
+    ok  	novelagent/internal/plan	1.662s
+    ok  	novelagent/internal/recall	1.195s
+    ok  	novelagent/internal/server	12.157s
+    ok  	novelagent/internal/store	17.258s
+
+3) 格式
+
+    gofmt -l internal cmd web
+    # 仍为 5 个 HEAD 既有文件（internal/analysis/extract_prompt.go、internal/analysis/merge_test.go、
+    # internal/novel/memory_test.go、internal/novel/project.go、internal/store/memory_init_test.go），
+    # 与本次改动无关，未顺手重排以免与并行改动冲突。本次新增/修改文件（internal/eval/review.go、
+    # internal/eval/review_test.go、cmd/evalreview/main.go、internal/recall/*、internal/agent/prompt.go、
+    # cmd/longeval/main.go、eval/cases/longform-synthetic.json）不在列表中。
+
+4) R4 前端走查收尾复跑（同日；本轮只改 web 静态资源与台账文档，无 Go 侧改动）
+
+    go build ./...                                  # 通过
+    go vet ./...                                    # 通过
+    go test ./... -count=1                          # 退出码 0
+
+    export PATH="/d/tools/mingw64/bin:$PATH"; export CGO_ENABLED=1
+    go test -race ./... -count=1                    # 退出码 0，无 DATA RACE 报告（9 包）
+
+    ?   	novelagent	[no test files]
+    ?   	novelagent/cmd/evalreview	[no test files]
+    ?   	novelagent/cmd/longeval	[no test files]
+    ?   	novelagent/cmd/probe	[no test files]
+    ok  	novelagent/internal/agent	1.809s
+    ok  	novelagent/internal/analysis	2.184s
+    ok  	novelagent/internal/eval	3.414s
+    ok  	novelagent/internal/llm	1.425s
+    ok  	novelagent/internal/novel	1.120s
+    ok  	novelagent/internal/plan	1.785s
+    ok  	novelagent/internal/recall	1.212s
+    ok  	novelagent/internal/server	6.335s
+    ok  	novelagent/internal/store	12.464s
+
+    注：本目录 r4-ui/r4-ui-run.md §6 记录同一轮收尾；issues #4（曾标为「本机无 C 编译器，-race 无法运行」）
+    据此结案。
+
+    5) R4 召回质量修复（真实语料命中率 19% -> 96%）收尾复跑，2026-10-24 12:38 前后
+    CGO_ENABLED=1 go test -race ./... -count=1  —— 9 包全绿，退出码 0：
+    ok  	novelagent/internal/agent	5.860s
+    ok  	novelagent/internal/analysis	6.390s
+    ok  	novelagent/internal/eval	17.561s
+    ok  	novelagent/internal/llm	11.385s
+    ok  	novelagent/internal/novel	11.262s
+    ok  	novelagent/internal/plan	11.691s
+    ok  	novelagent/internal/recall	11.311s
+    ok  	novelagent/internal/server	23.021s
+    ok  	novelagent/internal/store	23.437s
+    同轮 go vet ./... 通过，gofmt -l internal/recall 无输出。详见 r4-recall-quality/r4-recall-quality-run.md §7。
+
+    6) 命中率判据入库（TestSearchPlantedClueRateOnSyntheticCorpus）后复跑，2026-10-24 12:54 前后
+    CGO_ENABLED=1 go test -race ./... -count=1  —— 9 包全绿，退出码 0：
+    ok  	novelagent/internal/agent	2.187s
+    ok  	novelagent/internal/analysis	2.697s
+    ok  	novelagent/internal/eval	3.929s
+    ok  	novelagent/internal/llm	1.579s
+    ok  	novelagent/internal/novel	1.239s
+    ok  	novelagent/internal/plan	1.637s
+    ok  	novelagent/internal/recall	10.147s
+    ok  	novelagent/internal/server	13.437s
+    ok  	novelagent/internal/store	18.547s
+    同轮 go build ./... 无输出、go vet ./... 通过、gofmt -l internal/recall 无输出、
+    go test ./... -count=1 全绿。反向验证（临时 defaultMinClueRunes 3 -> 1）只让
+    internal/recall 红，随后已还原为 3。

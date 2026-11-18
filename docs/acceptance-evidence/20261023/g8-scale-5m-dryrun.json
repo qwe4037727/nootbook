@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "caseId": "longform-scale-5m-v1",
+  "title": "长篇规模样例（合成 500 万字）",
+  "description": "合成 500 章 × 10000 字，验证 500 万字级导入、停点组装与预算计量的可复现性；不含质量结论。",
+  "mode": "dry_run",
+  "generatedAt": "2026-10-23T09:46:48.4584919Z",
+  "source": {
+    "kind": "synthetic",
+    "title": "长篇规模样例（合成 500 万字）",
+    "chapters": 500,
+    "chars": 5020294
+  },
+  "pricing": {
+    "inputPerMillion": 1,
+    "outputPerMillion": 2,
+    "currency": "USD",
+    "note": "示例价，仅用于演示度量口径；请替换为实际供应商的每百万 token 单价。"
+  },
+  "stops": [
+    {
+      "name": "final@ctx4000",
+      "afterChapter": 500,
+      "contextChars": 4000,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "规模停点：正文窗口只覆盖末尾章节，早期设定依赖记忆与摘要。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 1000,
+        "records": 7,
+        "seeds": 3,
+        "droppedByBudget": 0,
+        "skippedReview": 1,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 242,
+        "injectedChars": 242,
+        "revision": 12
+      },
+      "prompt": {
+        "systemChars": 526,
+        "userChars": 3643,
+        "totalChars": 4169,
+        "limitChars": 4000,
+        "manuscriptChars": 2961,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 91.075,
+        "sections": {
+          "characters": 89,
+          "manuscript": 2979,
+          "memories": 242,
+          "overview": 55,
+          "plans": 0,
+          "summaries": 81,
+          "world": 0
+        },
+        "inputTokens": 4112
+      },
+      "cost": {
+        "inputTokens": 4112,
+        "outputTokens": 800,
+        "inputCost": 0.004112,
+        "outputCost": 0.0016,
+        "totalCost": 0.005712,
+        "currency": "USD",
+        "priced": true
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "左臂旧伤",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "unjudged",
+          "judgment": ""
+        }
+      ]
+    },
+    {
+      "name": "final@ctx12000",
+      "afterChapter": 500,
+      "contextChars": 12000,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "规模停点：正文窗口只覆盖末尾章节，早期设定依赖记忆与摘要。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 3000,
+        "records": 7,
+        "seeds": 3,
+        "droppedByBudget": 0,
+        "skippedReview": 1,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 242,
+        "injectedChars": 242,
+        "revision": 12
+      },
+      "prompt": {
+        "systemChars": 526,
+        "userChars": 9613,
+        "totalChars": 10139,
+        "limitChars": 12000,
+        "manuscriptChars": 8931,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 80.108333,
+        "sections": {
+          "characters": 89,
+          "manuscript": 8949,
+          "memories": 242,
+          "overview": 55,
+          "plans": 0,
+          "summaries": 81,
+          "world": 0
+        },
+        "inputTokens": 10004
+      },
+      "cost": {
+        "inputTokens": 10004,
+        "outputTokens": 800,
+        "inputCost": 0.010004,
+        "outputCost": 0.0016,
+        "totalCost": 0.011604,
+        "currency": "USD",
+        "priced": true
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "左臂旧伤",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "unjudged",
+          "judgment": ""
+        }
+      ]
+    },
+    {
+      "name": "final@ctx30000",
+      "afterChapter": 500,
+      "contextChars": 30000,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "规模停点：正文窗口只覆盖末尾章节，早期设定依赖记忆与摘要。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 3000,
+        "records": 7,
+        "seeds": 3,
+        "droppedByBudget": 0,
+        "skippedReview": 1,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 242,
+        "injectedChars": 242,
+        "revision": 12
+      },
+      "prompt": {
+        "systemChars": 526,
+        "userChars": 27594,
+        "totalChars": 28120,
+        "limitChars": 30000,
+        "manuscriptChars": 26912,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 91.98,
+        "sections": {
+          "characters": 89,
+          "manuscript": 26930,
+          "memories": 242,
+          "overview": 55,
+          "plans": 0,
+          "summaries": 81,
+          "world": 0
+        },
+        "inputTokens": 27759
+      },
+      "cost": {
+        "inputTokens": 27759,
+        "outputTokens": 800,
+        "inputCost": 0.027759,
+        "outputCost": 0.0016,
+        "totalCost": 0.029359,
+        "currency": "USD",
+        "priced": true
+      },
+      "checklist": [
+        {
+          "kind": "must_land",
+          "text": "左臂旧伤",
+          "hint": "unjudged",
+          "judgment": ""
+        },
+        {
+          "kind": "must_not",
+          "text": "林砚的左臂已经完全痊愈",
+          "hint": "unjudged",
+          "judgment": ""
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "stops": 3,
+    "inputTokens": 41875,
+    "outputTokens": 2400,
+    "totalCost": 0.046675,
+    "currency": "USD",
+    "priced": true,
+    "maxUserBudgetPct": 91.98,
+    "memoryInjectedStops": 3,
+    "overBudgetStops": 0
+  }
+}

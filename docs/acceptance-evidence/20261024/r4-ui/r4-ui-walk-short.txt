@@ -1,0 +1,13 @@
+toast_when_forced_on => ["前文召回已强制开启；不满 20 章也会检索"]
+forced_on_headings => ["已激活计划（1 条，仅约束走向）","人物当前状态","人物认知","未解决伏笔","关键事件","近期计划","前文相关片段（来自第 2、1 章）"]
+forced_on_recall_group => true
+forced_on_foot => "已用 242 / 3,000 字 · 检索 7 条 · 待复核跳过 1 条 · revision 12 · 计划 1 条 · 前文召回 2 段 · 582/800 字"
+forced_on_toasts => ["前文召回已强制开启；不满 20 章也会检索"]
+auto_recall_group => false
+auto_foot => "已用 242 / 3,000 字 · 检索 7 条 · 待复核跳过 1 条 · revision 12 · 计划 1 条"
+empty_all_off_text => null
+empty_all_off_recall_group => true
+short_continue_note => "已连接 · 带入正文 8,131 字（截取结尾） · 前文召回 2 段 · 582 字"
+short_continue_toasts => []
+short_continue_status_after => "已连接 · 带入正文 8,131 字（截取结尾） · 前文召回 2 段 · 582 字"
+console_errors => []

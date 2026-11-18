@@ -1,0 +1,21 @@
+{
+  "secondOpenIsIdempotent": true,
+  "pre": {
+    "revision": 6,
+    "commits": 6,
+    "storyOrder": 3
+  },
+  "post": {
+    "revision": 6,
+    "commits": 6,
+    "storyOrder": 3
+  },
+  "apiMemoryRevision": 6,
+  "apiSafeState": false,
+  "characterViewStatus": 200,
+  "storyOrderViaAPI": 3,
+  "allEventViewsViaAPI": [
+    "evt_941aad80d53ae04ebd:3:confirmed"
+  ],
+  "stderr": "time=2026-11-02T15:48:19.558+08:00 level=INFO msg=\"novel agent is ready\" url=http://127.0.0.1:8097 data=output/storyorder-probe-data\n"
+}

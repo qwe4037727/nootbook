@@ -1,0 +1,21 @@
+# 改动清单
+
+- task/iter2-acceptance-rework.md: 记录整改任务定义、范围、自测方法与结果
+- internal/analysis/extract.go: B2 同值跳过、B3 未知主体转冲突、D4 暂存期 manual_edit、D8 多命中 evidenceNote、resolved 线程补 ResolutionEvent、非法事件类型丢弃
+- internal/analysis/extract_test.go: 新增 9 个测试（U18/U19/U24/U29/I2-B/I2-C/I2-D、B2/B3/D8）
+- internal/store/memory_changeset.go: accept 保留暂存冲突与零有效 op 冲突、update_state 同值兜底、RebaseChangeSet 改用 memoryMu
+- internal/store/memory_extract.go: D2 去重语义（applied 始终跳过、pending 仅 force 绕过）
+- internal/store/memory_init.go: 导入重置清理 changesets.json 与 extractCurrentRun
+- internal/store/memory_iter2_test.go: 新增 15 个测试（U9/U10/U16/U18/U29/U31/U33/I2-A~I2-H、D2）
+- internal/server/memory_review.go: D1 严格 JSON 解码（4096B/413、未知字段/尾随 JSON/null/数组 400）
+- internal/server/memory_review_test.go: 新增 5 个测试（D1 契约 24 子用例、§6 状态映射、extract/candidate/reconcile）
+- docs/issues.md: 追加迭代 2 整改台账（#23–#28），D3/D5/D6/D7/EntityHint 已结案
+- internal/novel/memory_changeset.go: D3 ChangeSet 结构化 ChapterID/ChapterRevision 及校验
+- internal/store/memory_extract.go: D3 changeSetCoversChapter 结构化优先、旧 Reason 回退
+- internal/analysis/extract.go: D3 组装写入溯源字段；D7 合并 pending add_event；EntityHint 歧义原因码
+- internal/store/memory_changeset.go: D7 新增只读 LoadPendingEventRecords
+- internal/store/memory_candidates.go: D5 register 预写查重（MatchCharacter/MatchWorldEntry、歧义拒绝）、D6 Resolution 记实体 ID
+- internal/store/memory_iter2_test.go: S0 二次收口新增 6 个测试（D3 结构化/旧格式、D3 校验、D7 pending 读取、D5 幂等查重、D6 Resolution、D5 歧义拒绝）
+- internal/analysis/extract_test.go: S0 二次收口新增 3 个测试（D7 纯函数去重、D7 全链路、EntityHint 原因码）
+- task/iter2-acceptance-rework-changes.md: 本改动清单
+- task/iter2-acceptance-rework-issues.md: 配套问题记录

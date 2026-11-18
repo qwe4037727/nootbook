@@ -1,0 +1,37 @@
+{
+  "chapterTotal": "40",
+  "chapterRows": 40,
+  "activeChapter": "40第40章 霜降1,090 字×",
+  "editorHead": "林砚在河边门口等了很久，衣角被雨水打湿。陆行舟压低了声音，只让阿箬一个人听见。远",
+  "memoryItems": 7,
+  "memoryPreviewText": "已激活计划（1 条，仅约束走向） 【计划对齐（仅约束走向，不得覆盖已确认事实）】 - 近期《追查青玉符》｜目标：在离城前找到青玉符的另一半。 人物当前状态林砚｜伤势：左臂旧伤未愈，阴雨天会复发state_lin_wound人物认知林砚｜误以为沈青禾是旧案的主谋。（该认知为错误认知，人物尚未纠正）cog_2林砚｜知道青玉符与旧朝有关。cog_1未解决伏笔青玉符的来历｜已知线索：半枚青玉符thread_jade关键事件第12章：林砚左臂被断刃划伤。evt_2第3章：林砚在旧宅找到半枚青玉符。evt_1近期计划追查青玉符：在离城前找到青玉符的另一半。plan_near已用 242 / 3,000 字 · 召回 7 条 · 待复核跳过 1 条 · revision 12 · 计划 1 条",
+  "memoryFoot": "已用 242 / 3,000 字 · 召回 7 条 · 待复核跳过 1 条 · revision 12 · 计划 1 条",
+  "generatedText": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。",
+  "generationStatus": "已生成 32 字",
+  "draftBoxCount": "1",
+  "draftMeta": "目标：并入第 40 章 第40章 霜降 · 正文基线 r1 · 记忆基线 revision 12 · 更新于 2026/10/23 18:34:20",
+  "extractStatus": "已提取 1 操作 · 0 冲突；核对后确认提交。",
+  "changeSetText": "关联记忆变更 mcs_f9deb7fba234e0b0b8proposed1 操作 · 0 冲突 · 基于记忆 revision 12变更操作（1）add_event{ \"id\": \"evt_62cd28811d575f8877\", \"workId\": \"work_001\", \"recordVersion\": 1, \"createdAt\": \"2026-10-23T10:34:21.2977161Z\", \"updatedAt\": \"2026-10-23T10:34:21.2977161Z\", \"sourceRefs\": [ { \"chapterId\": \"ch_baef6998e74dc33a02\", \"chapterRevision\": 2, \"startOffset\": 1118, \"endOffset\": 1126, \"offsetUnit\": \"rune\", \"quote\": \"林砚按住左臂旧伤\" } ], \"needsReview\": false, \"origin\": { \"type\": \"deep_extract\", \"chapterId\": \"ch_baef6998e74dc33a02\" }, \"lastSource\": \"agent_extraction\", \"status\": \"proposed\", \"eventType\": \"character_action\", \"summary\": \"林砚按住左臂旧伤，决定追查青玉符旧账\", \"chapterId\": \"ch_baef6998e74dc33a02\", \"storyOrder\": 0, \"participantsKnown\": true, \"participants\": [ \"c_lin\" ], \"consequences\": [ { \"text\": \"林砚决定追查旧账\" } ] }",
+  "changeSetBaseline": "12",
+  "confirmDialog": "确认联合提交？将覆盖第 40 章 第40章 霜降，并同时写入已提取的记忆变更。",
+  "editorAfter": "脚步。沈青禾把手按在袖口，那里藏着一件不能示人的东西。老周在县衙门口等了很久，衣角被雨水打湿。沈青禾没有立刻回答，目光落在旧宅的尽头。灯影在县衙里晃了一下，陆行舟停住脚步。\n\n林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。",
+  "toast": "已联合提交 · commit commit_7afa535faebec4d9d7 · 记忆 revision 13",
+  "generationStatusAfter": "已联合提交 · 正文与记忆已写入",
+  "activeRowStatsAfter": "1,122 字",
+  "draftBadgeAfter": "0",
+  "postCommitPreviewText": "已激活计划（1 条，仅约束走向） 【计划对齐（仅约束走向，不得覆盖已确认事实）】 - 近期《追查青玉符》｜目标：在离城前找到青玉符的另一半。 人物当前状态林砚｜伤势：左臂旧伤未愈，阴雨天会复发state_lin_wound人物认知林砚｜误以为沈青禾是旧案的主谋。（该认知为错误认知，人物尚未纠正）cog_2林砚｜知道青玉符与旧朝有关。cog_1未解决伏笔青玉符的来历｜已知线索：半枚青玉符thread_jade关键事件第12章：林砚左臂被断刃划伤。evt_2第3章：林砚在旧宅找到半枚青玉符。evt_1林砚按住左臂旧伤，决定追查青玉符旧账evt_62cd28811d575f8877近期计划追查青玉符：在离城前找到青玉符的另一半。plan_near已用 263 / 3,000 字 · 召回 8 条 · 待复核跳过 1 条 · revision 13 · 计划 1 条",
+  "postCommitMemoryItems": 8,
+  "memoryRevision": 13,
+  "eventCount": 4,
+  "newEvent": [
+    {
+      "id": "evt_62cd28811d575f8877",
+      "status": "confirmed",
+      "needsReview": false,
+      "quote": "林砚按住左臂旧伤",
+      "chapterId": "ch_baef6998e74dc33a02"
+    }
+  ],
+  "pendingDrafts": 0,
+  "consoleErrors": []
+}

@@ -1,0 +1,108 @@
+{
+  "harness": "output/g4_5m_review_visibility.mjs",
+  "previewStatus": 200,
+  "previewMs": 1519,
+  "responseKeys": [
+    "budget",
+    "counts",
+    "droppedByBudget",
+    "manuscriptChars",
+    "memoryEnabled",
+    "memoryRevision",
+    "memorySection",
+    "planCount",
+    "planEnabled",
+    "planSection",
+    "promptOverBudget",
+    "promptTotalChars",
+    "recallBudgetChars",
+    "recallChapters",
+    "recallEnabled",
+    "recallHits",
+    "recallSection",
+    "recallUsedChars",
+    "records",
+    "sections",
+    "seeds",
+    "skippedAmbiguous",
+    "skippedReview",
+    "used"
+  ],
+  "memory": {
+    "used": 102,
+    "budget": 3000,
+    "enabled": true,
+    "counts": {
+      "states": 0,
+      "events": 1,
+      "threads": 0,
+      "cognitions": 1,
+      "plans": 0
+    },
+    "skippedReview": 6,
+    "skippedAmbiguous": 0,
+    "droppedByBudget": 0,
+    "memoryRevision": 3,
+    "recordIds": [
+      "cog_2",
+      "evt_2"
+    ]
+  },
+  "plan": {
+    "enabled": false,
+    "count": 0,
+    "sectionChars": 0
+  },
+  "recall": {
+    "enabled": false,
+    "budget": 0,
+    "used": 0,
+    "hits": 0,
+    "chapters": []
+  },
+  "prompt": {
+    "manuscriptChars": 8931,
+    "totalChars": 10002,
+    "overBudget": false
+  },
+  "overview": {
+    "status": 200,
+    "json": {
+      "workId": "work_001",
+      "schemaVersion": 1,
+      "memoryRevision": 3,
+      "lastCommitId": "commit_1deaa8d62e0f907d8f",
+      "initStatus": "not_started",
+      "counts": {
+        "events": 3,
+        "states": 3,
+        "cognitions": 2,
+        "threads": 2,
+        "plans": 1
+      },
+      "safeState": false
+    },
+    "keys": [
+      "counts",
+      "initStatus",
+      "lastCommitId",
+      "memoryRevision",
+      "safeState",
+      "schemaVersion",
+      "workId"
+    ]
+  },
+  "plans": {
+    "memoryRevision": 3,
+    "count": 1,
+    "roots": [
+      {
+        "id": "plan_near",
+        "status": "active",
+        "needsReview": true,
+        "reviewReason": "dependency_stale",
+        "recordVersion": 1
+      }
+    ]
+  }
+}

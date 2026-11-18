@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "caseId": "g8-review-selftest",
+  "title": "G8 盲评工具自测（合成 40 章）",
+  "seed": 20261023,
+  "createdAt": "2026-10-23T10:56:31.2291327Z",
+  "instructions": "X/Y 为同一停点的两版续写，顺序随机。请按 mustLand 三态（landed/summarized/missing）与 mustNot（clear/flagged）逐条评分，并填写人设崩坏、吞伏笔、失忆次数、未授权事实与偏好。评分完成前不要查看 key 文件。",
+  "stops": [
+    {
+      "name": "early",
+      "afterChapter": 10,
+      "x": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。",
+      "y": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。",
+      "mustLand": [
+        {
+          "text": "左臂旧伤",
+          "y": "landed",
+          "x": "missing"
+        }
+      ],
+      "mustNot": [
+        {
+          "text": "林砚的左臂已经完全痊愈",
+          "y": "clear",
+          "x": "flagged"
+        }
+      ],
+      "score": {
+        "preference": "y",
+        "reason": "self-test synthetic score; not human judgment",
+        "xUnauthorized": [
+          "selftest off-side extra fact"
+        ]
+      }
+    },
+    {
+      "name": "middle",
+      "afterChapter": 25,
+      "x": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。",
+      "y": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。",
+      "mustLand": [
+        {
+          "text": "青玉符",
+          "y": "landed",
+          "x": "missing"
+        }
+      ],
+      "mustNot": [
+        {
+          "text": "林砚的左臂已经完全痊愈",
+          "y": "clear",
+          "x": "flagged"
+        }
+      ],
+      "score": {
+        "preference": "y",
+        "reason": "self-test synthetic score; not human judgment"
+      }
+    },
+    {
+      "name": "late",
+      "afterChapter": 40,
+      "x": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。",
+      "y": "林砚按住左臂旧伤，望向雨幕。青玉符在掌心发烫，他知道旧账该清了。",
+      "mustLand": [
+        {
+          "text": "青玉符",
+          "x": "landed",
+          "y": "missing"
+        },
+        {
+          "text": "左臂旧伤",
+          "x": "landed",
+          "y": "missing"
+        }
+      ],
+      "mustNot": [
+        {
+          "text": "林砚的左臂已经完全痊愈",
+          "x": "clear",
+          "y": "flagged"
+        },
+        {
+          "text": "沈青禾已经死亡",
+          "x": "clear",
+          "y": "flagged"
+        }
+      ],
+      "score": {
+        "preference": "tie",
+        "reason": "self-test synthetic score; not human judgment"
+      }
+    }
+  ]
+}

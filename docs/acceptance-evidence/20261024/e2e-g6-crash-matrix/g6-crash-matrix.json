@@ -1,0 +1,916 @@
+{
+  "at": "2026-10-24T07:22:40.146Z",
+  "env": {
+    "bin": "output/novelagent-g6.exe",
+    "port": 8097,
+    "src": "output/e2e-g6-rec-base",
+    "crashSite": "output/e2e-g6-crash-pre",
+    "control": "output/e2e-g6-crash-ctrl",
+    "logs": "output/e2e-g6-crash-logs"
+  },
+  "crashSiteCommit": {
+    "id": "commit_24644d4a0f4fb5dba5",
+    "type": "formal",
+    "basedOn": 8,
+    "target": 9,
+    "payloadTargets": [
+      "memory/changesets.json",
+      "chapters/ch_ebd902ae71d7f14d27.json",
+      "memory/cognitions.json",
+      "memory/drafts.json",
+      "memory/events.json",
+      "project.json",
+      "memory/states.json",
+      "memory/threads.json"
+    ],
+    "newRecordIds": [
+      "evt_192534ca4def5c735c",
+      "cog_8b9dfac1c0130ae643",
+      "thread_3e786c0dca5b58f1a9"
+    ]
+  },
+  "controlChurn": [
+    {
+      "id": "commit_3f75af6ea5ba594185",
+      "type": "reconcile",
+      "basedOn": 9,
+      "target": 10,
+      "payload": [
+        "events.json"
+      ]
+    }
+  ],
+  "controlChangedFiles": [
+    "knowledge.json",
+    "memory/commits.json",
+    "memory/events.json",
+    "memory/meta.json",
+    "project.json"
+  ],
+  "results": [
+    {
+      "name": "P1_crash_site",
+      "before": {
+        "revision": 8,
+        "commitCount": 8,
+        "counts": {
+          "events": 9,
+          "states": 2,
+          "cognitions": 3,
+          "threads": 1,
+          "plans": 0
+        }
+      },
+      "extract": {
+        "status": 200,
+        "changeSetId": "mcs_48738e9d2ec2b07bf3",
+        "ops": [
+          "add_event",
+          "add_cognition",
+          "update_thread"
+        ],
+        "newRecordIds": [
+          "evt_192534ca4def5c735c",
+          "cog_8b9dfac1c0130ae643",
+          "thread_3e786c0dca5b58f1a9"
+        ]
+      },
+      "confirm": {
+        "status": 200,
+        "commitId": "commit_24644d4a0f4fb5dba5",
+        "revision": 9,
+        "chapterId": "ch_ebd902ae71d7f14d27",
+        "chapterRevision": 1,
+        "conflicts": 0
+      },
+      "tail": {
+        "commitId": "commit_24644d4a0f4fb5dba5",
+        "type": "formal",
+        "status": "committed",
+        "basedOn": 8,
+        "target": 9,
+        "payloadTargets": [
+          "memory/changesets.json",
+          "chapters/ch_ebd902ae71d7f14d27.json",
+          "memory/cognitions.json",
+          "memory/drafts.json",
+          "memory/events.json",
+          "project.json",
+          "memory/states.json",
+          "memory/threads.json"
+        ]
+      },
+      "after": {
+        "revision": 9,
+        "counts": {
+          "events": 10,
+          "states": 2,
+          "cognitions": 4,
+          "threads": 1,
+          "plans": 0
+        },
+        "commitCount": 9
+      },
+      "newEventBeforeRestart": {
+        "storyOrder": 0,
+        "recordVersion": 1,
+        "needsReview": false
+      },
+      "previewSameSession": {
+        "memoryUsedChars": 177,
+        "memorySectionChars": 177,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 3,
+          "threads": 0,
+          "cognitions": 3,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 463,
+        "promptTotalChars": 1443,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      }
+    },
+    {
+      "name": "P2_control_restart",
+      "churn": [
+        {
+          "id": "commit_3f75af6ea5ba594185",
+          "type": "reconcile",
+          "basedOn": 9,
+          "target": 10,
+          "payload": [
+            "events.json"
+          ]
+        }
+      ],
+      "churnDetected": {
+        "churn": true,
+        "rev": 10
+      },
+      "revision": 10,
+      "counts": {
+        "events": 10,
+        "states": 2,
+        "cognitions": 4,
+        "threads": 1,
+        "plans": 0
+      },
+      "preview": {
+        "memoryUsedChars": 182,
+        "memorySectionChars": 182,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 3,
+          "threads": 0,
+          "cognitions": 3,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 463,
+        "promptTotalChars": 1448,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      },
+      "filesChangedByControl": [
+        "knowledge.json",
+        "memory/commits.json",
+        "memory/events.json",
+        "memory/meta.json",
+        "project.json"
+      ],
+      "newEventAfterRestart": {
+        "storyOrder": 10,
+        "recordVersion": 1,
+        "needsReview": false
+      },
+      "injectionSameSessionVsAfterRestart": {
+        "memoryUsedChars": 5,
+        "recalledEvents": 0
+      },
+      "filesChangedByControlNote": "content compared modulo ISO timestamps (commits/meta excluded from byte identity: fresh commit IDs per run)",
+      "jointRecordPresentInLog": 1
+    },
+    {
+      "name": "P3_second_restart_quiescent",
+      "newCommits": false,
+      "revision": 10,
+      "contentDiffVsControl": []
+    },
+    {
+      "name": "C1_before_prepared",
+      "injected": {
+        "droppedCommit": "commit_24644d4a0f4fb5dba5",
+        "revertedTargets": 8,
+        "metaTo": 8
+      },
+      "api": {
+        "revision": 8,
+        "counts": {
+          "events": 9,
+          "states": 2,
+          "cognitions": 3,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false,
+        "safeStateError": null
+      },
+      "preview": {
+        "memoryUsedChars": 145,
+        "memorySectionChars": 145,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 2,
+          "threads": 0,
+          "cognitions": 2,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 406,
+        "promptTotalChars": 1354,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      },
+      "injectionDeltaVsControl": {
+        "memoryUsedChars": -37,
+        "memoryRecords": -1
+      },
+      "jointRecord": null,
+      "commitLog": {
+        "count": 8,
+        "tailId": "commit_6a2747608d2851da99",
+        "tailType": "reconcile",
+        "tailTarget": 8
+      },
+      "meta": {
+        "revision": 8,
+        "lastCommitId": "commit_6a2747608d2851da99"
+      },
+      "churn": {
+        "churn": false,
+        "rev": 8
+      },
+      "payloadTargetsDifferingFromGolden": [
+        "memory/changesets.json",
+        "memory/cognitions.json",
+        "memory/drafts.json",
+        "memory/events.json",
+        "project.json",
+        "memory/states.json",
+        "memory/threads.json"
+      ],
+      "expect": "no replay of a commit that never entered the log; chain stays valid; the joint commit stays absent",
+      "verdict": {
+        "safeStateFalse": true,
+        "chapterFileAbsent": true,
+        "revisionEqualsChainTail": true,
+        "newEventAbsentFromFile": true
+      }
+    },
+    {
+      "name": "C2_prepared_no_files",
+      "injected": {
+        "status": "prepared",
+        "revertedTargets": 8,
+        "metaTo": 8
+      },
+      "api": {
+        "revision": 10,
+        "counts": {
+          "events": 10,
+          "states": 2,
+          "cognitions": 4,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false,
+        "safeStateError": null
+      },
+      "preview": {
+        "memoryUsedChars": 182,
+        "memorySectionChars": 182,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 3,
+          "threads": 0,
+          "cognitions": 3,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 463,
+        "promptTotalChars": 1448,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      },
+      "injectionDeltaVsControl": {
+        "memoryUsedChars": 0,
+        "memoryRecords": 0
+      },
+      "jointRecord": {
+        "status": "committed",
+        "basedOn": 8,
+        "target": 9,
+        "occurrences": 1
+      },
+      "commitLog": {
+        "count": 10,
+        "tailId": "commit_e4487cb88751624975",
+        "tailType": "reconcile",
+        "tailTarget": 10
+      },
+      "meta": {
+        "revision": 10,
+        "lastCommitId": "commit_e4487cb88751624975"
+      },
+      "churn": {
+        "churn": true,
+        "rev": 10
+      },
+      "payloadTargetsDifferingFromGolden": [],
+      "expect": "replay the payload -> committed -> meta converged; body + all memory files land together",
+      "verdict": {
+        "replayedToGolden": true,
+        "statusCommitted": true,
+        "safeStateFalse": true,
+        "newChapterPresent": true
+      }
+    },
+    {
+      "name": "C3_half_written",
+      "injected": {
+        "status": "prepared",
+        "rolledBack": [
+          "memory/events.json",
+          "memory/cognitions.json",
+          "memory/threads.json",
+          "memory/states.json",
+          "chapters/ch_ebd902ae71d7f14d27.json (removed)"
+        ],
+        "leftPostCommit": [
+          "memory/changesets.json",
+          "memory/drafts.json",
+          "project.json"
+        ],
+        "metaTo": 8
+      },
+      "api": {
+        "revision": 10,
+        "counts": {
+          "events": 10,
+          "states": 2,
+          "cognitions": 4,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false,
+        "safeStateError": null
+      },
+      "preview": {
+        "memoryUsedChars": 182,
+        "memorySectionChars": 182,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 3,
+          "threads": 0,
+          "cognitions": 3,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 463,
+        "promptTotalChars": 1448,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      },
+      "injectionDeltaVsControl": {
+        "memoryUsedChars": 0,
+        "memoryRecords": 0
+      },
+      "jointRecord": {
+        "status": "committed",
+        "basedOn": 8,
+        "target": 9,
+        "occurrences": 1
+      },
+      "commitLog": {
+        "count": 10,
+        "tailId": "commit_ae0d6d660e60af3bf1",
+        "tailType": "reconcile",
+        "tailTarget": 10
+      },
+      "meta": {
+        "revision": 10,
+        "lastCommitId": "commit_ae0d6d660e60af3bf1"
+      },
+      "churn": {
+        "churn": true,
+        "rev": 10
+      },
+      "payloadTargetsDifferingFromGolden": [],
+      "expect": "覆盖写幂等: replay补齐 the gap -> identical to golden incl. 正文",
+      "verdict": {
+        "replayedToGolden": true,
+        "statusCommitted": true,
+        "safeStateFalse": true,
+        "diffs": []
+      }
+    },
+    {
+      "name": "C4_written_not_committed",
+      "injected": {
+        "status": "prepared",
+        "filesAlreadyAtCrashSite": true,
+        "metaTo": 8
+      },
+      "api": {
+        "revision": 10,
+        "counts": {
+          "events": 10,
+          "states": 2,
+          "cognitions": 4,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false,
+        "safeStateError": null
+      },
+      "preview": {
+        "memoryUsedChars": 182,
+        "memorySectionChars": 182,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 3,
+          "threads": 0,
+          "cognitions": 3,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 463,
+        "promptTotalChars": 1448,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      },
+      "injectionDeltaVsControl": {
+        "memoryUsedChars": 0,
+        "memoryRecords": 0
+      },
+      "jointRecord": {
+        "status": "committed",
+        "basedOn": 8,
+        "target": 9,
+        "occurrences": 1
+      },
+      "commitLog": {
+        "count": 10,
+        "tailId": "commit_fd50b1ef93cd457cd3",
+        "tailType": "reconcile",
+        "tailTarget": 10
+      },
+      "meta": {
+        "revision": 10,
+        "lastCommitId": "commit_fd50b1ef93cd457cd3"
+      },
+      "churn": {
+        "churn": true,
+        "rev": 10
+      },
+      "payloadTargetsDifferingFromGolden": [],
+      "expect": "replay is byte-wise a no-op, flips committed, converges meta; must not double-apply records",
+      "verdict": {
+        "bytesUnchanged": true,
+        "statusCommitted": true,
+        "singleOccurrence": true,
+        "newEventNotDoubled": 1,
+        "revision": 10
+      }
+    },
+    {
+      "name": "C5_committed_meta_stale",
+      "injected": {
+        "status": "committed (kept)",
+        "metaTo": 8,
+        "markerIn": "chapters/ch_ebd902ae71d7f14d27.json"
+      },
+      "api": {
+        "revision": 10,
+        "counts": {
+          "events": 10,
+          "states": 2,
+          "cognitions": 4,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false,
+        "safeStateError": null
+      },
+      "preview": {
+        "memoryUsedChars": 182,
+        "memorySectionChars": 182,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 3,
+          "threads": 0,
+          "cognitions": 3,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 471,
+        "promptTotalChars": 1456,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      },
+      "injectionDeltaVsControl": {
+        "memoryUsedChars": 0,
+        "memoryRecords": 0
+      },
+      "jointRecord": {
+        "status": "committed",
+        "basedOn": 8,
+        "target": 9,
+        "occurrences": 1
+      },
+      "commitLog": {
+        "count": 10,
+        "tailId": "commit_84621c381cd32e8716",
+        "tailType": "reconcile",
+        "tailTarget": 10
+      },
+      "meta": {
+        "revision": 10,
+        "lastCommitId": "commit_84621c381cd32e8716"
+      },
+      "churn": {
+        "churn": true,
+        "rev": 10
+      },
+      "payloadTargetsDifferingFromGolden": [],
+      "expect": "spec row 5: 不重放文件, only converge meta (对齐, not +1)",
+      "verdict": {
+        "markerSurvived_noFileReplay": true,
+        "tailStillCommitted": true,
+        "metaConverged": true,
+        "lastCommitIdSet": true,
+        "apiMatchesMeta": true,
+        "otherTargetsIdentical": true
+      }
+    },
+    {
+      "name": "C5b_committed_files_rolled",
+      "injected": {
+        "committedRecord": true,
+        "rolledBackMemoryFiles": [
+          "memory/events.json",
+          "memory/cognitions.json",
+          "memory/threads.json",
+          "memory/states.json"
+        ],
+        "metaTo": 8
+      },
+      "api": {
+        "revision": 9,
+        "counts": {
+          "events": 9,
+          "states": 2,
+          "cognitions": 3,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false,
+        "safeStateError": null
+      },
+      "preview": {
+        "memoryUsedChars": 145,
+        "memorySectionChars": 145,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 2,
+          "threads": 0,
+          "cognitions": 2,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 463,
+        "promptTotalChars": 1411,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      },
+      "injectionDeltaVsControl": {
+        "memoryUsedChars": -37,
+        "memoryRecords": -1
+      },
+      "jointRecord": {
+        "status": "committed",
+        "basedOn": 8,
+        "target": 9,
+        "occurrences": 1
+      },
+      "commitLog": {
+        "count": 9,
+        "tailId": "commit_24644d4a0f4fb5dba5",
+        "tailType": "formal",
+        "tailTarget": 9
+      },
+      "meta": {
+        "revision": 9,
+        "lastCommitId": "commit_24644d4a0f4fb5dba5"
+      },
+      "churn": {
+        "churn": true,
+        "rev": 9
+      },
+      "payloadTargetsDifferingFromGolden": [
+        "memory/cognitions.json",
+        "memory/events.json",
+        "memory/states.json",
+        "memory/threads.json"
+      ],
+      "expect": "recorded behaviour: committed => no replay, so rolled-back files stay behind while meta converges",
+      "verdict": {
+        "filesStayBehindGolden": [
+          "memory/cognitions.json",
+          "memory/events.json",
+          "memory/states.json",
+          "memory/threads.json"
+        ],
+        "apiRevision": 9,
+        "metaRevision": 9,
+        "safeStateFalse": true
+      }
+    },
+    {
+      "name": "C6_consistent",
+      "injected": {
+        "note": "pristine copy of the crash site: joint commit is tail and committed"
+      },
+      "api": {
+        "revision": 10,
+        "counts": {
+          "events": 10,
+          "states": 2,
+          "cognitions": 4,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false,
+        "safeStateError": null
+      },
+      "preview": {
+        "memoryUsedChars": 182,
+        "memorySectionChars": 182,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 3,
+          "threads": 0,
+          "cognitions": 3,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 463,
+        "promptTotalChars": 1448,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      },
+      "injectionDeltaVsControl": {
+        "memoryUsedChars": 0,
+        "memoryRecords": 0
+      },
+      "jointRecord": {
+        "status": "committed",
+        "basedOn": 8,
+        "target": 9,
+        "occurrences": 1
+      },
+      "commitLog": {
+        "count": 10,
+        "tailId": "commit_d77e81a1110442f912",
+        "tailType": "reconcile",
+        "tailTarget": 10
+      },
+      "meta": {
+        "revision": 10,
+        "lastCommitId": "commit_d77e81a1110442f912"
+      },
+      "churn": {
+        "churn": true,
+        "rev": 10
+      },
+      "payloadTargetsDifferingFromGolden": [],
+      "expect": "restart = control restart: identical bytes on payload targets, one deterministic reconcile commit, safeState false",
+      "verdict": {
+        "payloadTargetsIdenticalToControl": true,
+        "jointRecordIntact": true,
+        "chainHealthy": true,
+        "commitIdsUnique": true
+      }
+    },
+    {
+      "name": "C6b_replay_confirm_idempotent",
+      "draftId": "draft_57a143d74afbd61755",
+      "firstCommitId": "commit_24644d4a0f4fb5dba5",
+      "replayStatus": 200,
+      "replayCommitId": "commit_24644d4a0f4fb5dba5",
+      "errorCode": null,
+      "commitCountBefore": 10,
+      "commitCountAfter": 10,
+      "revisionBefore": 10,
+      "revisionAfter": 10,
+      "sameCommitId": true,
+      "countsUnchanged": true
+    },
+    {
+      "name": "C7_aborted_partial",
+      "injected": {
+        "status": "aborted",
+        "filesLeftAtCrashSite": true,
+        "metaTo": 8
+      },
+      "api": {
+        "revision": 8,
+        "counts": {
+          "events": 9,
+          "states": 2,
+          "cognitions": 3,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false,
+        "safeStateError": null
+      },
+      "preview": {
+        "memoryUsedChars": 145,
+        "memorySectionChars": 145,
+        "planCount": 0,
+        "counts": {
+          "states": 1,
+          "events": 2,
+          "threads": 0,
+          "cognitions": 2,
+          "plans": 0
+        },
+        "recallUsedChars": 0,
+        "manuscriptChars": 406,
+        "promptTotalChars": 1354,
+        "memoryEnabled": true,
+        "skippedReview": 3
+      },
+      "injectionDeltaVsControl": {
+        "memoryUsedChars": -37,
+        "memoryRecords": -1
+      },
+      "jointRecord": {
+        "status": "aborted",
+        "basedOn": 8,
+        "target": 9,
+        "occurrences": 1
+      },
+      "commitLog": {
+        "count": 9,
+        "tailId": "commit_24644d4a0f4fb5dba5",
+        "tailType": "formal",
+        "tailTarget": 9
+      },
+      "meta": {
+        "revision": 8,
+        "lastCommitId": "commit_6a2747608d2851da99"
+      },
+      "churn": {
+        "churn": false,
+        "rev": 8
+      },
+      "payloadTargetsDifferingFromGolden": [
+        "memory/changesets.json",
+        "memory/cognitions.json",
+        "memory/drafts.json",
+        "memory/events.json",
+        "project.json",
+        "memory/states.json",
+        "memory/threads.json"
+      ],
+      "expect": "tail aborted => revert re-executed: 正文/记忆回到提交前, chain 健康, 该提交不生效",
+      "verdict": {
+        "statusStaysAborted": true,
+        "chapterFileRemoved": true,
+        "newEventAbsent": true,
+        "safeStateFalse": true,
+        "metaAlignsToLastNonAborted": true
+      }
+    },
+    {
+      "name": "X1_broken_chain",
+      "injected": {
+        "removedCommit": "commit_81a10c650310ce7bbf",
+        "remaining": 8
+      },
+      "api": {
+        "revision": 9,
+        "counts": {
+          "events": 10,
+          "states": 2,
+          "cognitions": 4,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": true,
+        "safeStateError": "commit chain broken at commit_5c54771fdcd279868f: basedOn=2 want=1 (commit_chain_broken)"
+      },
+      "preview": null,
+      "injectionDeltaVsControl": null,
+      "jointRecord": {
+        "status": "committed",
+        "basedOn": 8,
+        "target": 9,
+        "occurrences": 1
+      },
+      "commitLog": {
+        "count": 8,
+        "tailId": "commit_24644d4a0f4fb5dba5",
+        "tailType": "formal",
+        "tailTarget": 9
+      },
+      "meta": {
+        "revision": 9,
+        "lastCommitId": "commit_24644d4a0f4fb5dba5"
+      },
+      "churn": {
+        "churn": false,
+        "rev": 9
+      },
+      "payloadTargetsDifferingFromGolden": [
+        "memory/events.json"
+      ],
+      "expect": "safeState=true commit_chain_broken; memory writes refused; 正文/project still readable",
+      "verdict": {
+        "failClosed": true,
+        "reason": "commit chain broken at commit_5c54771fdcd279868f: basedOn=2 want=1 (commit_chain_broken)"
+      },
+      "safeStateProbe": {
+        "draft": {
+          "status": 500,
+          "code": "memory_safe_state"
+        },
+        "project": 200,
+        "chapterRead": 200
+      }
+    },
+    {
+      "name": "X2_forked_chain",
+      "injected": {
+        "duplicatedCommit": "commit_6a2747608d2851da99",
+        "remaining": 10
+      },
+      "api": {
+        "revision": 9,
+        "counts": {
+          "events": 10,
+          "states": 2,
+          "cognitions": 4,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": true,
+        "safeStateError": "commit chain broken at commit_6a2747608d2851da99: basedOn=7 want=8 (commit_chain_broken)"
+      },
+      "preview": null,
+      "injectionDeltaVsControl": null,
+      "jointRecord": {
+        "status": "committed",
+        "basedOn": 8,
+        "target": 9,
+        "occurrences": 1
+      },
+      "commitLog": {
+        "count": 10,
+        "tailId": "commit_24644d4a0f4fb5dba5",
+        "tailType": "formal",
+        "tailTarget": 9
+      },
+      "meta": {
+        "revision": 9,
+        "lastCommitId": "commit_24644d4a0f4fb5dba5"
+      },
+      "churn": {
+        "churn": false,
+        "rev": 9
+      },
+      "payloadTargetsDifferingFromGolden": [
+        "memory/events.json"
+      ],
+      "expect": "safeState=true commit chain fork",
+      "verdict": {
+        "failClosed": true,
+        "reason": "commit chain broken at commit_6a2747608d2851da99: basedOn=7 want=8 (commit_chain_broken)"
+      }
+    }
+  ]
+}

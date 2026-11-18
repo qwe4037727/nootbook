@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "caseId": "corpus-wubian-v1",
+  "title": "无边悔恨（真实语料导入）",
+  "description": "用本地 511KB 真实文本验证导入分章与停点预算；未运行分析/记忆初始化，因此没有知识与记忆注入。",
+  "mode": "dry_run",
+  "generatedAt": "2026-10-23T09:57:16.7261178Z",
+  "source": {
+    "kind": "corpus",
+    "title": "无边悔恨（真实语料导入）",
+    "chapters": 79,
+    "chars": 163423
+  },
+  "pricing": {
+    "inputPerMillion": 0,
+    "outputPerMillion": 0,
+    "currency": "USD"
+  },
+  "stops": [
+    {
+      "name": "tail@ctx1600",
+      "afterChapter": 79,
+      "contextChars": 1600,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "全书最后一个停点；仅验证真实文本导入规模与 prompt 预算。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 0,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "revision": 0
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 1599,
+        "totalChars": 2026,
+        "limitChars": 1600,
+        "manuscriptChars": 1427,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 99.9375,
+        "sections": {
+          "characters": 0,
+          "manuscript": 1445,
+          "memories": 0,
+          "overview": 0,
+          "plans": 0,
+          "summaries": 0,
+          "world": 0
+        },
+        "inputTokens": 1850
+      },
+      "cost": {
+        "inputTokens": 1850,
+        "outputTokens": 800,
+        "inputCost": 0,
+        "outputCost": 0,
+        "totalCost": 0,
+        "currency": "USD",
+        "priced": false
+      }
+    },
+    {
+      "name": "tail@ctx4000",
+      "afterChapter": 79,
+      "contextChars": 4000,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "全书最后一个停点；仅验证真实文本导入规模与 prompt 预算。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 1000,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "disabledReason": "memory_absent",
+        "revision": 0
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 3160,
+        "totalChars": 3587,
+        "limitChars": 4000,
+        "manuscriptChars": 2988,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 79,
+        "sections": {
+          "characters": 0,
+          "manuscript": 3006,
+          "memories": 0,
+          "overview": 0,
+          "plans": 0,
+          "summaries": 0,
+          "world": 0
+        },
+        "inputTokens": 3228
+      },
+      "cost": {
+        "inputTokens": 3228,
+        "outputTokens": 800,
+        "inputCost": 0,
+        "outputCost": 0,
+        "totalCost": 0,
+        "currency": "USD",
+        "priced": false
+      }
+    },
+    {
+      "name": "tail@ctx12000",
+      "afterChapter": 79,
+      "contextChars": 12000,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "全书最后一个停点；仅验证真实文本导入规模与 prompt 预算。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 3000,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "disabledReason": "memory_absent",
+        "revision": 0
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 9145,
+        "totalChars": 9572,
+        "limitChars": 12000,
+        "manuscriptChars": 8973,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 76.208333,
+        "sections": {
+          "characters": 0,
+          "manuscript": 8991,
+          "memories": 0,
+          "overview": 0,
+          "plans": 0,
+          "summaries": 0,
+          "world": 0
+        },
+        "inputTokens": 8748
+      },
+      "cost": {
+        "inputTokens": 8748,
+        "outputTokens": 800,
+        "inputCost": 0,
+        "outputCost": 0,
+        "totalCost": 0,
+        "currency": "USD",
+        "priced": false
+      }
+    },
+    {
+      "name": "tail@ctx30000",
+      "afterChapter": 79,
+      "contextChars": 30000,
+      "targetChars": 800,
+      "useMemory": true,
+      "notes": "全书最后一个停点；仅验证真实文本导入规模与 prompt 预算。",
+      "memory": {
+        "enabled": true,
+        "budgetChars": 3000,
+        "records": 0,
+        "seeds": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 0,
+        "skippedAmbiguous": 0,
+        "retrievalUsedChars": 0,
+        "injectedChars": 0,
+        "disabledReason": "memory_absent",
+        "revision": 0
+      },
+      "prompt": {
+        "systemChars": 427,
+        "userChars": 27166,
+        "totalChars": 27593,
+        "limitChars": 30000,
+        "manuscriptChars": 26994,
+        "truncated": true,
+        "overBudget": false,
+        "userBudgetPct": 90.553333,
+        "sections": {
+          "characters": 0,
+          "manuscript": 27012,
+          "memories": 0,
+          "overview": 0,
+          "plans": 0,
+          "summaries": 0,
+          "world": 0
+        },
+        "inputTokens": 25824
+      },
+      "cost": {
+        "inputTokens": 25824,
+        "outputTokens": 800,
+        "inputCost": 0,
+        "outputCost": 0,
+        "totalCost": 0,
+        "currency": "USD",
+        "priced": false
+      }
+    }
+  ],
+  "totals": {
+    "stops": 4,
+    "inputTokens": 39650,
+    "outputTokens": 3200,
+    "totalCost": 0,
+    "currency": "USD",
+    "priced": false,
+    "maxUserBudgetPct": 99.9375,
+    "memoryInjectedStops": 0,
+    "overBudgetStops": 0
+  }
+}

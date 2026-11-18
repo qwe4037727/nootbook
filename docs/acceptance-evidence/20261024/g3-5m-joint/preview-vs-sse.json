@@ -1,0 +1,351 @@
+{
+  "harness": "output/g3_5m_preview_vs_sse.mjs",
+  "note": "桩端点不可达，仅取 meta；不含模型输出，故不判文学质量。",
+  "runs": [
+    {
+      "variant": "cluedAuto",
+      "request": {
+        "direction": "林砚带着半枚青玉符回到县城，连月阴雨，沈青禾替他处理左臂旧伤，陆行舟的商队带来外地消息。",
+        "targetChars": 800
+      },
+      "previewHttp": 200,
+      "sseHttp": 200,
+      "sseEvents": [
+        "meta",
+        "error"
+      ],
+      "sseError": "{\"error\":\"模型调用失败：llm: request failed: Post \\\"http://127.0.0.1:9/v1/chat/completions\\\": dial tcp 127.0.0.1:9: connectex: No connection could be made because the target machine actively refused it.\"}",
+      "sseMs": 1354,
+      "fields": {
+        "contextChars": {
+          "preview": 8179,
+          "sse": 8179
+        },
+        "promptTotalChars": {
+          "preview": 10420,
+          "sse": 10420
+        },
+        "promptOverBudget": {
+          "preview": false,
+          "sse": false
+        },
+        "promptSections": {
+          "preview": {
+            "characters": 89,
+            "manuscript": 8197,
+            "memories": 242,
+            "overview": 55,
+            "plans": 55,
+            "recall": 800,
+            "summaries": 81,
+            "world": 0
+          },
+          "sse": {
+            "characters": 89,
+            "manuscript": 8197,
+            "memories": 242,
+            "overview": 55,
+            "plans": 55,
+            "recall": 800,
+            "summaries": 81,
+            "world": 0
+          }
+        },
+        "memoryEnabled": {
+          "preview": true,
+          "sse": true
+        },
+        "memoryBudgetChars": {
+          "preview": 3000,
+          "sse": 3000
+        },
+        "memoryUsedChars": {
+          "preview": 242,
+          "sse": 242
+        },
+        "memoryRevision": {
+          "preview": 12,
+          "sse": 12
+        },
+        "seeds": {
+          "preview": 3,
+          "sse": 3
+        },
+        "recalledByKind": {
+          "preview": {
+            "states": 1,
+            "events": 2,
+            "threads": 1,
+            "cognitions": 2,
+            "plans": 1
+          },
+          "sse": {
+            "states": 1,
+            "events": 2,
+            "threads": 1,
+            "cognitions": 2,
+            "plans": 1
+          }
+        },
+        "recallEnabled": {
+          "preview": true,
+          "sse": true
+        },
+        "recallBudgetChars": {
+          "preview": 800,
+          "sse": 800
+        },
+        "recallUsedChars": {
+          "preview": 800,
+          "sse": 800
+        },
+        "recallChapters": {
+          "preview": [
+            3,
+            12
+          ],
+          "sse": [
+            3,
+            12
+          ]
+        },
+        "planCount": {
+          "preview": 1,
+          "sse": 1
+        }
+      },
+      "mismatchCount": 0,
+      "mismatches": []
+    },
+    {
+      "variant": "cluedRecallOff",
+      "request": {
+        "direction": "林砚带着半枚青玉符回到县城，连月阴雨，沈青禾替他处理左臂旧伤，陆行舟的商队带来外地消息。",
+        "targetChars": 800,
+        "useRecall": false
+      },
+      "previewHttp": 200,
+      "sseHttp": 200,
+      "sseEvents": [
+        "meta",
+        "error"
+      ],
+      "sseError": "{\"error\":\"模型调用失败：llm: request failed: Post \\\"http://127.0.0.1:9/v1/chat/completions\\\": dial tcp 127.0.0.1:9: connectex: No connection could be made because the target machine actively refused it.\"}",
+      "sseMs": 418,
+      "fields": {
+        "contextChars": {
+          "preview": 8931,
+          "sse": 8931
+        },
+        "promptTotalChars": {
+          "preview": 10276,
+          "sse": 10276
+        },
+        "promptOverBudget": {
+          "preview": false,
+          "sse": false
+        },
+        "promptSections": {
+          "preview": {
+            "characters": 89,
+            "manuscript": 8949,
+            "memories": 242,
+            "overview": 55,
+            "plans": 55,
+            "recall": 0,
+            "summaries": 81,
+            "world": 0
+          },
+          "sse": {
+            "characters": 89,
+            "manuscript": 8949,
+            "memories": 242,
+            "overview": 55,
+            "plans": 55,
+            "recall": 0,
+            "summaries": 81,
+            "world": 0
+          }
+        },
+        "memoryEnabled": {
+          "preview": true,
+          "sse": true
+        },
+        "memoryBudgetChars": {
+          "preview": 3000,
+          "sse": 3000
+        },
+        "memoryUsedChars": {
+          "preview": 242,
+          "sse": 242
+        },
+        "memoryRevision": {
+          "preview": 12,
+          "sse": 12
+        },
+        "seeds": {
+          "preview": 3,
+          "sse": 3
+        },
+        "recalledByKind": {
+          "preview": {
+            "states": 1,
+            "events": 2,
+            "threads": 1,
+            "cognitions": 2,
+            "plans": 1
+          },
+          "sse": {
+            "states": 1,
+            "events": 2,
+            "threads": 1,
+            "cognitions": 2,
+            "plans": 1
+          }
+        },
+        "recallEnabled": {
+          "preview": false,
+          "sse": false
+        },
+        "recallBudgetChars": {
+          "preview": 0,
+          "sse": 0
+        },
+        "recallUsedChars": {
+          "preview": 0,
+          "sse": 0
+        },
+        "recallChapters": {
+          "preview": [],
+          "sse": []
+        },
+        "planCount": {
+          "preview": 1,
+          "sse": 1
+        }
+      },
+      "mismatchCount": 0,
+      "mismatches": []
+    },
+    {
+      "variant": "cluedMemoryOff",
+      "request": {
+        "direction": "林砚带着半枚青玉符回到县城，连月阴雨，沈青禾替他处理左臂旧伤，陆行舟的商队带来外地消息。",
+        "targetChars": 800,
+        "useMemory": false,
+        "useRecall": true
+      },
+      "previewHttp": 200,
+      "sseHttp": 200,
+      "sseEvents": [
+        "meta",
+        "error"
+      ],
+      "sseError": "{\"error\":\"模型调用失败：llm: request failed: Post \\\"http://127.0.0.1:9/v1/chat/completions\\\": dial tcp 127.0.0.1:9: connectex: No connection could be made because the target machine actively refused it.\"}",
+      "sseMs": 1282,
+      "fields": {
+        "contextChars": {
+          "preview": 8179,
+          "sse": 8179
+        },
+        "promptTotalChars": {
+          "preview": 10079,
+          "sse": 10079
+        },
+        "promptOverBudget": {
+          "preview": false,
+          "sse": false
+        },
+        "promptSections": {
+          "preview": {
+            "characters": 89,
+            "manuscript": 8197,
+            "memories": 0,
+            "overview": 55,
+            "plans": 55,
+            "recall": 800,
+            "summaries": 81,
+            "world": 0
+          },
+          "sse": {
+            "characters": 89,
+            "manuscript": 8197,
+            "memories": 0,
+            "overview": 55,
+            "plans": 55,
+            "recall": 800,
+            "summaries": 81,
+            "world": 0
+          }
+        },
+        "memoryEnabled": {
+          "preview": false,
+          "sse": false
+        },
+        "memoryBudgetChars": {
+          "preview": 0,
+          "sse": 0
+        },
+        "memoryUsedChars": {
+          "preview": 0,
+          "sse": 0
+        },
+        "memoryRevision": {
+          "preview": 0,
+          "sse": 0
+        },
+        "seeds": {
+          "preview": 0,
+          "sse": 0
+        },
+        "recalledByKind": {
+          "preview": {
+            "states": 0,
+            "events": 0,
+            "threads": 0,
+            "cognitions": 0,
+            "plans": 0
+          },
+          "sse": {
+            "states": 0,
+            "events": 0,
+            "threads": 0,
+            "cognitions": 0,
+            "plans": 0
+          }
+        },
+        "recallEnabled": {
+          "preview": true,
+          "sse": true
+        },
+        "recallBudgetChars": {
+          "preview": 800,
+          "sse": 800
+        },
+        "recallUsedChars": {
+          "preview": 800,
+          "sse": 800
+        },
+        "recallChapters": {
+          "preview": [
+            3,
+            12
+          ],
+          "sse": [
+            3,
+            12
+          ]
+        },
+        "planCount": {
+          "preview": 1,
+          "sse": 1
+        }
+      },
+      "mismatchCount": 0,
+      "mismatches": []
+    }
+  ],
+  "config": {
+    "http": 200
+  }
+}

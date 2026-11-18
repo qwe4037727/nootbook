@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "caseId": "r4-review-selftest",
+  "title": "R4 召回开关盲评自测（合成）",
+  "description": "合成 live 夹具：两版报告仅「前文相关片段」召回开关不同，记忆与其他设置一致。正文为占位文本，非真实模型输出，也非真实作品。",
+  "mode": "live",
+  "generatedAt": "2026-10-24T03:20:00Z",
+  "source": {
+    "kind": "synthetic",
+    "chapters": 40,
+    "chars": 132000
+  },
+  "stops": [
+    {
+      "name": "early",
+      "afterChapter": 22,
+      "contextChars": 12000,
+      "targetChars": 600,
+      "direction": "继续追查青玉符的来历。",
+      "useMemory": false,
+      "memory": {"enabled": false, "budgetChars": 3000, "injectedChars": 0},
+      "recall": {"requested": "off", "enabled": false, "autoEligible": true, "budgetChars": 0, "injectedChars": 0, "hits": 0, "chapters": []},
+      "prompt": {"userChars": 10780, "limitChars": 12000, "userBudgetPct": 89.8},
+      "live": {
+        "finishReason": "stop",
+        "truncated": false,
+        "latencyMs": 1180,
+        "outputChars": 41,
+        "output": "雨还没停，林砚在骑楼下站了半晌。街对面的当铺亮着灯，他把帽檐压低，先去看那扇半掩的门。"
+      },
+      "checklist": [
+        {"kind": "must_land", "text": "青玉符", "hint": "landed"},
+        {"kind": "must_not", "text": "青玉符从未出现过", "hint": "clear"}
+      ]
+    },
+    {
+      "name": "middle",
+      "afterChapter": 31,
+      "contextChars": 12000,
+      "targetChars": 600,
+      "direction": "让青玉符在第 3 章埋设的旧朝年号再次成为线索。",
+      "useMemory": false,
+      "memory": {"enabled": false, "budgetChars": 3000, "injectedChars": 0},
+      "recall": {"requested": "off", "enabled": false, "autoEligible": true, "budgetChars": 0, "injectedChars": 0, "hits": 0, "chapters": []},
+      "prompt": {"userChars": 11050, "limitChars": 12000, "userBudgetPct": 92.1},
+      "live": {
+        "finishReason": "stop",
+        "truncated": false,
+        "latencyMs": 1260,
+        "outputChars": 43,
+        "output": "当铺老板听完他的来意，只把账本推过来。纸页间夹着一枚铜钱，年份被磨得看不清，像有人刻意刮过。"
+      },
+      "checklist": [
+        {"kind": "must_land", "text": "青玉符", "hint": "landed"},
+        {"kind": "must_not", "text": "青玉符从未出现过", "hint": "clear"}
+      ]
+    },
+    {
+      "name": "late",
+      "afterChapter": 40,
+      "contextChars": 12000,
+      "targetChars": 600,
+      "direction": "继续追查青玉符的来历，让它在章末再次出现。",
+      "useMemory": false,
+      "memory": {"enabled": false, "budgetChars": 3000, "injectedChars": 0},
+      "recall": {"requested": "off", "enabled": false, "autoEligible": true, "budgetChars": 0, "injectedChars": 0, "hits": 0, "chapters": []},
+      "prompt": {"userChars": 11280, "limitChars": 12000, "userBudgetPct": 94.0},
+      "live": {
+        "finishReason": "stop",
+        "truncated": false,
+        "latencyMs": 1390,
+        "outputChars": 42,
+        "output": "拓片摊在灯下，缺角处被人剪得干净。他想起账房那句“器物另有登记”，便决定明日再去问一次。"
+      },
+      "checklist": [
+        {"kind": "must_land", "text": "青玉符", "hint": "landed"},
+        {"kind": "must_not", "text": "青玉符从未出现过", "hint": "clear"}
+      ]
+    }
+  ]
+}

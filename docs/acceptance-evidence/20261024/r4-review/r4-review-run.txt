@@ -1,0 +1,45 @@
+R4 召回开关盲评（evalreview -axis recall）自测记录
+日期：2026-10-24
+说明：本目录的两份报告是**合成夹具**（占位正文，非真实模型输出、非真实作品），
+仅用于验证盲评包的生成与聚合闸在「召回开/关」这一对照轴上可用；
+真实模型的 recall-on/off A/B 仍待模型通道恢复后补做。
+
+复现命令（在仓库根目录）：
+
+    go build -o "$TEMP/evalbin/evalreview.exe" ./cmd/evalreview
+    cd docs/acceptance-evidence/20261024/r4-review
+
+    "$TEMP/evalbin/evalreview.exe" -axis recall \
+        -on r4-review-on-report.json -off r4-review-off-report.json \
+        -seed 20261024 -packet r4-review-packet.json -key r4-review-key.json \
+        -markdown r4-review-packet.md
+    # packet: r4-review-packet.json
+    # key: r4-review-key.json
+    # axis: recall
+    # stops: 3
+    # exit=0
+
+生成模式拒绝非法配对（负向对照）：
+
+    evalreview.exe -axis memory -on ... -off ...   -> evalreview: eval: stop "early" in on report must use memory   (exit 1)
+    evalreview.exe -axis plan   -on ... -off ...   -> evalreview: eval: unknown review axis "plan" (want memory or recall) (exit 1)
+
+key 的 X/Y 分配（种子 20261024）：early=x，middle=x，late=y
+
+正向聚合（合成评分：召回侧 landed/clear，非召回侧 missing/flagged；
+early/middle 偏好召回侧，late 平局；非召回侧记 1 条未授权事实）：
+
+    evalreview.exe -score r4-review-packet-scored.json -key r4-review-key.json -summary r4-review-summary.json
+    # pass=true axis=recall stops=3 onWins=2 offWins=0 ties=1
+    # onCoverage=1.00 offCoverage=0.00 onUnauthorized=0 offUnauthorized=1
+    # exit=0
+
+反转评分（偏好全部指向非召回侧，未授权事实落在召回侧）：
+
+    evalreview.exe -score r4-review-packet-scored-fail.json -key r4-review-key.json -summary r4-review-summary-fail.json
+    # pass=false axis=recall stops=3 onWins=0 offWins=3 ties=0
+    # problem: recall-on wins/ties 0 < 2 required
+    # problem: recall-on introduces more unauthorized facts than recall-off
+    # exit=4
+
+注意：`go run` 会把非零退出码统一显示为 1，判定退出码 4 必须先 `go build` 再直接运行二进制。

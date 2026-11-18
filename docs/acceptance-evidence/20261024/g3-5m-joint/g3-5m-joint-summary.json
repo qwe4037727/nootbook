@@ -1,0 +1,460 @@
+{
+  "harness": "output/g3_5m_joint.mjs",
+  "note": "记忆为 eval 夹具（confirmed 记录直接落盘），不是模型提取；本节只证预算与注入的可观测联合，不证文学收益。",
+  "corpus": {
+    "title": "长篇规模样例（合成 500 万字）",
+    "chapterCount": 500,
+    "charCountTotal": 5020294,
+    "analysisStatus": "error",
+    "analysisError": ""
+  },
+  "steps": {
+    "memoryState": {
+      "http": 200,
+      "workId": "work_001",
+      "schemaVersion": 1,
+      "memoryRevision": 12,
+      "initStatus": "not_started",
+      "safeState": false,
+      "counts": {
+        "events": 3,
+        "states": 3,
+        "cognitions": 2,
+        "threads": 2,
+        "plans": 1
+      }
+    },
+    "determinism": {
+      "sameMemorySection": true,
+      "sameRecallSection": true,
+      "sameSections": true
+    },
+    "sectionText": {
+      "memoryHead": "\n【已确认剧情记忆（来自正文抽取，效力低于下方最近正文）】\n人物当前状态：\n- 林砚｜伤势：左臂旧伤未愈，阴雨天会复发\n人物认知：\n- 林砚｜误以为沈青禾是旧案的主谋。（该认知为错误认知，人物尚未纠正）\n- 林砚｜知道青玉符与旧朝有关。\n未解决伏笔：\n- 青玉符的来历｜已知线索：半枚青玉符\n关键事件（近因优先）：\n- 第12章：林砚左臂被断刃划伤。\n- 第3章：林砚在旧宅找到半枚青玉符。\n近期计划（仅约束走向，不得覆盖已确认事实）：\n-",
+      "memoryTail": "伏笔：\n- 青玉符的来历｜已知线索：半枚青玉符\n关键事件（近因优先）：\n- 第12章：林砚左臂被断刃划伤。\n- 第3章：林砚在旧宅找到半枚青玉符。\n近期计划（仅约束走向，不得覆盖已确认事实）：\n- 追查青玉符：在离城前找到青玉符的另一半。\n",
+      "recallHead": "\n【前文相关片段】\n第3章 断桥：\n陆行舟忽然想起多年前的旧事，心口发紧。林砚沿着城门往前走，雨声一直没有停。沈青禾和顾临川对视一眼，谁都没有先开口。\n\n青玉符\n\n林砚把手按在袖口，那里藏着一件不能示人的东西。阿箬收起桌上的纸页，山道的光落在字迹上。老周忽然想起多年前的旧事，心口发紧。\n\n顾临川知道，再往前走就回不了头。阿箬压低了声音，只让陆行舟一个人听见。灯影在长街里晃了一下，老周停住脚步。灯影",
+      "recallChapters": [
+        3,
+        12
+      ],
+      "seeds": [
+        {
+          "entityId": "c_lin",
+          "entityName": "林砚",
+          "score": 7.45,
+          "reason": "recent_mention"
+        },
+        {
+          "entityId": "c_shen",
+          "entityName": "沈青禾",
+          "score": 6.9,
+          "reason": "recent_mention"
+        },
+        {
+          "entityId": "c_lu",
+          "entityName": "陆行舟",
+          "score": 6.8,
+          "reason": "recent_mention"
+        }
+      ],
+      "records": [
+        {
+          "id": "state_lin_wound",
+          "kind": "state",
+          "subject": "林砚",
+          "text": "林砚｜伤势：左臂旧伤未愈，阴雨天会复发",
+          "order": 0,
+          "priority": "P0"
+        },
+        {
+          "id": "cog_2",
+          "kind": "cognition",
+          "subject": "林砚",
+          "text": "林砚｜误以为沈青禾是旧案的主谋。（该认知为错误认知，人物尚未纠正）",
+          "order": 0,
+          "priority": "P0"
+        },
+        {
+          "id": "cog_1",
+          "kind": "cognition",
+          "subject": "林砚",
+          "text": "林砚｜知道青玉符与旧朝有关。",
+          "order": 0,
+          "priority": "P0"
+        },
+        {
+          "id": "thread_jade",
+          "kind": "thread",
+          "subject": "青玉符的来历",
+          "text": "青玉符的来历｜已知线索：半枚青玉符",
+          "order": 0,
+          "priority": "P1"
+        },
+        {
+          "id": "evt_2",
+          "kind": "event",
+          "subject": "",
+          "text": "第12章：林砚左臂被断刃划伤。",
+          "order": 12,
+          "priority": "P1"
+        },
+        {
+          "id": "evt_1",
+          "kind": "event",
+          "subject": "",
+          "text": "第3章：林砚在旧宅找到半枚青玉符。",
+          "order": 3,
+          "priority": "P1"
+        },
+        {
+          "id": "plan_near",
+          "kind": "plan",
+          "subject": "追查青玉符",
+          "text": "追查青玉符：在离城前找到青玉符的另一半。",
+          "order": 0,
+          "priority": "P1"
+        }
+      ]
+    },
+    "memoryWithoutRecall": {
+      "http": 200,
+      "budget": 3000,
+      "used": 242,
+      "records": 7,
+      "seeds": 3,
+      "memoryDisabledReason": "",
+      "memoryEnabled": true,
+      "planCount": 1,
+      "manuscriptChars": 8931,
+      "promptTotalChars": 10245,
+      "promptOverBudget": false,
+      "sections": {
+        "characters": 89,
+        "manuscript": 8949,
+        "memories": 242,
+        "overview": 55,
+        "plans": 55,
+        "recall": 0,
+        "summaries": 81,
+        "world": 0
+      },
+      "memorySectionChars": 242,
+      "recallSectionChars": 0,
+      "recallEnabled": false,
+      "recallBudgetChars": 0,
+      "recallUsedChars": 0,
+      "recallHits": 0,
+      "recallChapters": []
+    }
+  },
+  "cases": {
+    "cluedAuto": {
+      "http": 200,
+      "ms": 1325,
+      "preview": {
+        "budget": 3000,
+        "used": 242,
+        "records": 7,
+        "seeds": 3,
+        "memoryDisabledReason": "",
+        "memoryEnabled": true,
+        "planCount": 1,
+        "manuscriptChars": 8179,
+        "promptTotalChars": 10420,
+        "promptOverBudget": false,
+        "sections": {
+          "characters": 89,
+          "manuscript": 8197,
+          "memories": 242,
+          "overview": 55,
+          "plans": 55,
+          "recall": 800,
+          "summaries": 81,
+          "world": 0
+        },
+        "memorySectionChars": 242,
+        "recallSectionChars": 800,
+        "recallEnabled": true,
+        "recallBudgetChars": 800,
+        "recallUsedChars": 800,
+        "recallHits": 2,
+        "recallChapters": [
+          3,
+          12
+        ]
+      }
+    },
+    "cluedRecallOff": {
+      "http": 200,
+      "ms": 429,
+      "preview": {
+        "budget": 3000,
+        "used": 242,
+        "records": 7,
+        "seeds": 3,
+        "memoryDisabledReason": "",
+        "memoryEnabled": true,
+        "planCount": 1,
+        "manuscriptChars": 8931,
+        "promptTotalChars": 10276,
+        "promptOverBudget": false,
+        "sections": {
+          "characters": 89,
+          "manuscript": 8949,
+          "memories": 242,
+          "overview": 55,
+          "plans": 55,
+          "recall": 0,
+          "summaries": 81,
+          "world": 0
+        },
+        "memorySectionChars": 242,
+        "recallSectionChars": 0,
+        "recallEnabled": false,
+        "recallBudgetChars": 0,
+        "recallUsedChars": 0,
+        "recallHits": 0,
+        "recallChapters": []
+      }
+    },
+    "cluedMemoryOff": {
+      "http": 200,
+      "ms": 1260,
+      "preview": {
+        "budget": 0,
+        "used": 0,
+        "records": 0,
+        "seeds": 0,
+        "memoryDisabledReason": "",
+        "memoryEnabled": false,
+        "planCount": 1,
+        "manuscriptChars": 8179,
+        "promptTotalChars": 10079,
+        "promptOverBudget": false,
+        "sections": {
+          "characters": 89,
+          "manuscript": 8197,
+          "memories": 0,
+          "overview": 55,
+          "plans": 55,
+          "recall": 800,
+          "summaries": 81,
+          "world": 0
+        },
+        "memorySectionChars": 0,
+        "recallSectionChars": 800,
+        "recallEnabled": true,
+        "recallBudgetChars": 800,
+        "recallUsedChars": 800,
+        "recallHits": 2,
+        "recallChapters": [
+          3,
+          12
+        ]
+      }
+    },
+    "vagueAuto": {
+      "http": 200,
+      "ms": 1485,
+      "preview": {
+        "budget": 3000,
+        "used": 242,
+        "records": 7,
+        "seeds": 3,
+        "memoryDisabledReason": "",
+        "memoryEnabled": true,
+        "planCount": 1,
+        "manuscriptChars": 8931,
+        "promptTotalChars": 10244,
+        "promptOverBudget": false,
+        "sections": {
+          "characters": 89,
+          "manuscript": 8949,
+          "memories": 242,
+          "overview": 55,
+          "plans": 55,
+          "recall": 0,
+          "summaries": 81,
+          "world": 0
+        },
+        "memorySectionChars": 242,
+        "recallSectionChars": 0,
+        "recallEnabled": false,
+        "recallBudgetChars": 0,
+        "recallUsedChars": 0,
+        "recallHits": 0,
+        "recallChapters": []
+      }
+    }
+  },
+  "tiers": [
+    {
+      "contextChars": 1600,
+      "configHttp": 200,
+      "previewHttp": 200,
+      "ms": 1251,
+      "expectMemoryBudget": 0,
+      "budget": 0,
+      "used": 0,
+      "records": 0,
+      "seeds": 0,
+      "memoryDisabledReason": "",
+      "memoryEnabled": false,
+      "planCount": 1,
+      "manuscriptChars": 1258,
+      "promptTotalChars": 2092,
+      "promptOverBudget": false,
+      "sections": {
+        "characters": 0,
+        "manuscript": 1276,
+        "memories": 0,
+        "overview": 55,
+        "plans": 55,
+        "recall": 0,
+        "summaries": 0,
+        "world": 0
+      },
+      "memorySectionChars": 0,
+      "recallSectionChars": 0,
+      "recallEnabled": false,
+      "recallBudgetChars": 0,
+      "recallUsedChars": 0,
+      "recallHits": 0,
+      "recallChapters": [],
+      "jointNonZero": false,
+      "reservedMinusInjected": 0
+    },
+    {
+      "contextChars": 4000,
+      "configHttp": 200,
+      "previewHttp": 200,
+      "ms": 1396,
+      "expectMemoryBudget": 1000,
+      "budget": 1000,
+      "used": 242,
+      "records": 7,
+      "seeds": 3,
+      "memoryDisabledReason": "",
+      "memoryEnabled": true,
+      "planCount": 1,
+      "manuscriptChars": 2153,
+      "promptTotalChars": 4394,
+      "promptOverBudget": false,
+      "sections": {
+        "characters": 89,
+        "manuscript": 2171,
+        "memories": 242,
+        "overview": 55,
+        "plans": 55,
+        "recall": 800,
+        "summaries": 81,
+        "world": 0
+      },
+      "memorySectionChars": 242,
+      "recallSectionChars": 800,
+      "recallEnabled": true,
+      "recallBudgetChars": 800,
+      "recallUsedChars": 800,
+      "recallHits": 2,
+      "recallChapters": [
+        3,
+        12
+      ],
+      "jointNonZero": true,
+      "reservedMinusInjected": 758
+    },
+    {
+      "contextChars": 12000,
+      "configHttp": 200,
+      "previewHttp": 200,
+      "ms": 1378,
+      "expectMemoryBudget": 3000,
+      "budget": 3000,
+      "used": 242,
+      "records": 7,
+      "seeds": 3,
+      "memoryDisabledReason": "",
+      "memoryEnabled": true,
+      "planCount": 1,
+      "manuscriptChars": 8179,
+      "promptTotalChars": 10420,
+      "promptOverBudget": false,
+      "sections": {
+        "characters": 89,
+        "manuscript": 8197,
+        "memories": 242,
+        "overview": 55,
+        "plans": 55,
+        "recall": 800,
+        "summaries": 81,
+        "world": 0
+      },
+      "memorySectionChars": 242,
+      "recallSectionChars": 800,
+      "recallEnabled": true,
+      "recallBudgetChars": 800,
+      "recallUsedChars": 800,
+      "recallHits": 2,
+      "recallChapters": [
+        3,
+        12
+      ],
+      "jointNonZero": true,
+      "reservedMinusInjected": 2758
+    },
+    {
+      "contextChars": 30000,
+      "configHttp": 200,
+      "previewHttp": 200,
+      "ms": 1358,
+      "expectMemoryBudget": 3000,
+      "budget": 3000,
+      "used": 242,
+      "records": 7,
+      "seeds": 3,
+      "memoryDisabledReason": "",
+      "memoryEnabled": true,
+      "planCount": 1,
+      "manuscriptChars": 26166,
+      "promptTotalChars": 28407,
+      "promptOverBudget": false,
+      "sections": {
+        "characters": 89,
+        "manuscript": 26184,
+        "memories": 242,
+        "overview": 55,
+        "plans": 55,
+        "recall": 800,
+        "summaries": 81,
+        "world": 0
+      },
+      "memorySectionChars": 242,
+      "recallSectionChars": 800,
+      "recallEnabled": true,
+      "recallBudgetChars": 800,
+      "recallUsedChars": 800,
+      "recallHits": 2,
+      "recallChapters": [
+        3,
+        12
+      ],
+      "jointNonZero": true,
+      "reservedMinusInjected": 2758
+    }
+  ],
+  "derived": {
+    "联合非零": true,
+    "记忆预留未用量": 2758,
+    "关召回归还窗口": 752,
+    "关记忆归还窗口": 0,
+    "关记忆后正文是否变长": false,
+    "两臂正文相同": true,
+    "时延ms": {
+      "记忆召回都开": 1325,
+      "只开记忆": 429,
+      "只开召回": 1260,
+      "模糊方向都开": 1485
+    },
+    "note": "「关记忆不还窗口」指 useMemory=false 时正文窗口仍按配置的记忆预算预留（MemoryBudgetChars(ctx)），实测两臂 manuscriptChars 相同；召回零命中则整额归还。记忆实际注入远小于预留，未用部分不回补正文。"
+  }
+}

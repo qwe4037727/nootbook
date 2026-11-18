@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "caseId": "g8-review-selftest",
+  "stops": 3,
+  "onWins": 0,
+  "offWins": 3,
+  "ties": 0,
+  "onCoverage": 1,
+  "offCoverage": 0,
+  "onUnauthorized": 0,
+  "offUnauthorized": 1,
+  "onCharacterBreaks": 0,
+  "offCharacterBreaks": 0,
+  "onForeshadowMisses": 0,
+  "offForeshadowMisses": 0,
+  "onAmnesia": 0,
+  "offAmnesia": 0,
+  "pass": false,
+  "problems": [
+    "memory-on wins/ties 0 \u003c 2 required"
+  ],
+  "stopResults": [
+    {
+      "name": "early",
+      "onSide": "y",
+      "preference": "x",
+      "onCoverage": 1,
+      "offCoverage": 0,
+      "onUnauthorized": 0,
+      "offUnauthorized": 1
+    },
+    {
+      "name": "middle",
+      "onSide": "y",
+      "preference": "x",
+      "onCoverage": 1,
+      "offCoverage": 0,
+      "onUnauthorized": 0,
+      "offUnauthorized": 0
+    },
+    {
+      "name": "late",
+      "onSide": "x",
+      "preference": "y",
+      "onCoverage": 1,
+      "offCoverage": 0,
+      "onUnauthorized": 0,
+      "offUnauthorized": 0
+    }
+  ]
+}

@@ -29,9 +29,9 @@
 | U18 State 唯一键三元组 | ◐ | 唯一键/同值跳过逻辑已实现（回填路径）；跨类别共存写入口在迭代 2 |
 | U19 participantsKnown | ◐ | 回填恒 false 已测（U20）；"确认无=true+空列表"在迭代 2 |
 | U20 回填骨架不入事实集 | ✅ | store/memory_init_test.go `TestInitBackfillMapping`（proposed/needsReview/confidence 0.3） |
-| U21 多作用域并行 active | ✅ | 辅助校验层：novel/memory_test.go `TestValidateStoryPlanScopes`；不表示计划业务入口已交付 |
-| U22 同作用域激活替代 | ◐ | 仅 duplicate active 拒绝校验通过；自动 superseded 及激活写入口未交付，不能判完整通过 |
-| U23 父计划取消传播 | ➖ | 规则冻结于 §4.5；传播实现及写入口后续交付 |
+| U21 多作用域并行 active | ✅ | novel/memory_test.go `TestValidateStoryPlanScopes` + store `TestAddProposedPlansCommitsBatch`/`TestPlanStatusTransitionsRejected`；计划业务入口 `POST /api/plans/generate|activate|status` 已交付 |
+| U22 同作用域激活替代 | ✅ | store `TestActivatePlanSupersedesSameScopeAndPausesChildren`；激活提交内旧 active→superseded，失败整体回滚 |
+| U23 父计划取消传播 | ✅ | store `TestCancelPlanPausesActiveDescendants`（取消→后代递归 paused）、`TestCompletedPlanKeepsChildrenAndReconcileHints`（完成→reconcile 标记不让子计划误跑） |
 | U24 歧义候选不注册实体 | ◐ | `EntityCandidate` 结构+存储冻结（novel/memory.go）；产出方/确认在迭代 2；analysis 归并已改 ambiguous 不自动合并 |
 | U25 committed 后 meta 崩溃窗口 | ✅ | store/memory_test.go `TestMemoryRecoveryCommittedMetaWindow` |
 | U26 未迁移拦截 | ✅ | store/memory_init_test.go `TestInitLegacyProjectRejected` |

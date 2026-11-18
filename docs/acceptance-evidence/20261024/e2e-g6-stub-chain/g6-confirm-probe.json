@@ -1,0 +1,838 @@
+{
+  "generatedAt": "2026-10-24T06:28:12.845Z",
+  "steps": [
+    {
+      "name": "A00_baseline",
+      "status": 200,
+      "body": {
+        "workId": "work_001",
+        "schemaVersion": 1,
+        "memoryRevision": 3,
+        "lastCommitId": "commit_5c54771fdcd279868f",
+        "initStatus": "ready",
+        "counts": {
+          "events": 7,
+          "states": 2,
+          "cognitions": 1,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false
+      },
+      "counts": {
+        "events": 7,
+        "states": 2,
+        "cognitions": 1,
+        "threads": 1,
+        "plans": 0
+      },
+      "memoryRevision": 3,
+      "safeState": false,
+      "chapterCount": 7,
+      "commitCount": 3
+    },
+    {
+      "name": "A01_draft_create",
+      "status": 201,
+      "body": {
+        "id": "draft_db2175292f3dfee28d",
+        "workId": "work_001",
+        "targetChapterId": "ch_41ed9b9a82c7aa337e",
+        "newChapter": true,
+        "baseChapterRevision": 0,
+        "baseMemoryRevision": 3,
+        "status": "pending_confirmation",
+        "title": "第8章 封条",
+        "content": "封条印在灯下显出半个字。林砚用指甲抠了抠，握紧青玉符对准拓片的缺口，左臂旧伤开始发凉。沈青禾说这印属于三年前那桩案子。",
+        "draftRevision": 1,
+        "createdAt": "2026-10-24T06:28:11.4989984Z",
+        "updatedAt": "2026-10-24T06:28:11.4989984Z",
+        "committedAt": "0001-01-01T00:00:00Z",
+        "rejectedAt": "0001-01-01T00:00:00Z"
+      },
+      "draftId": "draft_db2175292f3dfee28d",
+      "targetChapterId": "ch_41ed9b9a82c7aa337e",
+      "newChapter": true,
+      "baseMemoryRevision": 3,
+      "draftRevision": 1
+    },
+    {
+      "name": "A02_draft_extract",
+      "status": 200,
+      "body": {
+        "changeset": {
+          "id": "mcs_0fa3eae2580c62cfed",
+          "workId": "work_001",
+          "status": "proposed",
+          "proposer": "deep_extract",
+          "reason": "chapter ch_41ed9b9a82c7aa337e rev 1 深度提取",
+          "chapterId": "ch_41ed9b9a82c7aa337e",
+          "chapterRevision": 1,
+          "draftId": "draft_db2175292f3dfee28d",
+          "draftRevision": 1,
+          "basedOnMemoryRevision": 3,
+          "ops": [
+            {
+              "op": "add_event",
+              "record": {
+                "id": "evt_048eb577c3ae894d39",
+                "workId": "work_001",
+                "recordVersion": 1,
+                "createdAt": "2026-10-24T06:28:11.5341491Z",
+                "updatedAt": "2026-10-24T06:28:11.5341491Z",
+                "sourceRefs": [
+                  {
+                    "chapterId": "ch_41ed9b9a82c7aa337e",
+                    "chapterRevision": 1,
+                    "startOffset": 21,
+                    "endOffset": 26,
+                    "offsetUnit": "rune",
+                    "quote": "握紧青玉符"
+                  }
+                ],
+                "needsReview": false,
+                "origin": {
+                  "type": "deep_extract",
+                  "chapterId": "ch_41ed9b9a82c7aa337e"
+                },
+                "lastSource": "agent_extraction",
+                "status": "proposed",
+                "eventType": "item_transfer",
+                "summary": "林砚在县衙外握紧青玉符",
+                "chapterId": "ch_41ed9b9a82c7aa337e",
+                "storyOrder": 0,
+                "participantsKnown": true,
+                "participants": [
+                  "c_9c9d6a711975f878fd"
+                ],
+                "preconditions": [
+                  {
+                    "text": "林砚到达县衙外"
+                  }
+                ],
+                "consequences": [
+                  {
+                    "text": "旧案线索被重新提起"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "add_cognition",
+              "record": {
+                "id": "cog_d565accf453d0c7578",
+                "workId": "work_001",
+                "recordVersion": 1,
+                "createdAt": "2026-10-24T06:28:11.5341491Z",
+                "updatedAt": "2026-10-24T06:28:11.5341491Z",
+                "sourceRefs": [
+                  {
+                    "chapterId": "ch_41ed9b9a82c7aa337e",
+                    "chapterRevision": 1,
+                    "startOffset": 21,
+                    "endOffset": 26,
+                    "offsetUnit": "rune",
+                    "quote": "握紧青玉符"
+                  }
+                ],
+                "needsReview": false,
+                "origin": {
+                  "type": "deep_extract",
+                  "chapterId": "ch_41ed9b9a82c7aa337e"
+                },
+                "lastSource": "agent_extraction",
+                "status": "known",
+                "subjectId": "c_9c9d6a711975f878fd",
+                "content": "认定青玉符能打开旧案缺口",
+                "knownSinceEvent": "evt_048eb577c3ae894d39"
+              }
+            },
+            {
+              "op": "update_thread",
+              "targetId": "thread_7a0ae82d4381b18517",
+              "expectedRecordVersion": 1,
+              "record": {
+                "id": "thread_1e7a40f304757d0604",
+                "workId": "work_001",
+                "recordVersion": 1,
+                "createdAt": "2026-10-24T06:28:11.5341491Z",
+                "updatedAt": "2026-10-24T06:28:11.5341491Z",
+                "needsReview": true,
+                "reviewReason": "evidence_unlocated",
+                "origin": {
+                  "type": "deep_extract",
+                  "chapterId": "ch_41ed9b9a82c7aa337e"
+                },
+                "lastSource": "agent_extraction",
+                "status": "open",
+                "title": "青玉符的来历",
+                "knownClues": [
+                  "青玉符上的刻痕"
+                ]
+              }
+            }
+          ],
+          "createdAt": "2026-10-24T06:28:11.5341491Z",
+          "appliedAt": "0001-01-01T00:00:00Z",
+          "rejectedAt": "0001-01-01T00:00:00Z"
+        },
+        "draft": {
+          "id": "draft_db2175292f3dfee28d",
+          "workId": "work_001",
+          "targetChapterId": "ch_41ed9b9a82c7aa337e",
+          "newChapter": true,
+          "baseChapterRevision": 0,
+          "baseMemoryRevision": 3,
+          "status": "pending_confirmation",
+          "title": "第8章 封条",
+          "content": "封条印在灯下显出半个字。林砚用指甲抠了抠，握紧青玉符对准拓片的缺口，左臂旧伤开始发凉。沈青禾说这印属于三年前那桩案子。",
+          "draftRevision": 1,
+          "memoryChangeSetId": "mcs_0fa3eae2580c62cfed",
+          "createdAt": "2026-10-24T06:28:11.4989984Z",
+          "updatedAt": "2026-10-24T06:28:11.5346936Z",
+          "committedAt": "0001-01-01T00:00:00Z",
+          "rejectedAt": "0001-01-01T00:00:00Z"
+        }
+      },
+      "changeSetId": "mcs_0fa3eae2580c62cfed",
+      "csDraftRevision": 1,
+      "csBaseMemory": 3,
+      "ops": [
+        {
+          "op": "add_event",
+          "record": {
+            "id": "evt_048eb577c3ae894d39",
+            "workId": "work_001",
+            "recordVersion": 1,
+            "createdAt": "2026-10-24T06:28:11.5341491Z",
+            "updatedAt": "2026-10-24T06:28:11.5341491Z",
+            "sourceRefs": [
+              {
+                "chapterId": "ch_41ed9b9a82c7aa337e",
+                "chapterRevision": 1,
+                "startOffset": 21,
+                "endOffset": 26,
+                "offsetUnit": "rune",
+                "quote": "握紧青玉符"
+              }
+            ],
+            "needsReview": false,
+            "origin": {
+              "type": "deep_extract",
+              "chapterId": "ch_41ed9b9a82c7aa337e"
+            },
+            "lastSource": "agent_extraction",
+            "status": "proposed",
+            "eventType": "item_transfer",
+            "summary": "林砚在县衙外握紧青玉符",
+            "chapterId": "ch_41ed9b9a82c7aa337e",
+            "storyOrder": 0,
+            "participantsKnown": true,
+            "participants": [
+              "c_9c9d6a711975f878fd"
+            ],
+            "preconditions": [
+              {
+                "text": "林砚到达县衙外"
+              }
+            ],
+            "consequences": [
+              {
+                "text": "旧案线索被重新提起"
+              }
+            ]
+          }
+        },
+        {
+          "op": "add_cognition",
+          "record": {
+            "id": "cog_d565accf453d0c7578",
+            "workId": "work_001",
+            "recordVersion": 1,
+            "createdAt": "2026-10-24T06:28:11.5341491Z",
+            "updatedAt": "2026-10-24T06:28:11.5341491Z",
+            "sourceRefs": [
+              {
+                "chapterId": "ch_41ed9b9a82c7aa337e",
+                "chapterRevision": 1,
+                "startOffset": 21,
+                "endOffset": 26,
+                "offsetUnit": "rune",
+                "quote": "握紧青玉符"
+              }
+            ],
+            "needsReview": false,
+            "origin": {
+              "type": "deep_extract",
+              "chapterId": "ch_41ed9b9a82c7aa337e"
+            },
+            "lastSource": "agent_extraction",
+            "status": "known",
+            "subjectId": "c_9c9d6a711975f878fd",
+            "content": "认定青玉符能打开旧案缺口",
+            "knownSinceEvent": "evt_048eb577c3ae894d39"
+          }
+        },
+        {
+          "op": "update_thread",
+          "targetId": "thread_7a0ae82d4381b18517",
+          "expectedRecordVersion": 1,
+          "record": {
+            "id": "thread_1e7a40f304757d0604",
+            "workId": "work_001",
+            "recordVersion": 1,
+            "createdAt": "2026-10-24T06:28:11.5341491Z",
+            "updatedAt": "2026-10-24T06:28:11.5341491Z",
+            "needsReview": true,
+            "reviewReason": "evidence_unlocated",
+            "origin": {
+              "type": "deep_extract",
+              "chapterId": "ch_41ed9b9a82c7aa337e"
+            },
+            "lastSource": "agent_extraction",
+            "status": "open",
+            "title": "青玉符的来历",
+            "knownClues": [
+              "青玉符上的刻痕"
+            ]
+          }
+        }
+      ],
+      "draftChangeSetId": "mcs_0fa3eae2580c62cfed",
+      "recordIds": [
+        "evt_048eb577c3ae894d39",
+        "cog_d565accf453d0c7578",
+        "thread_1e7a40f304757d0604"
+      ]
+    },
+    {
+      "name": "A03_confirm_joint",
+      "status": 200,
+      "body": {
+        "draft": {
+          "id": "draft_db2175292f3dfee28d",
+          "workId": "work_001",
+          "targetChapterId": "ch_41ed9b9a82c7aa337e",
+          "newChapter": true,
+          "baseChapterRevision": 0,
+          "baseMemoryRevision": 3,
+          "status": "committed",
+          "title": "第8章 封条",
+          "content": "封条印在灯下显出半个字。林砚用指甲抠了抠，握紧青玉符对准拓片的缺口，左臂旧伤开始发凉。沈青禾说这印属于三年前那桩案子。",
+          "draftRevision": 1,
+          "memoryChangeSetId": "mcs_0fa3eae2580c62cfed",
+          "commitId": "commit_93a191ad13bbb25cfe",
+          "chapterRevision": 1,
+          "createdAt": "2026-10-24T06:28:11.4989984Z",
+          "updatedAt": "2026-10-24T06:28:11.6634858Z",
+          "committedAt": "2026-10-24T06:28:11.6634858Z",
+          "rejectedAt": "0001-01-01T00:00:00Z"
+        },
+        "chapter": {
+          "id": "ch_41ed9b9a82c7aa337e",
+          "index": 8,
+          "title": "第8章 封条",
+          "content": "封条印在灯下显出半个字。林砚用指甲抠了抠，握紧青玉符对准拓片的缺口，左臂旧伤开始发凉。沈青禾说这印属于三年前那桩案子。",
+          "charCount": 59,
+          "revision": 1,
+          "updatedAt": "2026-10-24T06:28:11.6634858Z"
+        },
+        "project": {
+          "title": "桩模型 G6 测试稿",
+          "chapters": [
+            {
+              "id": "ch_370b1a22562dba5cf9",
+              "index": 1,
+              "title": "第1章 值房",
+              "charCount": 46,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_9c8c6f6f2e9af1f7f5",
+              "index": 2,
+              "title": "第2章 医者",
+              "charCount": 46,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_c750e8b4eb059913f1",
+              "index": 3,
+              "title": "第3章 旧案",
+              "charCount": 81,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_d7ecb44e755a9e8957",
+              "index": 4,
+              "title": "第4章 卷房",
+              "charCount": 43,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_5ef9ae7db2878edbd4",
+              "index": 5,
+              "title": "第5章 对峙",
+              "charCount": 34,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_1bc27d5001dfa18936",
+              "index": 6,
+              "title": "第6章 伤药",
+              "charCount": 28,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_e329bff8117568fdb6",
+              "index": 7,
+              "title": "第7章 拓片",
+              "charCount": 28,
+              "revision": 2,
+              "updatedAt": "2026-10-24T06:25:41.7203462Z"
+            },
+            {
+              "id": "ch_41ed9b9a82c7aa337e",
+              "index": 8,
+              "title": "第8章 封条",
+              "charCount": 59,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:28:11.6634858Z"
+            }
+          ],
+          "analysis": {
+            "status": "pending",
+            "analyzedCount": 7,
+            "totalCount": 8,
+            "updatedAt": "2026-10-24T06:28:11.6634858Z"
+          },
+          "revision": 4,
+          "updatedAt": "2026-10-24T06:28:11.6634858Z"
+        },
+        "memoryRevision": 4,
+        "commitId": "commit_93a191ad13bbb25cfe",
+        "memoryChangeSetId": "mcs_0fa3eae2580c62cfed"
+      },
+      "commitId": "commit_93a191ad13bbb25cfe",
+      "memoryRevision": 4,
+      "memoryChangeSetId": "mcs_0fa3eae2580c62cfed",
+      "chapterId": "ch_41ed9b9a82c7aa337e",
+      "chapterRevision": 1,
+      "conflicts": 0,
+      "projectChapterCount": 8
+    },
+    {
+      "name": "A04_memory_after_joint",
+      "status": 200,
+      "body": {
+        "workId": "work_001",
+        "schemaVersion": 1,
+        "memoryRevision": 4,
+        "lastCommitId": "commit_93a191ad13bbb25cfe",
+        "initStatus": "ready",
+        "counts": {
+          "events": 8,
+          "states": 2,
+          "cognitions": 2,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false
+      },
+      "counts": {
+        "events": 8,
+        "states": 2,
+        "cognitions": 2,
+        "threads": 1,
+        "plans": 0
+      },
+      "memoryRevision": 4
+    },
+    {
+      "name": "A05_commit_record",
+      "status": 200,
+      "body": {
+        "commitCountDelta": 1,
+        "lastCommitType": "formal",
+        "lastCommitPayloadKeys": [
+          "changesets.json",
+          "chapter:ch_41ed9b9a82c7aa337e",
+          "cognitions.json",
+          "drafts.json",
+          "events.json",
+          "project.json",
+          "states.json",
+          "threads.json"
+        ],
+        "basedOn": 3,
+        "target": 4
+      }
+    },
+    {
+      "name": "A06_proposed_changesets_left",
+      "status": 200,
+      "body": []
+    },
+    {
+      "name": "A07_draft_final",
+      "status": 200,
+      "body": {
+        "id": "draft_db2175292f3dfee28d",
+        "workId": "work_001",
+        "targetChapterId": "ch_41ed9b9a82c7aa337e",
+        "newChapter": true,
+        "baseChapterRevision": 0,
+        "baseMemoryRevision": 3,
+        "status": "committed",
+        "title": "第8章 封条",
+        "content": "封条印在灯下显出半个字。林砚用指甲抠了抠，握紧青玉符对准拓片的缺口，左臂旧伤开始发凉。沈青禾说这印属于三年前那桩案子。",
+        "draftRevision": 1,
+        "memoryChangeSetId": "mcs_0fa3eae2580c62cfed",
+        "commitId": "commit_93a191ad13bbb25cfe",
+        "chapterRevision": 1,
+        "createdAt": "2026-10-24T06:28:11.4989984Z",
+        "updatedAt": "2026-10-24T06:28:11.6634858Z",
+        "committedAt": "2026-10-24T06:28:11.6634858Z",
+        "rejectedAt": "0001-01-01T00:00:00Z"
+      },
+      "draftStatus": "committed",
+      "changeSetId": "mcs_0fa3eae2580c62cfed",
+      "commitId": "commit_93a191ad13bbb25cfe",
+      "chapterRevision": 1
+    },
+    {
+      "name": "B01_continue_meta",
+      "status": 200,
+      "body": {
+        "analysisStatus": "pending",
+        "analyzedChapters": 7,
+        "characters": 2,
+        "contextChars": 379,
+        "droppedByBudget": 0,
+        "memoryBudgetChars": 3000,
+        "memoryDisabledReason": "",
+        "memoryEnabled": true,
+        "memoryRevision": 4,
+        "memoryUsedChars": 137,
+        "planAligned": false,
+        "planCount": 0,
+        "promptOverBudget": false,
+        "promptSections": {
+          "characters": 59,
+          "manuscript": 397,
+          "memories": 137,
+          "overview": 45,
+          "plans": 0,
+          "recall": 0,
+          "summaries": 0,
+          "world": 32
+        },
+        "promptTotalChars": 1315,
+        "recallBudgetChars": 0,
+        "recallChapters": [],
+        "recallEnabled": false,
+        "recallUsedChars": 0,
+        "recalledByKind": {
+          "states": 1,
+          "events": 2,
+          "threads": 0,
+          "cognitions": 2,
+          "plans": 0
+        },
+        "seeds": 3,
+        "skippedAmbiguous": 0,
+        "skippedReview": 1,
+        "summaries": 0,
+        "totalChapters": 8,
+        "truncated": false,
+        "worldEntries": 1
+      }
+    },
+    {
+      "name": "C01_edit_draft_chapter",
+      "status": 200,
+      "body": {
+        "chapter": {
+          "id": "ch_41ed9b9a82c7aa337e",
+          "index": 8,
+          "title": "第8章 封条",
+          "content": "封条印在灯下看不清。林砚站了一会儿就走了，沈青禾没有说话。",
+          "charCount": 29,
+          "revision": 2,
+          "updatedAt": "2026-10-24T06:28:12.1639455Z"
+        },
+        "project": {
+          "title": "桩模型 G6 测试稿",
+          "chapters": [
+            {
+              "id": "ch_370b1a22562dba5cf9",
+              "index": 1,
+              "title": "第1章 值房",
+              "charCount": 46,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_9c8c6f6f2e9af1f7f5",
+              "index": 2,
+              "title": "第2章 医者",
+              "charCount": 46,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_c750e8b4eb059913f1",
+              "index": 3,
+              "title": "第3章 旧案",
+              "charCount": 81,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_d7ecb44e755a9e8957",
+              "index": 4,
+              "title": "第4章 卷房",
+              "charCount": 43,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_5ef9ae7db2878edbd4",
+              "index": 5,
+              "title": "第5章 对峙",
+              "charCount": 34,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_1bc27d5001dfa18936",
+              "index": 6,
+              "title": "第6章 伤药",
+              "charCount": 28,
+              "revision": 1,
+              "updatedAt": "2026-10-24T06:25:37.9541145Z"
+            },
+            {
+              "id": "ch_e329bff8117568fdb6",
+              "index": 7,
+              "title": "第7章 拓片",
+              "charCount": 28,
+              "revision": 2,
+              "updatedAt": "2026-10-24T06:25:41.7203462Z"
+            },
+            {
+              "id": "ch_41ed9b9a82c7aa337e",
+              "index": 8,
+              "title": "第8章 封条",
+              "charCount": 29,
+              "revision": 2,
+              "updatedAt": "2026-10-24T06:28:12.1639455Z"
+            }
+          ],
+          "analysis": {
+            "status": "pending",
+            "analyzedCount": 7,
+            "totalCount": 8,
+            "updatedAt": "2026-10-24T06:28:12.1639455Z"
+          },
+          "updatedAt": "2026-10-24T06:28:12.1639455Z"
+        }
+      },
+      "newRevision": 2
+    },
+    {
+      "name": "C02_memory_after_heal",
+      "status": 200,
+      "body": {
+        "workId": "work_001",
+        "schemaVersion": 1,
+        "memoryRevision": 5,
+        "lastCommitId": "commit_5fecfb7de46b546856",
+        "initStatus": "ready",
+        "counts": {
+          "events": 8,
+          "states": 2,
+          "cognitions": 2,
+          "threads": 1,
+          "plans": 0
+        },
+        "safeState": false
+      },
+      "memoryRevision": 5,
+      "counts": {
+        "events": 8,
+        "states": 2,
+        "cognitions": 2,
+        "threads": 1,
+        "plans": 0
+      },
+      "safeState": false
+    },
+    {
+      "name": "C03_draft_derived_marks",
+      "status": 200,
+      "body": {
+        "events": [
+          {
+            "id": "evt_048eb577c3ae894d39",
+            "needsReview": true,
+            "reason": "evidence_stale",
+            "recordVersion": 2
+          }
+        ],
+        "threads": [],
+        "commitTypes": [
+          "initialize",
+          "formal",
+          "formal",
+          "formal",
+          "reconcile"
+        ],
+        "lastCommitPayloadKeys": [
+          "cognitions.json",
+          "events.json"
+        ]
+      }
+    },
+    {
+      "name": "C04_preview_after_heal",
+      "status": 200,
+      "body": {
+        "memorySection": "\n【已确认剧情记忆（来自正文抽取，效力低于下方最近正文）】\n人物当前状态：\n- 林砚｜伤势：左臂旧伤开始发凉\n人物认知：\n- 林砚｜认定青玉符能打开旧案缺口\n关键事件（近因优先）：\n- 林砚在县衙外握紧青玉符\n",
+        "planSection": "",
+        "seeds": [
+          {
+            "entityId": "c_9c9d6a711975f878fd",
+            "entityName": "林砚",
+            "score": 10.4,
+            "reason": "recent_mention"
+          },
+          {
+            "entityId": "c_83f5c4d109e1a87b59",
+            "entityName": "沈青禾",
+            "score": 7.8,
+            "reason": "recent_mention"
+          },
+          {
+            "entityId": "w_51a6b050392b58b46b",
+            "entityName": "县衙",
+            "score": 5.8,
+            "reason": "recent_mention"
+          }
+        ],
+        "records": [
+          {
+            "id": "state_17574e3b8c49f8f130",
+            "kind": "state",
+            "subject": "林砚",
+            "text": "林砚｜伤势：左臂旧伤开始发凉",
+            "order": 0,
+            "priority": "P0"
+          },
+          {
+            "id": "cog_1b16329a391d55801c",
+            "kind": "cognition",
+            "subject": "林砚",
+            "text": "林砚｜认定青玉符能打开旧案缺口",
+            "order": 0,
+            "priority": "P0"
+          },
+          {
+            "id": "evt_8642e9cd7edecf5863",
+            "kind": "event",
+            "subject": "",
+            "text": "林砚在县衙外握紧青玉符",
+            "order": 0,
+            "priority": "P1"
+          }
+        ],
+        "budget": 3000,
+        "used": 105,
+        "counts": {
+          "states": 1,
+          "events": 1,
+          "threads": 0,
+          "cognitions": 1,
+          "plans": 0
+        },
+        "manuscriptChars": 349,
+        "memoryEnabled": true,
+        "planEnabled": false,
+        "planCount": 0,
+        "droppedByBudget": 0,
+        "skippedReview": 3,
+        "skippedAmbiguous": 0,
+        "memoryRevision": 5,
+        "promptTotalChars": 1253,
+        "promptOverBudget": false,
+        "sections": {
+          "characters": 59,
+          "manuscript": 367,
+          "memories": 105,
+          "overview": 45,
+          "plans": 0,
+          "recall": 0,
+          "summaries": 0,
+          "world": 32
+        },
+        "recallSection": "",
+        "recallEnabled": false,
+        "recallBudgetChars": 0,
+        "recallUsedChars": 0,
+        "recallHits": 0,
+        "recallChapters": []
+      },
+      "memoryEnabled": true,
+      "skippedReview": 3,
+      "counts": {
+        "states": 1,
+        "events": 1,
+        "threads": 0,
+        "cognitions": 1,
+        "plans": 0
+      }
+    },
+    {
+      "name": "D01_accept_rejected_orphan",
+      "status": 409,
+      "body": {
+        "code": "analysis_running",
+        "error": "故事分析进行中，不可提交"
+      }
+    },
+    {
+      "name": "D02_rebase_rejected_orphan",
+      "status": 409,
+      "body": {
+        "code": "changeset_terminal",
+        "error": "仅 proposed 状态可 rebase"
+      }
+    },
+    {
+      "name": "D03_reject_again",
+      "status": 409,
+      "body": {
+        "code": "changeset_terminal",
+        "error": "变更集已处于终态"
+      }
+    }
+  ],
+  "promptEvidence": {
+    "newCalls": 4,
+    "streamCalls": [
+      {
+        "at": "2026-10-24T06:28:12.161Z",
+        "chars": 789,
+        "hasDraftEvent": true,
+        "hasNewChapterText": true,
+        "hasPatchedDraftChapter": false
+      }
+    ],
+    "wrotePromptFile": true
+  }
+}
