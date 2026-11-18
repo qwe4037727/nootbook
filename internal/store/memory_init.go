@@ -515,6 +515,7 @@ func (s *Store) resetMemoryLocked() error {
 		"threads.json":           []novel.StoryThread{},
 		"plans.json":             []novel.StoryPlan{},
 		"entity_candidates.json": []novel.EntityCandidate{},
+		"changesets.json":        []novel.ChangeSet{},
 		"commits.json":           []CommitRecord{},
 	}
 	for name, value := range empties {
@@ -537,10 +538,15 @@ func (s *Store) resetMemoryLocked() error {
 	}); err != nil {
 		return err
 	}
+	// 深度提取状态重置为 idle（I2-5：导入新书使在途提取任务代次失效，已无需续跑）。
+	if err := s.writeExtractStateLocked(ExtractState{Status: ExtractIdle}); err != nil {
+		return err
+	}
 	// 递增记忆代次并失效当前运行号（docs/issues.md #18）：在途初始化任务凭此判定失效，
 	// 旧书快照不得写入新书记忆，旧任务也不得覆盖新书的 init_state。
 	s.memoryGeneration++
 	s.initCurrentRun = 0
+	s.extractCurrentRun = 0
 	// 记忆子系统已整体重建：旧数据触发的安全态随之解除。
 	s.memorySafe = false
 	s.memorySafeError = ""
@@ -599,45 +605,115 @@ func (s *Store) reconcileStoryOrderLocked(indexes map[string]int) error {
 	if err != nil {
 		return err
 	}
-	if len(events) == 0 {
-		return nil
+	states, err := s.loadMemoryStatesLocked()
+	if err != nil {
+		return err
+	}
+	cognitions, err := s.loadMemoryCognitionsLocked()
+	if err != nil {
+		return err
+	}
+	threads, err := s.loadMemoryThreadsLocked()
+	if err != nil {
+		return err
+	}
+	plans, err := s.loadMemoryPlansLocked()
+	if err != nil {
+		return err
 	}
 
 	now := time.Now().UTC()
-	changed := false
+	changed := map[string]bool{}
 	for i := range events {
 		event := &events[i]
-		if event.ChapterID == "" {
-			continue
-		}
-		index, ok := indexes[event.ChapterID]
-		if !ok {
-			// 来源章节被删除：标记待复核（needsReview 变化 → recordVersion+1，R8）
-			if !event.NeedsReview || event.ReviewReason != "chapter_deleted" {
-				event.NeedsReview = true
-				event.ReviewReason = "chapter_deleted"
+		if event.ChapterID != "" {
+			index, ok := indexes[event.ChapterID]
+			if !ok {
+				// 来源章节被删除：标记待复核（needsReview 变化 → recordVersion+1，R8）
 				event.StoryOrder = 0
-				event.RecordVersion++
+				if markReview(&event.MemoryMeta, "chapter_deleted", now) {
+					changed["events.json"] = true
+				}
+			} else if event.StoryOrder != index {
+				// StoryOrder 为可重建派生字段：纯重排不递增 recordVersion（R8 穷尽表未列）
+				event.StoryOrder = index
 				event.UpdatedAt = now
-				changed = true
+				changed["events.json"] = true
 			}
-			continue
 		}
-		// StoryOrder 为可重建派生字段：纯重排不递增 recordVersion（R8 穷尽表未列）
-		if event.StoryOrder != index {
-			event.StoryOrder = index
-			event.UpdatedAt = now
-			changed = true
+		if markMissingSourceRefs(&event.MemoryMeta, indexes, now) {
+			changed["events.json"] = true
 		}
 	}
-	if !changed {
+	for i := range states {
+		if markMissingSourceRefs(&states[i].MemoryMeta, indexes, now) {
+			changed["states.json"] = true
+		}
+		if chapter := states[i].LastConfirmedChapter; chapter != "" {
+			if _, ok := indexes[chapter]; !ok && markReview(&states[i].MemoryMeta, "chapter_deleted", now) {
+				changed["states.json"] = true
+			}
+		}
+	}
+	for i := range cognitions {
+		if markMissingSourceRefs(&cognitions[i].MemoryMeta, indexes, now) {
+			changed["cognitions.json"] = true
+		}
+	}
+	for i := range threads {
+		if markMissingSourceRefs(&threads[i].MemoryMeta, indexes, now) {
+			changed["threads.json"] = true
+		}
+	}
+	for i := range plans {
+		if markMissingSourceRefs(&plans[i].MemoryMeta, indexes, now) {
+			changed["plans.json"] = true
+		}
+	}
+
+	// 依赖传播（详设 §7.2）：直接证据失效后沿事件/伏笔依赖链仅做标记，
+	// 绝不改写状态、计划或历史正文（spec §5.1「失效传播」红线）。
+	eventsMarked, statesMarked, cogsMarked, threadsMarked, plansMarked := propagateReviewDependencies(events, states, cognitions, threads, plans, now)
+	if eventsMarked > 0 {
+		changed["events.json"] = true
+	}
+	if statesMarked > 0 {
+		changed["states.json"] = true
+	}
+	if cogsMarked > 0 {
+		changed["cognitions.json"] = true
+	}
+	if threadsMarked > 0 {
+		changed["threads.json"] = true
+	}
+	if plansMarked > 0 {
+		changed["plans.json"] = true
+	}
+	if len(changed) == 0 {
 		return nil
+	}
+
+	payload := make(map[string]any, len(changed))
+	if changed["events.json"] {
+		payload["events.json"] = events
+	}
+	if changed["states.json"] {
+		payload["states.json"] = states
+	}
+	if changed["cognitions.json"] {
+		payload["cognitions.json"] = cognitions
+	}
+	if changed["threads.json"] {
+		payload["threads.json"] = threads
+	}
+	if changed["plans.json"] {
+		payload["plans.json"] = plans
 	}
 	meta, err := s.ensureMemoryMetaLocked()
 	if err != nil {
 		return err
 	}
-	_, err = s.commitMemoryLocked(CommitReconcile, meta.MemoryRevision, map[string]any{"events.json": events})
+	_, err = s.commitMemoryLocked(CommitReconcile, meta.MemoryRevision, payload)
 	return err
 }
 

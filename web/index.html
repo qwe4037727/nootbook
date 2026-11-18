@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>续写 · 小说续写 Agent</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -21,6 +22,9 @@
         <span id="modelBadgeText">模型未配置</span>
       </button>
       <span id="saveStatus" class="save-status is-saved" aria-live="polite">已保存</span>
+      <button id="planButton" class="btn btn-ghost" type="button">大纲规划</button>
+      <button id="memoryReviewButton" class="btn btn-ghost" type="button">记忆审阅</button>
+      <button id="draftBoxButton" class="btn btn-ghost" type="button">草稿台 <span id="draftBoxCount" class="count" hidden>0</span></button>
       <button id="settingsButton" class="btn btn-ghost" type="button">模型设置</button>
     </div>
   </header>
@@ -130,6 +134,37 @@
           <button id="generateButton" class="btn btn-primary" type="button">开始续写</button>
         </div>
 
+        <div class="memory-bar">
+          <label class="memory-toggle">
+            <input id="useMemory" type="checkbox" checked>
+            <span>记忆注入</span>
+          </label>
+          <label class="memory-toggle">
+            <input id="usePlan" type="checkbox" checked>
+            <span>对齐计划</span>
+          </label>
+          <label class="inline-field">前文召回
+            <select id="useRecall">
+              <option value="auto" selected>自动</option>
+              <option value="on">开</option>
+              <option value="off">关</option>
+            </select>
+          </label>
+          <span class="memory-note">记忆补充人物状态 / 伏笔（最多 25% 上下文）；计划只约束走向，冲突时以正文与已确认记忆为准；「前文召回」在旧章节里检索与本次方向最相关的片段（最多 800 字）；「自动」满 20 章才启用，选「开」可提前强制检索</span>
+          <button id="memoryPreviewButton" class="btn btn-quiet" type="button">预览本次注入</button>
+        </div>
+
+        <section id="memoryPreview" class="memory-preview" hidden aria-label="本次将注入的记忆与计划">
+          <div class="memory-preview-head">
+            <div>
+              <p class="kicker">CONTEXT</p>
+              <h3>本次将注入的记忆与计划</h3>
+            </div>
+            <button id="memoryPreviewClose" class="icon-button" type="button" aria-label="收起">×</button>
+          </div>
+          <div id="memoryPreviewBody" class="memory-preview-body"></div>
+        </section>
+
         <section id="draftPanel" class="draft" hidden aria-label="续写草稿">
           <div class="draft-head">
             <div>
@@ -143,6 +178,13 @@
           <div class="draft-actions">
             <button id="appendButton" class="btn btn-primary" type="button" hidden>追加到本章</button>
             <button id="newChapterButton" class="btn btn-ghost" type="button" hidden>存为新章节</button>
+            <label id="persistTargetWrap" class="inline-field" hidden>存入
+              <select id="persistTarget">
+                <option value="append" selected>并入本章</option>
+                <option value="new">作为新章节</option>
+              </select>
+            </label>
+            <button id="persistDraftButton" class="btn btn-ghost" type="button" hidden>存入草稿台</button>
             <button id="retryButton" class="btn btn-ghost" type="button" hidden>重新生成</button>
             <button id="discardButton" class="btn btn-quiet" type="button" hidden>丢弃</button>
             <button id="stopButton" class="btn btn-danger" type="button" hidden>停止</button>
@@ -222,6 +264,163 @@
         <button id="importSubmitButton" type="submit" class="btn btn-primary">导入并分析</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="memoryReviewDialog" class="dialog dialog-wide" aria-labelledby="memoryReviewTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="kicker">MEMORY REVIEW</p>
+        <h2 id="memoryReviewTitle">记忆审阅</h2>
+      </div>
+      <button type="button" class="icon-button" data-close-dialog="memoryReviewDialog" aria-label="关闭">×</button>
+    </div>
+
+    <div class="review-body">
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>深度提取</h3>
+          <div class="review-actions">
+            <label class="inline-check">
+              <input type="checkbox" id="extractForceInput"> 强制重提
+            </label>
+            <button id="extractStartButton" class="btn btn-primary btn-sm" type="button">开始提取</button>
+            <button id="reconcileButton" class="btn btn-quiet btn-sm" type="button">重新核查证据</button>
+          </div>
+        </div>
+        <p id="extractStatusText" class="review-note">空闲</p>
+      </section>
+
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>待审变更集</h3>
+          <div class="review-actions">
+            <button id="refreshReviewButton" class="btn btn-quiet btn-sm" type="button">刷新</button>
+          </div>
+        </div>
+        <div id="changesetList" class="changeset-list"></div>
+        <div id="changesetDetail" class="changeset-detail" hidden></div>
+      </section>
+
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>实体候选</h3>
+        </div>
+        <div id="candidateList" class="candidate-list"></div>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="planDialog" class="dialog dialog-wide" aria-labelledby="planTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="kicker">PLAN</p>
+        <h2 id="planTitle">大纲规划</h2>
+      </div>
+      <button type="button" class="icon-button" data-close-dialog="planDialog" aria-label="关闭">×</button>
+    </div>
+
+    <div class="review-body">
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>生成草案</h3>
+          <span id="planRevisionBadge" class="plan-revision"></span>
+        </div>
+        <p class="review-note">生成结果为草案，确认激活后才会注入续写。同一范围激活新计划时，旧计划会自动标记为「已取代」。</p>
+        <div class="plan-form">
+          <label class="field">
+            <span>分卷数量</span>
+            <input id="planVolumeCount" type="number" min="1" max="12" value="3">
+          </label>
+          <label class="field">
+            <span>结局基调（可选）</span>
+            <input id="planEndingTone" type="text" maxlength="200" placeholder="例如：苦尽甘来，但代价沉重">
+          </label>
+          <label class="field">
+            <span>规避套路（可选）</span>
+            <input id="planAvoidTropes" type="text" maxlength="500" placeholder="例如：失忆、误会、突然天降">
+          </label>
+          <label class="field plan-form-wide">
+            <span>额外要求（可选）</span>
+            <textarea id="planExtra" rows="2" maxlength="1000" placeholder="例如：第二卷重心放在师门线，不要提前解决核心矛盾"></textarea>
+          </label>
+        </div>
+        <div class="plan-actions">
+          <button id="planGenerateButton" class="btn btn-primary btn-sm" type="button">生成计划草案</button>
+          <button id="planRefreshButton" class="btn btn-quiet btn-sm" type="button">刷新</button>
+        </div>
+        <p id="planStatusText" class="review-note" aria-live="polite"></p>
+      </section>
+
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>计划树</h3>
+          <span id="planCountBadge" class="plan-revision"></span>
+        </div>
+        <div id="planTree" class="plan-tree"></div>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="draftBoxDialog" class="dialog dialog-wide" aria-labelledby="draftBoxTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="kicker">DRAFT DESK</p>
+        <h2 id="draftBoxTitle">草稿台</h2>
+      </div>
+      <button type="button" class="icon-button" data-close-dialog="draftBoxDialog" aria-label="关闭">×</button>
+    </div>
+
+    <div class="review-body">
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>待确认稿</h3>
+          <div class="review-actions">
+            <label class="inline-field">状态
+              <select id="draftStatusFilter">
+                <option value="pending_confirmation" selected>待确认</option>
+                <option value="committed">已提交</option>
+                <option value="rejected">已拒绝</option>
+                <option value="">全部</option>
+              </select>
+            </label>
+            <button id="draftRefreshButton" class="btn btn-quiet btn-sm" type="button">刷新</button>
+          </div>
+        </div>
+        <p class="review-note">草稿的编辑与提取不会改动正文或记忆；「确认提交」会把正文、项目元数据与记忆变更放进同一次提交。</p>
+        <div id="draftList" class="changeset-list"></div>
+      </section>
+
+      <section id="draftDetailSection" class="review-section" hidden>
+        <div class="review-section-head">
+          <h3 id="draftDetailTitle">草稿详情</h3>
+          <span id="draftDetailBadge" class="plan-revision"></span>
+        </div>
+        <div class="draft-detail-form">
+          <label class="field">
+            <span>章节标题</span>
+            <input id="draftTitleInput" type="text" maxlength="200" autocomplete="off">
+          </label>
+          <label class="field">
+            <span>正文</span>
+            <textarea id="draftContentInput" rows="14" spellcheck="false"></textarea>
+          </label>
+        </div>
+        <p id="draftDetailMeta" class="review-note"></p>
+        <div class="review-actions draft-detail-actions">
+          <button id="draftSaveEditButton" class="btn btn-quiet btn-sm" type="button">保存修改</button>
+          <button id="draftExtractButton" class="btn btn-ghost btn-sm" type="button">提取记忆变更</button>
+          <button id="draftConfirmButton" class="btn btn-primary btn-sm" type="button">确认提交</button>
+          <button id="draftRejectButton" class="btn btn-danger btn-sm" type="button">拒绝</button>
+          <button id="draftOpenChapterButton" class="btn btn-quiet btn-sm" type="button" hidden>打开已提交章节</button>
+        </div>
+        <label id="draftRejectField" class="field draft-reject-field">
+          <span>拒绝原因（可选）</span>
+          <input id="draftRejectReason" type="text" maxlength="200" autocomplete="off" placeholder="例如：情节方向不对，稍后重写">
+        </label>
+        <div id="draftChangeSet" class="changeset-detail" hidden></div>
+        <p id="draftDetailStatus" class="review-note" aria-live="polite"></p>
+      </section>
+    </div>
   </dialog>
 
   <script src="/app.js"></script>

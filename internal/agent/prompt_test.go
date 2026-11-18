@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -144,9 +145,9 @@ func TestBuildUsesDefaultsWithoutKnowledge(t *testing.T) {
 
 func TestBuildUsesSummariesOnlyForChaptersOutsideRecentWindow(t *testing.T) {
 	chapters := []novel.Chapter{
-		{ID: "ch_1", Index: 1, Title: "一", Content: strings.Repeat("第一章旧事。", 100)},
-		{ID: "ch_2", Index: 2, Title: "二", Content: strings.Repeat("第二章旧事。", 100)},
-		{ID: "ch_3", Index: 3, Title: "三", Content: strings.Repeat("第三章旧事。", 100)},
+		{ID: "ch_1", Index: 1, Title: "一", Content: strings.Repeat("第一章旧事。", 250)},
+		{ID: "ch_2", Index: 2, Title: "二", Content: strings.Repeat("第二章旧事。", 250)},
+		{ID: "ch_3", Index: 3, Title: "三", Content: strings.Repeat("第三章旧事。", 250)},
 	}
 	knowledge := novel.Knowledge{
 		Summaries: []novel.ChapterSummary{
@@ -156,13 +157,13 @@ func TestBuildUsesSummariesOnlyForChaptersOutsideRecentWindow(t *testing.T) {
 		},
 	}
 
-	prompt := Build(Input{Chapters: chapters, Knowledge: knowledge, ContextChars: 400})
+	prompt := Build(Input{Chapters: chapters, Knowledge: knowledge, ContextChars: 2000})
 
 	if !prompt.Truncated {
 		t.Fatal("Truncated = false, want true")
 	}
-	if prompt.ContextChars > 400 {
-		t.Errorf("ContextChars = %d, want <= 400", prompt.ContextChars)
+	if prompt.ContextChars > 2000 || prompt.ContextChars < 1000 {
+		t.Errorf("ContextChars = %d, want within the allocated manuscript window", prompt.ContextChars)
 	}
 	if strings.Contains(prompt.User, "第一章旧事。") {
 		t.Error("recent context still contains the earliest chapter")
@@ -195,8 +196,11 @@ func TestBuildTruncatesLongContextAtLineBoundary(t *testing.T) {
 	if !prompt.Truncated {
 		t.Fatal("Truncated = false, want true")
 	}
-	if prompt.ContextChars > 400 || prompt.ContextChars < 350 {
-		t.Errorf("ContextChars = %d, want a near-limit tail", prompt.ContextChars)
+	if prompt.ContextChars > 400 || prompt.ContextChars < 200 {
+		t.Errorf("ContextChars = %d, want >= ctx/2 and <= ctx", prompt.ContextChars)
+	}
+	if got := utf8.RuneCountInString(prompt.User); got > 400 {
+		t.Errorf("user prompt = %d runes, want <= 400 (R2 full budget)", got)
 	}
 	if strings.Contains(prompt.User, "很久以前的旧事") {
 		t.Error("truncated context still contains the beginning of the chapter")
@@ -214,5 +218,210 @@ func TestBuildTruncatesLongContextAtLineBoundary(t *testing.T) {
 	}
 	if want := utf8.RuneCountInString(excerpt); prompt.ContextChars != want {
 		t.Errorf("ContextChars = %d, excerpt runes = %d", prompt.ContextChars, want)
+	}
+}
+
+// TestBuildFullBudgetInvariants 覆盖 I3-7/R2 四档守卫（iter3-详设 §4.1/§13.2）。
+func TestBuildFullBudgetInvariants(t *testing.T) {
+	const (
+		title       = "长篇预算"
+		direction   = "推进主线"
+		targetChars = 800
+	)
+
+	chapters := make([]novel.Chapter, 0, 31)
+	for i := 1; i <= 30; i++ {
+		chapters = append(chapters, novel.Chapter{
+			ID:      fmt.Sprintf("ch_%02d", i),
+			Index:   i,
+			Title:   fmt.Sprintf("第%d章", i),
+			Content: strings.Repeat(fmt.Sprintf("第%d章铺垫。", i), 120),
+		})
+	}
+	chapters = append(chapters, novel.Chapter{
+		ID:      "ch_31",
+		Index:   31,
+		Title:   "终章",
+		Content: strings.Repeat("雨夜追查旧案的正文。\n", 1200),
+	})
+
+	characters := make([]novel.Character, 0, 50)
+	names := make([]string, 0, 50)
+	for i := 1; i <= 50; i++ {
+		name := fmt.Sprintf("角色%02d", i)
+		names = append(names, name)
+		characters = append(characters, novel.Character{
+			Name:          name,
+			Aliases:       []string{fmt.Sprintf("别名%02d", i)},
+			Role:          "身份",
+			State:         "当前状态",
+			Personality:   strings.Repeat("性格", 20),
+			Appearance:    strings.Repeat("外貌", 20),
+			Relationships: strings.Repeat("关系", 20),
+			Notes:         strings.Repeat("备注", 20),
+			Confidence:    0.9,
+			LastSeen:      31,
+		})
+	}
+	world := make([]novel.WorldEntry, 0, 50)
+	for i := 1; i <= 50; i++ {
+		world = append(world, novel.WorldEntry{
+			Title:      fmt.Sprintf("设定%02d", i),
+			Aliases:    []string{fmt.Sprintf("旧称%02d", i)},
+			Category:   "规则",
+			Content:    strings.Repeat("设定内容", 20),
+			Confidence: 0.9,
+			LastSeen:   31,
+		})
+	}
+	summaries := make([]novel.ChapterSummary, 0, 30)
+	for i := 1; i <= 30; i++ {
+		summaries = append(summaries, novel.ChapterSummary{
+			ChapterID: fmt.Sprintf("ch_%02d", i),
+			Index:     i,
+			Summary:   strings.Repeat("摘要", 50),
+		})
+	}
+
+	kinds := []string{
+		novel.MemoryKindWorldState, novel.MemoryKindWorldState,
+		novel.MemoryKindState, novel.MemoryKindState, novel.MemoryKindState,
+		novel.MemoryKindCognition, novel.MemoryKindCognition,
+		novel.MemoryKindThread, novel.MemoryKindThread, novel.MemoryKindThread,
+		novel.MemoryKindEvent, novel.MemoryKindEvent, novel.MemoryKindEvent,
+	}
+	records := make([]novel.MemoryRecord, 0, len(kinds)*2)
+	for round := 0; round < 2; round++ {
+		for i, kind := range kinds {
+			priority := novel.MemoryPriorityP0
+			if kind == novel.MemoryKindThread || kind == novel.MemoryKindEvent {
+				priority = novel.MemoryPriorityP1
+			}
+			records = append(records, novel.MemoryRecord{
+				ID:       fmt.Sprintf("rec_%d_%d", round, i),
+				Kind:     kind,
+				Subject:  "角色01",
+				Text:     strings.Repeat("记忆内容", 12),
+				Order:    i,
+				Priority: priority,
+			})
+		}
+	}
+
+	for _, contextChars := range []int{1600, 4000, 12000, 30000} {
+		t.Run(fmt.Sprintf("ctx_%d", contextChars), func(t *testing.T) {
+			prompt := Build(Input{
+				Title: title,
+				Knowledge: novel.Knowledge{
+					Overview:   strings.Join(names, "，"),
+					Characters: characters,
+					World:      world,
+					Summaries:  summaries,
+				},
+				Chapters:     chapters,
+				Direction:    direction,
+				TargetChars:  targetChars,
+				ContextChars: contextChars,
+				Memory: &novel.ContinuationMemory{
+					BudgetChars: novel.MemoryBudgetChars(contextChars),
+					Records:     records,
+				},
+			})
+
+			if prompt.OverBudget {
+				t.Fatalf("OverBudget = true, want false")
+			}
+			userRunes := utf8.RuneCountInString(prompt.User)
+			if userRunes > contextChars {
+				t.Fatalf("user prompt = %d runes, want <= %d", userRunes, contextChars)
+			}
+			if prompt.TotalChars != utf8.RuneCountInString(prompt.System)+userRunes {
+				t.Errorf("TotalChars = %d, want system+user", prompt.TotalChars)
+			}
+			sectionSum := 0
+			for _, key := range []string{
+				SectionOverview, SectionCharacters, SectionWorld, SectionMemories,
+				SectionPlans, SectionSummaries, SectionManuscript,
+			} {
+				sectionSum += prompt.Sections[key]
+			}
+			if sectionSum > userRunes {
+				t.Errorf("sum(Sections) = %d > user runes %d", sectionSum, userRunes)
+			}
+			if prompt.ContextChars != prompt.Sections[SectionManuscript]-utf8.RuneCountInString("\n【最近正文（末尾即续写起点）】\n")-1 {
+				t.Errorf("ContextChars = %d does not match manuscript section %d",
+					prompt.ContextChars, prompt.Sections[SectionManuscript])
+			}
+			if prompt.ContextChars < contextChars/2 {
+				t.Errorf("manuscript chars = %d, want >= ctx/2", prompt.ContextChars)
+			}
+			if contextChars == 1600 && prompt.MemorySection != "" {
+				t.Errorf("memory section should degrade to empty at ctx=1600")
+			}
+			if prompt.System == "" {
+				t.Error("system prompt is empty")
+			}
+			// 固定文本（标题/文风兜底/续写指令）与 system 不参与裁剪，四档必须一致。
+			fixed := userRunes - sectionSum
+			wantFixed := utf8.RuneCountInString(fmt.Sprintf("【作品】《%s》\n", title)) +
+				utf8.RuneCountInString("\n【文风指纹】\n严格贴合下方正文的叙述视角、句式节奏、段落密度和对白习惯。\n") +
+				utf8.RuneCountInString(fmt.Sprintf("\n【本次续写】\n剧情方向：%s\n目标篇幅：约 %d 字。\n请从最近正文末尾直接续写，不要复述、概括或重写已有内容。", direction, targetChars))
+			if fixed != wantFixed {
+				t.Errorf("fixed prompt chars = %d, want %d", fixed, wantFixed)
+			}
+			// I3-17 精确口径：sum(Sections) + 标题/固定文本 + system = TotalChars。
+			if sectionSum+wantFixed+utf8.RuneCountInString(prompt.System) != prompt.TotalChars {
+				t.Errorf("sum(Sections)+fixed+system = %d, TotalChars = %d",
+					sectionSum+wantFixed+utf8.RuneCountInString(prompt.System), prompt.TotalChars)
+			}
+		})
+	}
+
+	// 收缩到底仍放不下时（正文下限 ctx/2 + 固定文本 > ctx），OverBudget 才置真。
+	t.Run("over_budget", func(t *testing.T) {
+		const contextChars = 200
+		prompt := Build(Input{
+			Title:        title,
+			Knowledge:    novel.Knowledge{Overview: strings.Repeat("设定", 100), Characters: characters, World: world},
+			Chapters:     chapters,
+			Direction:    direction,
+			TargetChars:  targetChars,
+			ContextChars: contextChars,
+		})
+		if !prompt.OverBudget {
+			t.Error("OverBudget = false, want true when fixed text + ctx/2 manuscript exceeds the budget")
+		}
+		if utf8.RuneCountInString(prompt.User) <= contextChars {
+			t.Errorf("user prompt = %d runes, want > %d for the OverBudget fixture",
+				utf8.RuneCountInString(prompt.User), contextChars)
+		}
+		if prompt.ContextChars < contextChars/2 {
+			t.Errorf("manuscript chars = %d, want >= ctx/2", prompt.ContextChars)
+		}
+	})
+}
+
+func TestBuildFixedOverheadStableAcrossContexts(t *testing.T) {
+	chapter := novel.Chapter{ID: "ch_1", Index: 1, Content: strings.Repeat("正文。", 2000)}
+	fixed := map[int]struct{}{}
+	for _, contextChars := range []int{1600, 4000, 12000, 30000} {
+		prompt := Build(Input{
+			Title:        "固定开销",
+			Chapters:     []novel.Chapter{chapter},
+			Direction:    "继续",
+			TargetChars:  600,
+			ContextChars: contextChars,
+		})
+		sectionSum := 0
+		for _, count := range prompt.Sections {
+			sectionSum += count
+		}
+		fixed[utf8.RuneCountInString(prompt.User)-sectionSum] = struct{}{}
+		if utf8.RuneCountInString(prompt.User) > contextChars {
+			t.Errorf("ctx %d: user prompt over budget", contextChars)
+		}
+	}
+	if len(fixed) != 1 {
+		t.Errorf("fixed overhead differs across contexts: %v", fixed)
 	}
 }

@@ -40,7 +40,7 @@ func chapterFiles(t *testing.T, dir string) []string {
 func TestImportAndLoadChapters(t *testing.T) {
 	st, dir := newTestStore(t)
 
-	project, err := st.ImportChapters("无边悔恨", []novel.Chapter{
+	project, err := st.ImportChapters("测试小说", []novel.Chapter{
 		{Title: "初始", Content: "天空下着雨。"},
 		{Title: "", Content: "他睁开眼。"},
 		{Title: "空章", Content: "   "},

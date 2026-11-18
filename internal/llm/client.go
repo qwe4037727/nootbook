@@ -21,6 +21,23 @@ type Message struct {
 	Content string `json:"content"`
 }
 
+// Result 携带一次模型调用的正文与结束原因（iter3-详设 I3-6/R1）。
+// 流式调用只填 FinishReason（正文已通过 onDelta 下发），非流式调用两者都填。
+type Result struct {
+	Content      string
+	FinishReason string
+}
+
+// IsTruncated 判断上游结束原因是否表示达到长度上限。
+// 部分网关不返回 finish_reason：此时返回 false（判空、不推断）。
+func IsTruncated(reason string) bool {
+	switch strings.ToLower(strings.TrimSpace(reason)) {
+	case "length", "max_tokens", "max_output_tokens":
+		return true
+	}
+	return false
+}
+
 // RetryConfig 描述瞬时网络故障的重试策略（MODEL-01，docs/issues.md #22）。
 // 仅对可重建的瞬时故障重试（超时/连接中断/EOF/5xx/429/408），
 // 业务级 4xx、回调错误（已向对端写出部分内容）与调用方主动取消不重试。
@@ -203,12 +220,12 @@ func (c *Client) backoff(ctx context.Context, cfg RetryConfig, attempt int, retr
 	return c.sleepFn()(ctx, delay)
 }
 
-func (c *Client) StreamChat(ctx context.Context, messages []Message, temperature float64, onDelta func(string) error) error {
+func (c *Client) StreamChat(ctx context.Context, messages []Message, temperature float64, onDelta func(string) error) (Result, error) {
 	if c.BaseURL == "" {
-		return errors.New("llm: base URL is empty")
+		return Result{}, errors.New("llm: base URL is empty")
 	}
 	if c.Model == "" {
-		return errors.New("llm: model is empty")
+		return Result{}, errors.New("llm: model is empty")
 	}
 
 	body, err := json.Marshal(chatRequest{
@@ -218,7 +235,7 @@ func (c *Client) StreamChat(ctx context.Context, messages []Message, temperature
 		Stream:      true,
 	})
 	if err != nil {
-		return fmt.Errorf("llm: encode request: %w", err)
+		return Result{}, fmt.Errorf("llm: encode request: %w", err)
 	}
 
 	cfg := c.retryConfig()
@@ -234,28 +251,28 @@ func (c *Client) StreamChat(ctx context.Context, messages []Message, temperature
 			}
 			return nil
 		}
-		err, retryAfter := c.streamAttempt(ctx, body, cb)
+		result, err, retryAfter := c.streamAttempt(ctx, body, cb)
 		if err == nil {
-			return nil
+			return result, nil
 		}
 		lastErr = err
 		if !delivered && isRetryableError(err) && attempt < cfg.MaxAttempts {
 			if werr := c.backoff(ctx, cfg, attempt, retryAfter); werr != nil {
-				return werr
+				return Result{}, werr
 			}
 			continue
 		}
-		return err
+		return Result{}, err
 	}
-	return lastErr
+	return Result{}, lastErr
 }
 
-func (c *Client) CompleteChat(ctx context.Context, messages []Message, temperature float64) (string, error) {
+func (c *Client) CompleteChat(ctx context.Context, messages []Message, temperature float64) (Result, error) {
 	if c.BaseURL == "" {
-		return "", errors.New("llm: base URL is empty")
+		return Result{}, errors.New("llm: base URL is empty")
 	}
 	if c.Model == "" {
-		return "", errors.New("llm: model is empty")
+		return Result{}, errors.New("llm: model is empty")
 	}
 
 	body, err := json.Marshal(chatRequest{
@@ -265,26 +282,26 @@ func (c *Client) CompleteChat(ctx context.Context, messages []Message, temperatu
 		Stream:      false,
 	})
 	if err != nil {
-		return "", fmt.Errorf("llm: encode request: %w", err)
+		return Result{}, fmt.Errorf("llm: encode request: %w", err)
 	}
 
 	cfg := c.retryConfig()
 	var lastErr error
 	for attempt := 1; attempt <= cfg.MaxAttempts; attempt++ {
-		content, err, retryAfter := c.completeAttempt(ctx, body)
+		result, err, retryAfter := c.completeAttempt(ctx, body)
 		if err == nil {
-			return content, nil
+			return result, nil
 		}
 		lastErr = err
 		if isRetryableError(err) && attempt < cfg.MaxAttempts {
 			if werr := c.backoff(ctx, cfg, attempt, retryAfter); werr != nil {
-				return "", werr
+				return Result{}, werr
 			}
 			continue
 		}
-		return "", err
+		return Result{}, err
 	}
-	return "", lastErr
+	return Result{}, lastErr
 }
 
 // buildRequest 每次尝试重建请求（请求体读器在上一尝试已被消费）。
@@ -302,68 +319,71 @@ func (c *Client) buildRequest(ctx context.Context, body []byte, accept string) (
 	return req, nil
 }
 
-func (c *Client) streamAttempt(ctx context.Context, body []byte, onDelta func(string) error) (error, time.Duration) {
+func (c *Client) streamAttempt(ctx context.Context, body []byte, onDelta func(string) error) (Result, error, time.Duration) {
 	req, err := c.buildRequest(ctx, body, "text/event-stream")
 	if err != nil {
-		return err, 0
+		return Result{}, err, 0
 	}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		return fmt.Errorf("llm: request failed: %w", err), 0
+		return Result{}, fmt.Errorf("llm: request failed: %w", err), 0
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return upstreamStatusError(resp), 0
+		return Result{}, upstreamStatusError(resp), 0
 	}
 	if !isEventStream(resp) {
-		return readNonStreaming(resp.Body, onDelta), 0
+		reason, err := readNonStreaming(resp.Body, onDelta)
+		return Result{FinishReason: reason}, err, 0
 	}
-	return scanSSE(resp.Body, onDelta), 0
+	reason, err := scanSSE(resp.Body, onDelta)
+	return Result{FinishReason: reason}, err, 0
 }
 
-func (c *Client) completeAttempt(ctx context.Context, body []byte) (string, error, time.Duration) {
+func (c *Client) completeAttempt(ctx context.Context, body []byte) (Result, error, time.Duration) {
 	req, err := c.buildRequest(ctx, body, "application/json")
 	if err != nil {
-		return "", err, 0
+		return Result{}, err, 0
 	}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("llm: request failed: %w", err), 0
+		return Result{}, fmt.Errorf("llm: request failed: %w", err), 0
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", upstreamStatusError(resp), 0
+		return Result{}, upstreamStatusError(resp), 0
 	}
 
 	if isEventStream(resp) {
 		var content strings.Builder
-		if err := scanSSE(resp.Body, func(delta string) error {
+		reason, err := scanSSE(resp.Body, func(delta string) error {
 			content.WriteString(delta)
 			return nil
-		}); err != nil {
-			return "", err, 0
+		})
+		if err != nil {
+			return Result{}, err, 0
 		}
 		if strings.TrimSpace(content.String()) == "" {
-			return "", errors.New("llm: response has no content"), 0
+			return Result{}, errors.New("llm: response has no content"), 0
 		}
-		return content.String(), nil, 0
+		return Result{Content: content.String(), FinishReason: reason}, nil, 0
 	}
 
 	var completion completionResponse
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 16<<20)).Decode(&completion); err != nil {
-		return "", fmt.Errorf("llm: decode response: %w", err), 0
+		return Result{}, fmt.Errorf("llm: decode response: %w", err), 0
 	}
 	if completion.Error != nil && completion.Error.Message != "" {
-		return "", fmt.Errorf("llm: %s", completion.Error.Message), 0
+		return Result{}, fmt.Errorf("llm: %s", completion.Error.Message), 0
 	}
 	if len(completion.Choices) == 0 {
-		return "", errors.New("llm: response has no choices"), 0
+		return Result{}, errors.New("llm: response has no choices"), 0
 	}
 	content := completion.Choices[0].Message.Content
 	if strings.TrimSpace(content) == "" {
-		return "", errors.New("llm: response has no content"), 0
+		return Result{}, errors.New("llm: response has no content"), 0
 	}
-	return content, nil, 0
+	return Result{Content: content, FinishReason: completion.Choices[0].FinishReason}, nil, 0
 }
 
 func isEventStream(resp *http.Response) bool {
@@ -385,9 +405,11 @@ func upstreamStatusError(resp *http.Response) error {
 	return se
 }
 
-func scanSSE(body io.Reader, onDelta func(string) error) error {
+// scanSSE 逐条下发 delta，并返回最后一个非空 finish_reason。
+func scanSSE(body io.Reader, onDelta func(string) error) (string, error) {
 	scanner := bufio.NewScanner(body)
 	scanner.Buffer(make([]byte, 32<<10), 8<<20)
+	finishReason := ""
 
 	for scanner.Scan() {
 		line := strings.TrimRight(scanner.Text(), "\r")
@@ -400,7 +422,7 @@ func scanSSE(body io.Reader, onDelta func(string) error) error {
 		}
 		data = strings.TrimSpace(data)
 		if data == "[DONE]" {
-			return nil
+			return finishReason, nil
 		}
 
 		var event streamEvent
@@ -409,38 +431,41 @@ func scanSSE(body io.Reader, onDelta func(string) error) error {
 			continue
 		}
 		if event.Error != nil && event.Error.Message != "" {
-			return fmt.Errorf("llm: %s", event.Error.Message)
+			return finishReason, fmt.Errorf("llm: %s", event.Error.Message)
 		}
 		if len(event.Choices) == 0 {
 			continue
 		}
+		if reason := strings.TrimSpace(event.Choices[0].FinishReason); reason != "" {
+			finishReason = reason
+		}
 		if delta := event.Choices[0].Delta.Content; delta != "" {
 			if err := onDelta(delta); err != nil {
-				return err
+				return finishReason, err
 			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("llm: read stream: %w", err)
+		return finishReason, fmt.Errorf("llm: read stream: %w", err)
 	}
-	return nil
+	return finishReason, nil
 }
 
-func readNonStreaming(body io.Reader, onDelta func(string) error) error {
+func readNonStreaming(body io.Reader, onDelta func(string) error) (string, error) {
 	var resp completionResponse
 	if err := json.NewDecoder(io.LimitReader(body, 16<<20)).Decode(&resp); err != nil {
-		return fmt.Errorf("llm: decode response: %w", err)
+		return "", fmt.Errorf("llm: decode response: %w", err)
 	}
 	if resp.Error != nil && resp.Error.Message != "" {
-		return fmt.Errorf("llm: %s", resp.Error.Message)
+		return "", fmt.Errorf("llm: %s", resp.Error.Message)
 	}
 	if len(resp.Choices) == 0 {
-		return errors.New("llm: response has no choices")
+		return "", errors.New("llm: response has no choices")
 	}
 	if content := resp.Choices[0].Message.Content; content != "" {
-		return onDelta(content)
+		return resp.Choices[0].FinishReason, onDelta(content)
 	}
-	return nil
+	return resp.Choices[0].FinishReason, nil
 }
 
 type upstreamError struct {
@@ -453,12 +478,14 @@ type streamEvent struct {
 		Delta struct {
 			Content string `json:"content"`
 		} `json:"delta"`
+		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
 }
 
 type completionResponse struct {
 	Error   *upstreamError `json:"error"`
 	Choices []struct {
-		Message Message `json:"message"`
+		Message      Message `json:"message"`
+		FinishReason string  `json:"finish_reason"`
 	} `json:"choices"`
 }

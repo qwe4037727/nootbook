@@ -157,7 +157,7 @@ func (m *Manager) step(ctx context.Context) bool {
 
 		if strings.TrimSpace(chapter.Content) != "" {
 			messages := buildAnalystMessages(project.Title, chapter, knowledge)
-			text, err := completeWithTimeout(ctx, client, messages, 0.2)
+			reply, err := completeWithTimeout(ctx, client, messages, 0.2)
 			if err != nil {
 				if ctx.Err() != nil {
 					return false
@@ -166,8 +166,12 @@ func (m *Manager) step(ctx context.Context) bool {
 				return m.markFailed(project.Revision, "分析中断，请检查模型设置后重试")
 			}
 			var result chapterResult
-			if err := parseJSONObject(text, &result); err != nil {
-				m.log.Error("decode chapter analysis", "chapter", chapter.Index, "err", err, "head", headForLog(text, 300))
+			if err := parseJSONObject(reply.Content, &result); err != nil {
+				m.log.Error("decode chapter analysis", "chapter", chapter.Index, "err", err,
+					"truncated", llm.IsTruncated(reply.FinishReason), "head", headForLog(reply.Content, 300))
+				if llm.IsTruncated(reply.FinishReason) {
+					return m.markFailed(project.Revision, "模型输出被截断，请缩短章节或调大输出上限")
+				}
 				return m.markFailed(project.Revision, "分析结果格式异常，请重试")
 			}
 			applyChapter(&knowledge, chapter, result)
@@ -186,7 +190,7 @@ func (m *Manager) step(ctx context.Context) bool {
 
 	if len(knowledge.Summaries) > 0 {
 		messages := buildSynthesisMessages(project.Title, knowledge)
-		text, err := completeWithTimeout(ctx, client, messages, 0.3)
+		reply, err := completeWithTimeout(ctx, client, messages, 0.3)
 		if err != nil {
 			if ctx.Err() != nil {
 				return false
@@ -195,8 +199,12 @@ func (m *Manager) step(ctx context.Context) bool {
 			return m.markFailed(project.Revision, "总览更新失败，请重试")
 		}
 		var result synthesisResult
-		if err := parseJSONObject(text, &result); err != nil {
-			m.log.Error("decode synthesis", "err", err, "head", headForLog(text, 300))
+		if err := parseJSONObject(reply.Content, &result); err != nil {
+			m.log.Error("decode synthesis", "err", err, "truncated", llm.IsTruncated(reply.FinishReason),
+				"head", headForLog(reply.Content, 300))
+			if llm.IsTruncated(reply.FinishReason) {
+				return m.markFailed(project.Revision, "总览输出被截断，请稍后重试")
+			}
 			return m.markFailed(project.Revision, "总览格式异常，请重试")
 		}
 		applySynthesis(&knowledge, result)
@@ -230,7 +238,7 @@ func (m *Manager) markFailed(revision int64, message string) bool {
 // （3 次尝试 × 120s 响应头超时 + 退避 + 正文传输，MODEL-01）。
 const analysisCallTimeout = 8 * time.Minute
 
-func completeWithTimeout(ctx context.Context, client *llm.Client, messages []llm.Message, temperature float64) (string, error) {
+func completeWithTimeout(ctx context.Context, client *llm.Client, messages []llm.Message, temperature float64) (llm.Result, error) {
 	callCtx, cancel := context.WithTimeout(ctx, analysisCallTimeout)
 	defer cancel()
 	return client.CompleteChat(callCtx, messages, temperature)

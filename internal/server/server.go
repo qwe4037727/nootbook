@@ -13,8 +13,10 @@ import (
 	"unicode/utf8"
 
 	"novelagent/internal/agent"
+	"novelagent/internal/analysis"
 	"novelagent/internal/llm"
 	"novelagent/internal/novel"
+	"novelagent/internal/plan"
 	"novelagent/internal/store"
 )
 
@@ -24,17 +26,20 @@ type AnalysisNotifier interface {
 }
 
 type Server struct {
-	store    *store.Store
-	static   fs.FS
-	log      *slog.Logger
-	analyzer AnalysisNotifier
+	store     *store.Store
+	static    fs.FS
+	log       *slog.Logger
+	analyzer  AnalysisNotifier
+	extractor *analysis.ExtractLauncher
+	planner   *plan.Generator
 }
 
-func New(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNotifier) http.Handler {
+func New(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNotifier, extractor *analysis.ExtractLauncher) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	s := &Server{store: st, static: static, log: logger, analyzer: analyzer}
+	s := &Server{store: st, static: static, log: logger, analyzer: analyzer, extractor: extractor}
+	s.planner = plan.NewGenerator(st, logger)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/project", s.handleGetProject)
@@ -48,7 +53,11 @@ func New(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNo
 	mux.HandleFunc("GET /api/config", s.handleGetConfig)
 	mux.HandleFunc("PUT /api/config", s.handlePutConfig)
 	mux.HandleFunc("POST /api/continue", s.handleContinue)
+	mux.HandleFunc("POST /api/continue/preview", s.handleContinuePreview)
 	s.registerMemoryRoutes(mux)
+	s.registerMemoryReviewRoutes(mux)
+	s.registerPlanRoutes(mux)
+	s.registerDraftRoutes(mux)
 	mux.Handle("/", http.FileServer(http.FS(static)))
 
 	return withHeaders(mux)
@@ -385,6 +394,12 @@ type continueRequest struct {
 	Direction   string  `json:"direction"`
 	TargetChars int     `json:"targetChars"`
 	Temperature float64 `json:"temperature"`
+	// UseMemory 缺省为 true（iter3-详设 §7）；显式 false 完全不检索。
+	UseMemory *bool `json:"useMemory"`
+	// UsePlan 缺省为 true；显式 false 不注入已激活计划。
+	UsePlan *bool `json:"usePlan"`
+	// UseRecall 缺省按章节数自动判定；显式值用于 R4 A/B。
+	UseRecall *bool `json:"useRecall"`
 }
 
 type sseWriter struct {
@@ -473,6 +488,11 @@ func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	useMemory := req.UseMemory == nil || *req.UseMemory
+	memory := s.retrieveContinuationMemory(chapters, knowledge, cfg.ContextChars, useMemory, req.UseRecall)
+	usePlan := req.UsePlan == nil || *req.UsePlan
+	plans := s.activePlansForContinuation(usePlan)
+
 	prompt := agent.Build(agent.Input{
 		Title:        project.Title,
 		Knowledge:    knowledge,
@@ -480,6 +500,9 @@ func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 		Direction:    req.Direction,
 		TargetChars:  req.TargetChars,
 		ContextChars: cfg.ContextChars,
+		Memory:       memory,
+		Plans:        plans,
+		UseRecall:    req.UseRecall,
 	})
 
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
@@ -489,16 +512,35 @@ func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	sw := &sseWriter{w: w, f: flusher}
-	if err := sw.send("meta", map[string]any{
-		"contextChars":     prompt.ContextChars,
-		"truncated":        prompt.Truncated,
-		"characters":       prompt.Characters,
-		"worldEntries":     prompt.WorldEntries,
-		"summaries":        prompt.Summaries,
-		"analysisStatus":   project.Analysis.Status,
-		"analyzedChapters": project.Analysis.AnalyzedCount,
-		"totalChapters":    project.Analysis.TotalCount,
-	}); err != nil {
+	meta := map[string]any{
+		"contextChars":      prompt.ContextChars,
+		"truncated":         prompt.Truncated,
+		"promptTotalChars":  prompt.TotalChars,
+		"promptOverBudget":  prompt.OverBudget,
+		"promptSections":    prompt.Sections,
+		"characters":        prompt.Characters,
+		"worldEntries":      prompt.WorldEntries,
+		"summaries":         prompt.Summaries,
+		"analysisStatus":    project.Analysis.Status,
+		"analyzedChapters":  project.Analysis.AnalyzedCount,
+		"totalChapters":     project.Analysis.TotalCount,
+		"planAligned":       prompt.PlanSection != "",
+		"planCount":         len(plans),
+		"recallEnabled":     prompt.RecallSection != "",
+		"recallBudgetChars": prompt.RecallBudget,
+		"recallUsedChars":   utf8.RuneCountInString(prompt.RecallSection),
+		"recallChapters":    recallChaptersPayload(prompt.RecallChapters),
+	}
+	if prompt.OverBudget {
+		s.log.Warn("prompt exceeds context budget after shrink",
+			"contextChars", cfg.ContextChars,
+			"promptTotalChars", prompt.TotalChars,
+			"promptContextChars", prompt.ContextChars)
+	}
+	for key, value := range memoryMetaPayload(memory, prompt.MemorySection) {
+		meta[key] = value
+	}
+	if err := sw.send("meta", meta); err != nil {
 		return
 	}
 
@@ -506,7 +548,7 @@ func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 	client := llm.NewClient(cfg.BaseURL, key, cfg.Model)
 
 	var full strings.Builder
-	err = client.StreamChat(
+	result, err := client.StreamChat(
 		r.Context(),
 		[]llm.Message{
 			{Role: "system", Content: prompt.System},
@@ -533,7 +575,8 @@ func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = sw.send("done", map[string]any{
-		"chars": utf8.RuneCountInString(strings.TrimSpace(full.String())),
+		"chars":     utf8.RuneCountInString(strings.TrimSpace(full.String())),
+		"truncated": llm.IsTruncated(result.FinishReason),
 	})
 }
 

@@ -48,7 +48,7 @@ func TestStreamChatReadsSSE(t *testing.T) {
 
 	client := NewClient(server.URL+"/v1/", "sk-test", "deepseek-chat")
 	var deltas []string
-	err := client.StreamChat(
+	_, err := client.StreamChat(
 		context.Background(),
 		[]Message{{Role: "system", Content: "rules"}, {Role: "user", Content: "continue"}},
 		0.7,
@@ -93,7 +93,7 @@ func TestStreamChatReportsHTTPError(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "bad-key", "test-model")
-	err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(string) error {
+	_, err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(string) error {
 		return nil
 	})
 	if err == nil {
@@ -112,7 +112,7 @@ func TestStreamChatReportsSSEErrorEvent(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "", "test-model")
-	err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(string) error {
+	_, err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(string) error {
 		return nil
 	})
 	if err == nil || !strings.Contains(err.Error(), "rate limited") {
@@ -129,7 +129,7 @@ func TestStreamChatFallsBackToNonStreamingJSON(t *testing.T) {
 
 	client := NewClient(server.URL, "", "test-model")
 	var deltas []string
-	err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(delta string) error {
+	_, err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(delta string) error {
 		deltas = append(deltas, delta)
 		return nil
 	})
@@ -161,12 +161,12 @@ func TestCompleteChatReadsJSONResponse(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL+"/v1", "sk-test", "deepseek-chat")
-	content, err := client.CompleteChat(context.Background(), []Message{{Role: "system", Content: "json"}, {Role: "user", Content: "analyze"}}, 0.2)
+	result, err := client.CompleteChat(context.Background(), []Message{{Role: "system", Content: "json"}, {Role: "user", Content: "analyze"}}, 0.2)
 	if err != nil {
 		t.Fatalf("CompleteChat returned error: %v", err)
 	}
-	if content != `{"summary":"雨夜"}` {
-		t.Errorf("content = %q", content)
+	if result.Content != `{"summary":"雨夜"}` {
+		t.Errorf("content = %q", result.Content)
 	}
 
 	got := <-captured
@@ -188,12 +188,12 @@ func TestCompleteChatAggregatesSSEResponse(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "", "test-model")
-	content, err := client.CompleteChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.3)
+	result, err := client.CompleteChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.3)
 	if err != nil {
 		t.Fatalf("CompleteChat returned error: %v", err)
 	}
-	if content != "第一段第二段" {
-		t.Errorf("content = %q", content)
+	if result.Content != "第一段第二段" {
+		t.Errorf("content = %q", result.Content)
 	}
 }
 
@@ -263,7 +263,7 @@ func TestStreamChatRetriesTransientStatus(t *testing.T) {
 	client.sleep = func(context.Context, time.Duration) error { return nil }
 
 	var deltas []string
-	err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(delta string) error {
+	_, err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(delta string) error {
 		deltas = append(deltas, delta)
 		return nil
 	})
@@ -296,12 +296,12 @@ func TestCompleteChatRetriesTransientStatus(t *testing.T) {
 	client.Retry.BaseDelay = time.Millisecond
 	client.sleep = func(context.Context, time.Duration) error { return nil }
 
-	content, err := client.CompleteChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.3)
+	result, err := client.CompleteChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.3)
 	if err != nil {
 		t.Fatalf("CompleteChat returned error: %v", err)
 	}
-	if content != "重连成功。" {
-		t.Errorf("content = %q", content)
+	if result.Content != "重连成功。" {
+		t.Errorf("content = %q", result.Content)
 	}
 	if got := atomic.LoadInt32(&attempts); got != 2 {
 		t.Errorf("attempts = %d, want 2", got)
@@ -355,7 +355,7 @@ func TestStreamChatDoesNotRetryAfterDelta(t *testing.T) {
 	client.sleep = func(context.Context, time.Duration) error { return nil }
 
 	var deltas []string
-	err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(delta string) error {
+	_, err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(delta string) error {
 		deltas = append(deltas, delta)
 		return nil
 	})
@@ -384,8 +384,64 @@ func TestStreamChatRespectsContextCancel(t *testing.T) {
 	client.Retry.BaseDelay = time.Millisecond
 	client.sleep = func(context.Context, time.Duration) error { return nil }
 
-	err := client.StreamChat(ctx, []Message{{Role: "user", Content: "hi"}}, 0.5, func(string) error { return nil })
+	_, err := client.StreamChat(ctx, []Message{{Role: "user", Content: "hi"}}, 0.5, func(string) error { return nil })
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+}
+
+func TestIsTruncated(t *testing.T) {
+	cases := map[string]bool{
+		"length":            true,
+		" max_tokens ":      true,
+		"max_output_tokens": true,
+		"stop":              false,
+		"":                  false,
+	}
+	for reason, want := range cases {
+		if got := IsTruncated(reason); got != want {
+			t.Errorf("IsTruncated(%q) = %v, want %v", reason, got, want)
+		}
+	}
+}
+
+func TestStreamChatReportsFinishReason(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"半句\"},\"finish_reason\":null}]}\n\n")
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"length\"}]}\n\n")
+		fmt.Fprint(w, "data: [DONE]\n\n")
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "", "test-model")
+	result, err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.5, func(string) error {
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("StreamChat returned error: %v", err)
+	}
+	if result.FinishReason != "length" || !IsTruncated(result.FinishReason) {
+		t.Errorf("FinishReason = %q, want length", result.FinishReason)
+	}
+}
+
+func TestCompleteChatReportsFinishReason(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"choices":[{"message":{"role":"assistant","content":"{\"a\":1"},"finish_reason":"length"}]}`)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "", "test-model")
+	result, err := client.CompleteChat(context.Background(), []Message{{Role: "user", Content: "hi"}}, 0.3)
+	if err != nil {
+		t.Fatalf("CompleteChat returned error: %v", err)
+	}
+	if result.Content != `{"a":1` {
+		t.Errorf("Content = %q", result.Content)
+	}
+	if !IsTruncated(result.FinishReason) {
+		t.Errorf("FinishReason = %q, want truncated", result.FinishReason)
 	}
 }

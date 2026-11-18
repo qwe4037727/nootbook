@@ -462,7 +462,7 @@ func TestInitAlreadyRunning(t *testing.T) {
 func TestLegacyToEndMemoryFlow(t *testing.T) {
 	dir := t.TempDir()
 	// 1. legacy 数据入库（New 自动迁移分章）
-	legacy := `{"title":"无边悔恨","manuscript":"第一章 起点\n他睁开眼。\n\n第二章 转折\n雨停了。","style":"冷峻","characters":[{"name":"林越","state":"重伤"}],"world":[]}`
+	legacy := `{"title":"测试小说","manuscript":"第一章 起点\n他睁开眼。\n\n第二章 转折\n雨停了。","style":"冷峻","characters":[{"name":"林越","state":"重伤"}],"world":[]}`
 	if err := osWriteFileForTest(dir+"/project.json", []byte(legacy)); err != nil {
 		t.Fatalf("write legacy: %v", err)
 	}

@@ -161,6 +161,62 @@ func TestManagerAnalyzesIncrementally(t *testing.T) {
 	}
 }
 
+// TestManagerReportsTruncatedOutput 覆盖 I3-6/R1：解析失败时按 finish_reason 区分
+// “输出被截断”与普通格式异常，便于用户采取不同处置。
+func TestManagerReportsTruncatedOutput(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		finishReason string
+		want         string
+	}{
+		{name: "length", finishReason: "length", want: "模型输出被截断"},
+		{name: "max_tokens", finishReason: "max_tokens", want: "模型输出被截断"},
+		{name: "format_error", finishReason: "stop", want: "分析结果格式异常"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			st, err := store.New(t.TempDir())
+			if err != nil {
+				t.Fatalf("store.New: %v", err)
+			}
+			if _, err := st.ImportChapters("雨夜", []novel.Chapter{
+				{Title: "初始", Content: "雨落到青石板上。"},
+			}); err != nil {
+				t.Fatalf("ImportChapters: %v", err)
+			}
+
+			provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"choices": []map[string]any{{
+						"message":       map[string]string{"role": "assistant", "content": `{"summary":`},
+						"finish_reason": tc.finishReason,
+					}},
+				})
+			}))
+			defer provider.Close()
+			if _, err := st.SaveConfig(store.Config{
+				BaseURL:      provider.URL + "/v1",
+				Model:        "mock-model",
+				ContextChars: 4000,
+			}); err != nil {
+				t.Fatalf("SaveConfig: %v", err)
+			}
+
+			manager := NewManager(st, slog.New(slog.NewTextHandler(io.Discard, nil)))
+			if !manager.step(context.Background()) {
+				t.Error("step should keep work queued after a parse failure")
+			}
+			project, err := st.LoadProject()
+			if err != nil {
+				t.Fatalf("LoadProject: %v", err)
+			}
+			if project.Analysis.Status != novel.AnalysisError || !strings.Contains(project.Analysis.Message, tc.want) {
+				t.Errorf("analysis = %+v, want status error with %q", project.Analysis, tc.want)
+			}
+		})
+	}
+}
+
 func TestManagerRecordsMissingConfig(t *testing.T) {
 	st, err := store.New(t.TempDir())
 	if err != nil {

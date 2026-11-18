@@ -56,8 +56,10 @@ func run(addr, dataDir string, logger *slog.Logger) error {
 	manager.Start(ctx)
 	defer manager.Stop()
 
+	extractor := analysis.NewExtractLauncher(st, logger)
+
 	httpServer := &http.Server{
-		Handler:           server.New(st, staticFS, logger, manager),
+		Handler:           server.New(st, staticFS, logger, manager, extractor),
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}

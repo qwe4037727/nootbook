@@ -130,8 +130,12 @@ type Store struct {
 	// initRunCounter/initCurrentRun 为初始化运行号（memoryMu 守护）：
 	// 每次授权一次初始化任务即递增 initRunCounter 并写入 initCurrentRun；
 	// 新任务一经授权，同代次下的旧任务立即失效（区分"同代次的不同任务"）。
-	initRunCounter  uint64
+	initRunCounter uint64
 	initCurrentRun uint64
+	// extractRunCounter/extractCurrentRun 为深度提取运行号（memoryMu 守护）：
+	// 与初始化同构，复用 memoryGeneration 作代次——导入新书递增代次使在途提取任务失效。
+	extractRunCounter uint64
+	extractCurrentRun uint64
 }
 
 func New(dir string) (*Store, error) {
@@ -427,6 +431,11 @@ func (s *Store) SaveChapter(chapter novel.Chapter) (novel.Chapter, novel.Project
 	if err := s.writeProjectLocked(project); err != nil {
 		return novel.Chapter{}, novel.Project{}, err
 	}
+	// I2-5 联动：章节正文/标题变化（Revision 已递增）→ 复核该章证据是否失效。
+	// 与 chapterOrderHook 同模式：锁外（相对 memoryMu）执行、error 仅记日志、不阻断章节保存。
+	if err := s.reconcileForChapter(chapter); err != nil {
+		log.Printf("store: chapter %s saved but evidence reconcile skipped (ignored): %v", chapter.ID, err)
+	}
 	return chapter, project, nil
 }
 
@@ -720,6 +729,21 @@ func (s *Store) loadProjectLocked() (novel.Project, error) {
 	return project, nil
 }
 
+// loadConfigLocked 在 store.mu 域内读取 config.json（供 BeginExtract 校验模型配置）。
+// 调用方须持 store.mu。
+func (s *Store) loadConfigLocked() (Config, error) {
+	cfg := DefaultConfig()
+	err := s.readJSONLocked(s.path("config.json"), &cfg)
+	if errors.Is(err, os.ErrNotExist) {
+		return cfg, nil
+	}
+	if err != nil {
+		return Config{}, fmt.Errorf("store: load config: %w", err)
+	}
+	cfg.Normalize()
+	return cfg, nil
+}
+
 func (s *Store) writeProjectLocked(project novel.Project) error {
 	if err := writeJSONFile(s.path("project.json"), project, 0o644); err != nil {
 		return fmt.Errorf("store: save project: %w", err)
@@ -832,7 +856,11 @@ func writeJSONFile(path string, value any, perm os.FileMode) error {
 		return fmt.Errorf("encode %s: %w", filepath.Base(path), err)
 	}
 	data = append(data, '\n')
+	return writeRawFileAtomic(path, data, perm)
+}
 
+// writeRawFileAtomic 以临时文件 + rename 原子写入原始字节（提交回滚需逐字节还原）。
+func writeRawFileAtomic(path string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(path)
 	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
 	if err != nil {

@@ -46,7 +46,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "call failed: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println(resp)
+	if llm.IsTruncated(resp.FinishReason) {
+		fmt.Fprintln(os.Stderr, "warning: upstream output was truncated (finish_reason="+resp.FinishReason+")")
+	}
+	fmt.Println(resp.Content)
 }
 
 func jsonOrEmpty(m map[string]interface{}, k string) string {

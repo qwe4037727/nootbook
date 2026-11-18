@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"novelagent/internal/novel"
@@ -119,6 +120,12 @@ func (s *Store) LoadMemoryInfo() (MemoryInfo, error) {
 //   - 已 committed 但 meta 对齐失败：进入安全态（P1-2）——同进程重试被拒绝，
 //     重启后恢复流程按崩溃点 5 收敛 meta，杜绝"同进程重试造成版本链分叉"。
 func (s *Store) commitMemoryLocked(commitType string, basedOn int64, payload map[string]any) (record CommitRecord, err error) {
+	return s.commitMemoryWithIDLocked(commitType, basedOn, payload, "")
+}
+
+// commitMemoryWithIDLocked 同 commitMemoryLocked，但允许调用方预生成 commitID，
+// 以便正文/草稿/ChangeSet 在同一次提交中携带一致的审计 ID（G6 联合提交）。
+func (s *Store) commitMemoryWithIDLocked(commitType string, basedOn int64, payload map[string]any, commitID string) (record CommitRecord, err error) {
 	if s.memorySafe {
 		return CommitRecord{}, fmt.Errorf("%w: %s", ErrMemorySafeState, s.memorySafeError)
 	}
@@ -154,8 +161,11 @@ func (s *Store) commitMemoryLocked(commitType string, basedOn int64, payload map
 	}
 
 	now := time.Now().UTC()
+	if commitID == "" {
+		commitID = novel.NewID("commit")
+	}
 	record = CommitRecord{
-		CommitID:              novel.NewID("commit"),
+		CommitID:              commitID,
 		Type:                  commitType,
 		Status:                CommitPrepared,
 		BasedOnMemoryRevision: basedOn,
@@ -175,11 +185,13 @@ func (s *Store) commitMemoryLocked(commitType string, basedOn int64, payload map
 	// 目标文件存在但解码失败 → 拒绝提交：覆盖写会销毁唯一副本且无法回滚。
 	record.RevertPayload = make(map[string]json.RawMessage, len(record.Payload))
 	for name := range record.Payload {
-		var raw json.RawMessage
-		readErr := s.readMemoryFileLocked(name, &raw)
+		raw, readErr := s.readCommitTargetLocked(name)
 		switch {
 		case readErr == nil:
-			record.RevertPayload[name] = raw
+			if !json.Valid(raw) {
+				return CommitRecord{}, fmt.Errorf("store: snapshot revert payload %s: invalid JSON", name)
+			}
+			record.RevertPayload[name] = json.RawMessage(raw)
 		case errors.Is(readErr, os.ErrNotExist):
 			record.RevertPayload[name] = json.RawMessage("null")
 		default:
@@ -258,7 +270,7 @@ func (s *Store) applyCommitPayloadLocked(record CommitRecord) error {
 		if err := json.Unmarshal(record.Payload[name], &value); err != nil {
 			return fmt.Errorf("store: decode commit payload %s: %w", name, err)
 		}
-		if err := s.writeMemoryFileLocked(name, value); err != nil {
+		if err := s.writeCommitTargetLocked(name, value); err != nil {
 			return err
 		}
 	}
@@ -279,13 +291,20 @@ func (s *Store) restoreRevertPayloadLocked(revert map[string]json.RawMessage) er
 	sort.Strings(names)
 	for _, name := range names {
 		raw := revert[name]
+		path, err := s.commitTargetPath(name)
+		if err != nil {
+			return err
+		}
 		if len(raw) == 0 || string(raw) == "null" {
-			if err := os.Remove(s.memoryPath(name)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("store: revert remove %s: %w", name, err)
 			}
 			continue
 		}
-		if err := s.writeMemoryFileLocked(name, raw); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return fmt.Errorf("store: revert rewrite %s: %w", name, err)
+		}
+		if err := writeRawFileAtomic(path, raw, 0o644); err != nil {
 			return fmt.Errorf("store: revert rewrite %s: %w", name, err)
 		}
 	}
@@ -304,6 +323,8 @@ func (s *Store) recoverMemoryLocked() {
 	// 附带恢复（阻塞修复 #1）：进程重启后遗留的孤儿 mapping 状态不可能有在途映射，
 	// 重置为 failed 以允许 §9.3 的"失败后续跑"。
 	s.resetOrphanInitStateLocked()
+	// 同构：遗留的孤儿 extracting 状态重置为 failed（I2-5 重启恢复，iter2-详设 §3.1）。
+	s.resetOrphanExtractStateLocked()
 
 	// 运行号基线续接（docs/issues.md #18）：init_state.runId 是上次授权的运行号，
 	// 重启后以其为基线继续递增，保证运行号跨进程单调、不与历史任务撞号。
@@ -429,6 +450,56 @@ func (s *Store) enterMemorySafeStateLocked(err error) {
 
 func (s *Store) memoryPath(name string) string {
 	return filepath.Join(s.dir, memoryDirName, name)
+}
+
+// commitTargetPath 解析提交 payload 键的目标文件（G6 联合提交，spec §4.3）：
+// 默认写 memory/ 下文件；project.json 与 chapter:<id> 允许把正文/项目元数据纳入同一提交。
+// 非 memory 目标仅限这两个白名单，杜绝任意路径写入。
+func (s *Store) commitTargetPath(name string) (string, error) {
+	switch {
+	case name == "project.json":
+		return s.path("project.json"), nil
+	case strings.HasPrefix(name, "chapter:"):
+		id := strings.TrimPrefix(name, "chapter:")
+		if !novel.ValidID(id) || !strings.HasPrefix(id, "ch_") {
+			return "", fmt.Errorf("store: invalid commit target %q", name)
+		}
+		return s.chapterPath(id)
+	case strings.Contains(name, `\`) || strings.Contains(name, "..") ||
+		strings.HasPrefix(name, "/") || !strings.HasSuffix(name, ".json"):
+		return "", fmt.Errorf("store: invalid commit target %q", name)
+	default:
+		return s.memoryPath(name), nil
+	}
+}
+
+func (s *Store) readCommitTargetLocked(name string) ([]byte, error) {
+	path, err := s.commitTargetPath(name)
+	if err != nil {
+		return nil, err
+	}
+	return os.ReadFile(path)
+}
+
+func (s *Store) writeCommitTargetLocked(name string, value any) error {
+	path, err := s.commitTargetPath(name)
+	if err != nil {
+		return err
+	}
+	// 只有正文目标自动建章节目录；memory/ 下沿用旧语义（不代建子目录）。
+	dir := filepath.Join(s.dir, memoryDirName)
+	if name == "project.json" {
+		dir = s.dir
+	} else if strings.HasPrefix(name, "chapter:") {
+		dir = filepath.Dir(path)
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("store: create commit target dir for %s: %w", name, err)
+	}
+	if err := writeJSONFile(path, value, 0o644); err != nil {
+		return fmt.Errorf("store: save commit target %s: %w", name, err)
+	}
+	return nil
 }
 
 func (s *Store) ensureMemoryMetaLocked() (memoryMetaFile, error) {

@@ -36,6 +36,13 @@ const directionInput = $("direction");
 const targetCharsSelect = $("targetChars");
 const temperatureSelect = $("temperature");
 const generateButton = $("generateButton");
+const useMemoryInput = $("useMemory");
+const usePlanInput = $("usePlan");
+const useRecallSelect = $("useRecall");
+const memoryPreviewButton = $("memoryPreviewButton");
+const memoryPreview = $("memoryPreview");
+const memoryPreviewBody = $("memoryPreviewBody");
+const memoryPreviewClose = $("memoryPreviewClose");
 
 const draftPanel = $("draftPanel");
 const draftStatus = $("draftStatus");
@@ -43,9 +50,34 @@ const draftTarget = $("draftTarget");
 const draftText = $("draftText");
 const appendButton = $("appendButton");
 const newChapterButton = $("newChapterButton");
+const persistTargetWrap = $("persistTargetWrap");
+const persistTarget = $("persistTarget");
+const persistDraftButton = $("persistDraftButton");
 const retryButton = $("retryButton");
 const discardButton = $("discardButton");
 const stopButton = $("stopButton");
+
+const draftBoxButton = $("draftBoxButton");
+const draftBoxCount = $("draftBoxCount");
+const draftBoxDialog = $("draftBoxDialog");
+const draftStatusFilter = $("draftStatusFilter");
+const draftRefreshButton = $("draftRefreshButton");
+const draftList = $("draftList");
+const draftDetailSection = $("draftDetailSection");
+const draftDetailTitle = $("draftDetailTitle");
+const draftDetailBadge = $("draftDetailBadge");
+const draftTitleInput = $("draftTitleInput");
+const draftContentInput = $("draftContentInput");
+const draftDetailMeta = $("draftDetailMeta");
+const draftSaveEditButton = $("draftSaveEditButton");
+const draftExtractButton = $("draftExtractButton");
+const draftConfirmButton = $("draftConfirmButton");
+const draftRejectButton = $("draftRejectButton");
+const draftOpenChapterButton = $("draftOpenChapterButton");
+const draftRejectField = $("draftRejectField");
+const draftRejectReason = $("draftRejectReason");
+const draftChangeSet = $("draftChangeSet");
+const draftDetailStatus = $("draftDetailStatus");
 
 const toast = $("toast");
 
@@ -65,6 +97,32 @@ const importTitleInput = $("importTitleInput");
 const importText = $("importText");
 const importHint = $("importHint");
 const importSubmitButton = $("importSubmitButton");
+
+const planButton = $("planButton");
+const planDialog = $("planDialog");
+const planVolumeCount = $("planVolumeCount");
+const planEndingTone = $("planEndingTone");
+const planAvoidTropes = $("planAvoidTropes");
+const planExtra = $("planExtra");
+const planGenerateButton = $("planGenerateButton");
+const planRefreshButton = $("planRefreshButton");
+const planStatusText = $("planStatusText");
+const planTree = $("planTree");
+const planCountBadge = $("planCountBadge");
+const planRevisionBadge = $("planRevisionBadge");
+
+const memoryReviewButton = $("memoryReviewButton");
+const memoryReviewDialog = $("memoryReviewDialog");
+const extractForceInput = $("extractForceInput");
+const extractStartButton = $("extractStartButton");
+const reconcileButton = $("reconcileButton");
+const extractStatusText = $("extractStatusText");
+const changesetList = $("changesetList");
+const changesetDetail = $("changesetDetail");
+const candidateList = $("candidateList");
+const refreshReviewButton = $("refreshReviewButton");
+
+let reviewExtractTimer = 0;
 
 let project = {
   title: "",
@@ -99,11 +157,16 @@ let draft = {
   text: "",
   streaming: false,
   appended: false,
+  persisted: false,
+  persistedDraftID: "",
   controller: null,
   targetChapterID: "",
   targetLabel: "",
 };
 let toastTimer = 0;
+
+let persistedDraft = null;
+let draftDetailBusy = false;
 
 function readString(value) {
   return typeof value === "string" ? value : "";
@@ -133,7 +196,10 @@ async function api(url, options = {}) {
   }
   if (!response.ok) {
     const message = data && typeof data.error === "string" ? data.error : `请求失败（HTTP ${response.status}）`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.code = data && typeof data.code === "string" ? data.code : "";
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -271,8 +337,10 @@ function applyProjectMeta(raw) {
     const meta = project.chapters.find((item) => item.id === chapter.id);
     if (meta) {
       chapter.index = meta.index;
-      meta.title = chapter.title;
-      meta.charCount = countChars(chapter.content);
+      if (chapterDirtyRevision > chapterSavedRevision) {
+        meta.title = chapter.title;
+        meta.charCount = countChars(chapter.content);
+      }
     }
   }
   refreshHeader();
@@ -830,10 +898,13 @@ function setDraftStatus(message) {
 function setDraftPhase(phase) {
   const settled = phase === "done" || phase === "stopped" || phase === "error" || phase === "appended";
   const hasText = draft.text.trim() !== "";
+  const noSave = draft.appended || draft.persisted;
   stopButton.hidden = phase !== "streaming";
   updateGenerateAvailability();
-  appendButton.hidden = !(phase === "done" || phase === "stopped") || draft.appended || !hasText;
+  appendButton.hidden = !(phase === "done" || phase === "stopped") || noSave || !hasText;
   newChapterButton.hidden = appendButton.hidden;
+  persistDraftButton.hidden = appendButton.hidden;
+  persistTargetWrap.hidden = appendButton.hidden;
   retryButton.hidden = !(phase === "done" || phase === "stopped" || phase === "error");
   discardButton.hidden = !settled;
   draftText.classList.toggle("is-streaming", phase === "streaming");
@@ -931,6 +1002,431 @@ function applyAnalysisFromMeta(data) {
   }
 }
 
+// ---- 续写记忆注入（I3-5，iter3-详设 §8）----
+
+const memoryKindLabels = {
+  world_state: "世界规则",
+  state: "人物当前状态",
+  cognition: "人物认知",
+  thread: "未解决伏笔",
+  event: "关键事件",
+  plan: "近期计划",
+};
+
+const memoryKindOrder = ["world_state", "state", "cognition", "thread", "event", "plan"];
+
+function memoryDisabledText(reason) {
+  switch (reason) {
+    case "safe_state":
+      return "记忆链校验异常，本次未注入";
+    case "read_error":
+      return "记忆文件读取失败，本次未注入";
+    case "memory_absent":
+      return "还没有已确认的剧情记忆，本次未注入";
+    default:
+      return "本次未注入记忆";
+  }
+}
+
+function hideMemoryPreview() {
+  memoryPreview.hidden = true;
+  memoryPreviewBody.textContent = "";
+}
+
+function recallParam() {
+  switch (useRecallSelect.value) {
+    case "on":
+      return true;
+    case "off":
+      return false;
+    default:
+      return null;
+  }
+}
+
+function memoryPreviewParams() {
+  return {
+    direction: directionInput.value.trim(),
+    targetChars: Number(targetCharsSelect.value) || 800,
+    useMemory: useMemoryInput.checked,
+    usePlan: usePlanInput.checked,
+    useRecall: recallParam(),
+  };
+}
+
+function renderMemoryPreview(data) {
+  memoryPreviewBody.textContent = "";
+  memoryPreview.hidden = false;
+  const memoryEnabled = data && data.memoryEnabled === true;
+  const planEnabled = data && data.planEnabled === true;
+  const recallEnabled = data && data.recallEnabled === true;
+  if (!memoryEnabled && !planEnabled && !recallEnabled) {
+    const empty = document.createElement("p");
+    empty.className = "memory-empty";
+    const reason = readString(data && data.memoryDisabledReason);
+    if (reason) empty.textContent = memoryDisabledText(reason);
+    else if (!useMemoryInput.checked && !usePlanInput.checked) empty.textContent = "记忆注入与计划对齐均已关闭，前文也没有可召回的片段。";
+    else if (usePlanInput.checked && useMemoryInput.checked) empty.textContent = "还没有已确认的剧情记忆、已激活的计划或可召回的前文片段。";
+    else if (usePlanInput.checked) empty.textContent = "还没有已激活的计划；激活后才会参与续写。";
+    else empty.textContent = "本次不注入记忆，前文也没有检索到相关片段。";
+    if (useRecallSelect.value === "on") empty.textContent += " 已要求前文召回但无注入：旧章节没有命中片段，或正文窗口不让位。";
+    memoryPreviewBody.append(empty);
+    return;
+  }
+
+  if (planEnabled) {
+    const group = document.createElement("div");
+    group.className = "memory-group";
+    const title = document.createElement("h4");
+    title.textContent = `已激活计划（${Number(data.planCount) || 0} 条，仅约束走向）`;
+    const text = document.createElement("pre");
+    text.className = "memory-plan-section";
+    text.textContent = readString(data.planSection);
+    group.append(title, text);
+    memoryPreviewBody.append(group);
+  }
+
+  if (memoryEnabled) {
+    const groups = new Map(memoryKindOrder.map((kind) => [kind, []]));
+    const records = Array.isArray(data.records) ? data.records : [];
+    for (const record of records) {
+      if (!record) continue;
+      const kind = readString(record.kind);
+      if (!groups.has(kind)) groups.set(kind, []);
+      groups.get(kind).push(record);
+    }
+    for (const [kind, items] of groups) {
+      if (!items.length) continue;
+      const group = document.createElement("div");
+      group.className = "memory-group";
+      const title = document.createElement("h4");
+      title.textContent = memoryKindLabels[kind] || kind;
+      group.append(title);
+      for (const item of items) {
+        const row = document.createElement("div");
+        row.className = "memory-item";
+        const text = document.createElement("span");
+        text.className = "memory-item-text";
+        text.textContent = readString(item.text);
+        row.append(text);
+        if (item.needsReview) {
+          const badge = document.createElement("span");
+          badge.className = "memory-badge";
+          badge.textContent = "待复核";
+          row.append(badge);
+        }
+        const id = document.createElement("span");
+        id.className = "memory-item-id";
+        id.textContent = readString(item.id);
+        row.append(id);
+        group.append(row);
+      }
+      memoryPreviewBody.append(group);
+    }
+  }
+
+  if (recallEnabled) {
+    const group = document.createElement("div");
+    group.className = "memory-group";
+    const title = document.createElement("h4");
+    const chapters = (Array.isArray(data.recallChapters) ? data.recallChapters : [])
+      .map((value) => Number(value) || 0)
+      .filter((value) => value > 0);
+    title.textContent = chapters.length
+      ? `前文相关片段（来自第 ${chapters.join("、")} 章）`
+      : "前文相关片段";
+    const text = document.createElement("pre");
+    text.className = "memory-plan-section memory-recall-section";
+    text.textContent = readString(data.recallSection);
+    group.append(title, text);
+    memoryPreviewBody.append(group);
+  }
+
+  const parts = [];
+  if (memoryEnabled) {
+    const counts = data.counts || {};
+    const recalled = ["states", "events", "threads", "cognitions", "plans"]
+      .map((key) => Number(counts[key]) || 0)
+      .reduce((sum, value) => sum + value, 0);
+    parts.push(`已用 ${formatNumber(Number(data.used) || 0)} / ${formatNumber(Number(data.budget) || 0)} 字`);
+    parts.push(`检索 ${recalled} 条`);
+    if (Number(data.droppedByBudget)) parts.push(`预算裁掉 ${Number(data.droppedByBudget)} 条`);
+    if (Number(data.skippedReview)) parts.push(`待复核跳过 ${Number(data.skippedReview)} 条`);
+    if (Number(data.skippedAmbiguous)) parts.push(`歧义提及跳过 ${Number(data.skippedAmbiguous)} 条`);
+    if (Number(data.memoryRevision)) parts.push(`revision ${Number(data.memoryRevision)}`);
+  }
+  if (planEnabled) parts.push(`计划 ${Number(data.planCount) || 0} 条`);
+  if (recallEnabled) {
+    parts.push(`前文召回 ${Number(data.recallHits) || 0} 段 · ${formatNumber(Number(data.recallUsedChars) || 0)}/${formatNumber(Number(data.recallBudgetChars) || 0)} 字`);
+  }
+  if (useRecallSelect.value === "off") parts.push("前文召回已关闭");
+  else if (useRecallSelect.value === "on" && !recallEnabled) {
+    parts.push("已要求前文召回但无注入：旧章节没有命中片段，或正文窗口不让位");
+  }
+  const foot = document.createElement("p");
+  foot.className = "memory-preview-foot";
+  foot.textContent = parts.join(" · ");
+  memoryPreviewBody.append(foot);
+}
+
+async function loadMemoryPreview({ quiet = false } = {}) {
+  if (!useMemoryInput.checked && !usePlanInput.checked && useRecallSelect.value !== "on") {
+    hideMemoryPreview();
+    if (!quiet) showToast("记忆注入与计划对齐均已关闭，本次不附加上下文");
+    return;
+  }
+  memoryPreviewButton.disabled = true;
+  try {
+    const data = await api("/api/continue/preview", {
+      method: "POST",
+      body: JSON.stringify(memoryPreviewParams()),
+    });
+    renderMemoryPreview(data);
+  } catch (error) {
+    hideMemoryPreview();
+    if (!quiet) showToast(error.message || "无法预览本次记忆", true);
+  } finally {
+    memoryPreviewButton.disabled = false;
+  }
+}
+
+function memoryMetaSummary(meta) {
+  const planNote = meta && meta.planAligned === true ? `计划 ${Number(meta.planCount) || 0} 条` : "";
+  const recallChapters = meta && Array.isArray(meta.recallChapters) ? meta.recallChapters.filter((value) => Number(value) > 0) : [];
+  const recallNote = meta && meta.recallEnabled === true
+    ? `前文召回 ${recallChapters.length} 段 · ${formatNumber(Number(meta.recallUsedChars) || 0)} 字`
+    : "";
+  if (!meta || meta.memoryEnabled !== true) {
+    const reason = readString(meta && meta.memoryDisabledReason);
+    const base = reason ? memoryDisabledText(reason) : planNote;
+    return [base, recallNote].filter(Boolean).join(" · ");
+  }
+  const counts = meta.recalledByKind || {};
+  const total = ["states", "events", "threads", "cognitions", "plans"]
+    .map((key) => Number(counts[key]) || 0)
+    .reduce((sum, value) => sum + value, 0);
+  let text = `记忆 ${total} 条`;
+  const used = Number(meta.memoryUsedChars) || 0;
+  if (used) text += ` · ${formatNumber(used)} 字`;
+  const dropped = Number(meta.droppedByBudget) || 0;
+  if (dropped) text += ` · 裁掉 ${dropped} 条`;
+  const skipped = Number(meta.skippedReview) || 0;
+  if (skipped) text += ` · 待复核跳过 ${skipped} 条`;
+  if (planNote) text += ` · ${planNote}`;
+  if (recallNote) text += ` · ${recallNote}`;
+  return text;
+}
+
+// ---- 大纲规划（F20–F23）----
+
+const planLevelLabels = { global: "全书", volume: "分卷", near_term: "近期" };
+const planStatusLabels = {
+  proposed: "草案",
+  active: "生效",
+  paused: "暂停",
+  completed: "完成",
+  superseded: "已取代",
+  cancelled: "已取消",
+};
+const planReviewReasons = {
+  evidence_stale: "依据章节已改动，请复核计划",
+  quote_mismatch: "原文引用与正文不符，请复核",
+  parent_completed: "上级计划已完成，子计划需要复核",
+};
+
+let planBusy = false;
+
+function openPlanDialog() {
+  showDialog(planDialog);
+  void loadPlanTree();
+}
+
+async function loadPlanTree() {
+  planRefreshButton.disabled = true;
+  try {
+    const tree = await api("/api/plans");
+    renderPlanTree(tree || {});
+  } catch (error) {
+    planTree.replaceChildren();
+    const empty = document.createElement("p");
+    empty.className = "empty-state small";
+    empty.textContent = "读取计划失败：" + error.message;
+    planTree.append(empty);
+    showToast("读取计划失败：" + error.message, true);
+  } finally {
+    planRefreshButton.disabled = false;
+  }
+}
+
+function renderPlanTree(tree) {
+  planTree.replaceChildren();
+  const roots = Array.isArray(tree.roots) ? tree.roots : [];
+  const count = Number(tree.count) || 0;
+  planCountBadge.textContent = count ? `${count} 条计划` : "";
+  planRevisionBadge.textContent = `revision ${Number(tree.memoryRevision) || 0}`;
+  if (!roots.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state small";
+    empty.textContent = "还没有计划。生成草案后，确认激活才会参与续写对齐。";
+    planTree.append(empty);
+    return;
+  }
+  for (const root of roots) planTree.append(planNodeElement(root));
+}
+
+function planNodeElement(node) {
+  const plan = (node && node.plan) || {};
+  const status = readString(plan.status);
+  const card = document.createElement("article");
+  card.className = "plan-node" + (status === "active" ? " is-active" : "");
+
+  const head = document.createElement("div");
+  head.className = "plan-node-head";
+  const level = document.createElement("span");
+  level.className = "plan-level";
+  level.textContent = planLevelLabels[readString(plan.level)] || readString(plan.level);
+  const badge = document.createElement("span");
+  badge.className = "plan-status is-" + (status || "proposed");
+  badge.textContent = planStatusLabels[status] || status;
+  head.append(level, badge);
+
+  const title = document.createElement("h4");
+  title.className = "plan-title";
+  title.textContent = readString(plan.title) || "未命名计划";
+  card.append(head, title);
+
+  const objective = readString(plan.objective);
+  if (objective) {
+    const p = document.createElement("p");
+    p.className = "plan-objective";
+    p.textContent = objective;
+    card.append(p);
+  }
+
+  const constraints = Array.isArray(plan.constraints) ? plan.constraints.filter(Boolean) : [];
+  const beats = Array.isArray(plan.candidateBeats) ? plan.candidateBeats.filter(Boolean) : [];
+  if (constraints.length || beats.length) {
+    const meta = document.createElement("div");
+    meta.className = "plan-meta";
+    if (constraints.length) {
+      const row = document.createElement("p");
+      row.textContent = "约束：" + constraints.join("；");
+      meta.append(row);
+    }
+    if (beats.length) {
+      const row = document.createElement("p");
+      row.textContent = "候选发展：" + beats.join("；");
+      meta.append(row);
+    }
+    card.append(meta);
+  }
+
+  if (plan.needsReview) {
+    const review = document.createElement("p");
+    review.className = "plan-review";
+    const reason = readString(plan.reviewReason);
+    review.textContent = planReviewReasons[reason] || "计划依据已变化，请复核后再使用";
+    card.append(review);
+  }
+
+  const actions = [];
+  if (status === "proposed" || status === "paused") actions.push(["activate", "激活", "btn-primary"]);
+  if (status === "active") actions.push(["pause", "暂停", "btn-quiet"]);
+  if (status === "active" || status === "paused") actions.push(["complete", "完成", "btn-ghost"]);
+  if (status === "proposed" || status === "active" || status === "paused") actions.push(["cancel", "取消", "btn-quiet"]);
+  if (actions.length) {
+    const row = document.createElement("div");
+    row.className = "plan-node-actions";
+    for (const [action, label, className] of actions) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn btn-sm " + className;
+      button.textContent = label;
+      button.addEventListener("click", () => {
+        void updatePlanStatus(plan.id, action, button);
+      });
+      row.append(button);
+    }
+    card.append(row);
+  }
+
+  const children = Array.isArray(node && node.children) ? node.children : [];
+  if (children.length) {
+    const list = document.createElement("div");
+    list.className = "plan-children";
+    for (const child of children) list.append(planNodeElement(child));
+    card.append(list);
+  }
+  return card;
+}
+
+async function updatePlanStatus(id, action, button) {
+  if (planBusy) return;
+  const status = action === "activate" ? "active" : action;
+  planBusy = true;
+  button.disabled = true;
+  try {
+    const url =
+      action === "activate"
+        ? `/api/plans/${encodeURIComponent(id)}/activate`
+        : `/api/plans/${encodeURIComponent(id)}/status`;
+    const body = action === "activate" ? "{}" : JSON.stringify({ status });
+    await api(url, { method: "POST", body });
+    showToast(action === "activate" ? "计划已激活，将参与续写对齐" : `计划已标记为「${planStatusLabels[status] || status}」`);
+    hideMemoryPreview();
+    await loadPlanTree();
+  } catch (error) {
+    showToast("更新计划失败：" + error.message, true);
+    button.disabled = false;
+  } finally {
+    planBusy = false;
+  }
+}
+
+async function generatePlanDrafts() {
+  if (planGenerateButton.disabled) return;
+  if (!configured()) {
+    showToast("请先配置模型接口", true);
+    openSettings();
+    return;
+  }
+  if (!project.chapters.length) {
+    showToast("请先导入文稿或新建章节，再生成计划", true);
+    return;
+  }
+  const volumeCount = Number(planVolumeCount.value) || 3;
+  if (volumeCount < 1 || volumeCount > 12) {
+    showToast("分卷数量需要在 1 到 12 之间", true);
+    planVolumeCount.focus();
+    return;
+  }
+
+  planGenerateButton.disabled = true;
+  planGenerateButton.textContent = "生成中…";
+  planStatusText.textContent = "正在调用模型生成全书与分卷草案，通常需要十几秒…";
+  try {
+    const data = await api("/api/plans/generate", {
+      method: "POST",
+      body: JSON.stringify({
+        volumeCount,
+        endingTone: planEndingTone.value.trim(),
+        avoidTropes: planAvoidTropes.value.trim(),
+        extra: planExtra.value.trim(),
+      }),
+    });
+    const created = Array.isArray(data && data.plans) ? data.plans.length : 0;
+    planStatusText.textContent = `已生成 ${created} 条草案（revision ${Number(data && data.memoryRevision) || 0}）。激活后才会参与续写。`;
+    showToast(`已生成 ${created} 条计划草案`);
+    await loadPlanTree();
+  } catch (error) {
+    planStatusText.textContent = "";
+    showToast("生成计划失败：" + error.message, true);
+  } finally {
+    planGenerateButton.disabled = false;
+    planGenerateButton.textContent = "生成计划草案";
+  }
+}
+
 async function startGeneration() {
   if (draft.streaming) return;
   if (!project.chapters.length) {
@@ -957,11 +1453,15 @@ async function startGeneration() {
     return;
   }
 
+  await loadMemoryPreview({ quiet: true });
+
   const target = project.chapters[project.chapters.length - 1];
   draft = {
     text: "",
     streaming: true,
     appended: false,
+    persisted: false,
+    persistedDraftID: "",
     controller: new AbortController(),
     targetChapterID: target ? target.id : "",
     targetLabel: chapterLabel(target),
@@ -983,6 +1483,9 @@ async function startGeneration() {
         direction: directionInput.value.trim(),
         targetChars: Number(targetCharsSelect.value) || 800,
         temperature: Number(temperatureSelect.value) || 0.85,
+        useMemory: useMemoryInput.checked,
+        usePlan: usePlanInput.checked,
+        useRecall: recallParam(),
       }),
       signal: controller.signal,
     });
@@ -1001,6 +1504,7 @@ async function startGeneration() {
 
     let serverError = "";
     let sawDone = false;
+    let doneTruncated = false;
 
     await readSSE(response.body, (event, data) => {
       switch (event) {
@@ -1009,7 +1513,20 @@ async function startGeneration() {
           const contextChars = Number(data.contextChars) || 0;
           let message = `已连接 · 带入正文 ${formatNumber(contextChars)} 字`;
           if (data.truncated) message += "（截取结尾）";
+          const memoryNote = memoryMetaSummary(data);
+          if (memoryNote) message += ` · ${memoryNote}`;
           setDraftStatus(message);
+          const disabledReason = readString(data.memoryDisabledReason);
+          if (disabledReason === "safe_state" || disabledReason === "read_error") {
+            showToast(memoryDisabledText(disabledReason), true);
+          }
+          const skippedReview = Number(data.skippedReview) || 0;
+          if (skippedReview > 0) {
+            showToast(`有 ${skippedReview} 条记忆因待复核未注入，请在「记忆审阅」中处理`);
+          }
+          if (useRecallSelect.value === "on" && data.recallEnabled !== true) {
+            showToast("已要求前文召回，但本次没有注入：旧章节没有命中片段，或正文窗口不让位", true);
+          }
           break;
         }
         case "delta": {
@@ -1021,6 +1538,7 @@ async function startGeneration() {
         }
         case "done":
           sawDone = true;
+          doneTruncated = Boolean(data && data.truncated);
           break;
         case "error":
           serverError = readString(data.error) || "模型调用失败";
@@ -1040,7 +1558,15 @@ async function startGeneration() {
       return;
     }
     if (!sawDone) throw new Error("连接意外中断，请重试");
-    finishGeneration("done", `已生成 ${formatNumber(countChars(draft.text))} 字`);
+    finishGeneration(
+      "done",
+      doneTruncated
+        ? `已生成 ${formatNumber(countChars(draft.text))} 字 · 输出达到模型长度上限，已截断`
+        : `已生成 ${formatNumber(countChars(draft.text))} 字`,
+    );
+    if (doneTruncated) {
+      showToast("输出达到模型长度上限，已截断；请调大输出上限或缩短章节后重试", true);
+    }
   } catch (error) {
     if (controller.signal.aborted) {
       finishStopped();
@@ -1059,6 +1585,8 @@ function discardDraft() {
     text: "",
     streaming: false,
     appended: false,
+    persisted: false,
+    persistedDraftID: "",
     controller: null,
     targetChapterID: "",
     targetLabel: "",
@@ -1070,10 +1598,490 @@ function discardDraft() {
   draftTarget.hidden = true;
   appendButton.hidden = true;
   newChapterButton.hidden = true;
+  persistDraftButton.hidden = true;
+  persistTargetWrap.hidden = true;
   retryButton.hidden = true;
   discardButton.hidden = true;
   stopButton.hidden = true;
   updateGenerateAvailability();
+}
+
+// ---- 草稿台（G6）：正文草稿与记忆变更联合确认 ----
+
+function normalizeDraft(raw) {
+  if (!raw || typeof raw !== "object" || !readString(raw.id)) return null;
+  const status = readString(raw.status);
+  return {
+    id: readString(raw.id),
+    title: readString(raw.title),
+    content: readString(raw.content),
+    status: ["pending_confirmation", "committed", "rejected"].includes(status) ? status : "pending_confirmation",
+    draftRevision: Math.max(1, Number(raw.draftRevision) || 1),
+    targetChapterId: readString(raw.targetChapterId),
+    newChapter: Boolean(raw.newChapter),
+    baseChapterRevision: Number(raw.baseChapterRevision) || 0,
+    baseMemoryRevision: Number(raw.baseMemoryRevision) || 0,
+    memoryChangeSetId: readString(raw.memoryChangeSetId),
+    commitId: readString(raw.commitId),
+    chapterRevision: Number(raw.chapterRevision) || 0,
+    rejectReason: readString(raw.rejectReason),
+    createdAt: readString(raw.createdAt),
+    updatedAt: readString(raw.updatedAt),
+  };
+}
+
+function draftStatusText(status) {
+  switch (status) {
+    case "pending_confirmation":
+      return "待确认";
+    case "committed":
+      return "已提交";
+    case "rejected":
+      return "已拒绝";
+    default:
+      return String(status || "未知");
+  }
+}
+
+function draftTargetLabel(d) {
+  if (!d) return "";
+  if (d.newChapter) return "新章节";
+  const meta = project.chapters.find((item) => item.id === d.targetChapterId);
+  return meta ? "并入" + chapterLabel(meta) : "章节 " + d.targetChapterId;
+}
+
+async function refreshPendingDraftCount() {
+  try {
+    const pending = await api("/api/drafts?status=pending_confirmation");
+    const count = Array.isArray(pending) ? pending.length : 0;
+    draftBoxCount.textContent = String(count);
+    draftBoxCount.hidden = count === 0;
+    draftBoxButton.title = count ? `有 ${count} 份待确认草稿` : "查看草稿台";
+  } catch {
+    // 服务未就绪时保持上次计数。
+  }
+}
+
+async function openDraftBox(focusID = "") {
+  if (!draftBoxDialog.open) showDialog(draftBoxDialog);
+  persistedDraft = null;
+  draftDetailSection.hidden = true;
+  draftStatusFilter.value = "pending_confirmation";
+  await loadDraftList();
+  if (focusID) {
+    await openDraftDetail(focusID);
+  } else {
+    const first = draftList.querySelector("[data-draft-id]");
+    if (first) await openDraftDetail(first.dataset.draftId);
+  }
+  await refreshPendingDraftCount();
+}
+
+async function loadDraftList() {
+  const status = draftStatusFilter.value;
+  draftList.replaceChildren();
+  try {
+    const summaries = await api("/api/drafts" + (status ? "?status=" + encodeURIComponent(status) : ""));
+    renderDraftList(Array.isArray(summaries) ? summaries : []);
+  } catch (error) {
+    showToast("读取草稿列表失败：" + error.message, true);
+  }
+}
+
+function renderDraftList(summaries) {
+  draftList.replaceChildren();
+  if (!summaries.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state small";
+    empty.textContent = draftStatusFilter.value === "pending_confirmation"
+      ? "没有待确认稿。生成续写后可「存入草稿台」，在这里提取记忆并联合提交。"
+      : "没有符合条件的草稿。";
+    draftList.append(empty);
+    return;
+  }
+  const showStatus = draftStatusFilter.value === "";
+  const fragment = document.createDocumentFragment();
+  for (const raw of summaries) {
+    const d = normalizeDraft(raw);
+    if (!d) continue;
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "changeset-row";
+    row.dataset.draftId = d.id;
+    if (persistedDraft && persistedDraft.id === d.id) row.classList.add("is-active");
+
+    const meta = document.createElement("span");
+    meta.className = "changeset-meta";
+    const flags = [draftTargetLabel(d), `r${d.draftRevision}`];
+    flags.push(d.memoryChangeSetId ? "已提取记忆" : "未提取记忆");
+    if (showStatus) flags.push(draftStatusText(d.status));
+    meta.textContent = `${d.title || "未命名章节"} · ${flags.join(" · ")}`;
+
+    const time = document.createElement("span");
+    time.className = "changeset-time";
+    time.textContent = formatTime(d.updatedAt || d.createdAt);
+    row.append(meta, time);
+    row.addEventListener("click", () => void openDraftDetail(d.id));
+    fragment.append(row);
+  }
+  draftList.append(fragment);
+}
+
+function markActiveDraftRow() {
+  for (const row of draftList.querySelectorAll("[data-draft-id]")) {
+    row.classList.toggle("is-active", Boolean(persistedDraft && row.dataset.draftId === persistedDraft.id));
+  }
+}
+
+async function openDraftDetail(id) {
+  if (draftDetailBusy) return;
+  draftDetailStatus.textContent = "读取中…";
+  draftChangeSet.hidden = true;
+  draftChangeSet.replaceChildren();
+  try {
+    const data = await api("/api/drafts/" + encodeURIComponent(id));
+    persistedDraft = normalizeDraft(data);
+    if (!persistedDraft) throw new Error("草稿数据无效");
+    renderDraftDetail();
+    markActiveDraftRow();
+  } catch (error) {
+    draftDetailStatus.textContent = "";
+    showToast("读取草稿失败：" + error.message, true);
+  }
+}
+
+function renderDraftDetail() {
+  if (!persistedDraft) return;
+  const d = persistedDraft;
+  const editable = d.status === "pending_confirmation";
+  draftDetailSection.hidden = false;
+  draftDetailTitle.textContent = d.title || "未命名章节";
+  draftDetailBadge.textContent = `${draftStatusText(d.status)} · r${d.draftRevision}`;
+  draftTitleInput.value = d.title;
+  draftContentInput.value = d.content;
+  draftTitleInput.disabled = !editable;
+  draftContentInput.disabled = !editable;
+  draftSaveEditButton.hidden = !editable;
+  draftExtractButton.hidden = !editable;
+  draftConfirmButton.hidden = !editable;
+  draftRejectButton.hidden = !editable;
+  draftRejectField.hidden = !editable;
+  draftOpenChapterButton.hidden = d.status !== "committed";
+  draftRejectReason.value = "";
+
+  const parts = [
+    `目标：${draftTargetLabel(d)}`,
+    `正文基线 r${d.newChapter ? 0 : d.baseChapterRevision}`,
+    `记忆基线 revision ${d.baseMemoryRevision}`,
+    `更新于 ${formatTime(d.updatedAt || d.createdAt)}`,
+  ];
+  draftDetailMeta.textContent = parts.join(" · ");
+
+  if (d.status === "committed") {
+    draftDetailStatus.textContent = `已联合提交 · commit ${d.commitId} · 章节版本 r${d.chapterRevision}`;
+  } else if (d.status === "rejected") {
+    draftDetailStatus.textContent = d.rejectReason ? "已拒绝：" + d.rejectReason : "已拒绝";
+  } else if (!d.memoryChangeSetId) {
+    draftDetailStatus.textContent = "尚未提取记忆变更：建议先提取核对，再联合提交。";
+  } else {
+    draftDetailStatus.textContent = "已关联记忆变更：确认时会与正文放入同一次提交。";
+  }
+
+  if (d.memoryChangeSetId) {
+    void loadDraftChangeSet(d.memoryChangeSetId);
+  } else {
+    draftChangeSet.hidden = true;
+    draftChangeSet.replaceChildren();
+  }
+}
+
+async function loadDraftChangeSet(id) {
+  try {
+    const cs = await api("/api/memory/changesets/" + encodeURIComponent(id));
+    if (!persistedDraft || persistedDraft.memoryChangeSetId !== id) return;
+    renderDraftChangeSet(cs || {});
+  } catch (error) {
+    if (!persistedDraft || persistedDraft.memoryChangeSetId !== id) return;
+    draftChangeSet.hidden = false;
+    draftChangeSet.replaceChildren();
+    const note = document.createElement("p");
+    note.className = "review-note";
+    note.textContent = "读取关联记忆变更失败：" + error.message;
+    draftChangeSet.append(note);
+  }
+}
+
+function renderDraftChangeSet(cs) {
+  draftChangeSet.hidden = false;
+  draftChangeSet.replaceChildren();
+
+  const head = document.createElement("div");
+  head.className = "detail-head";
+  const title = document.createElement("h4");
+  title.textContent = "关联记忆变更 " + (cs.id || "");
+  head.append(title);
+  const badge = document.createElement("span");
+  badge.className = "detail-status is-" + (cs.status || "proposed");
+  badge.textContent = cs.status || "proposed";
+  head.append(badge);
+  draftChangeSet.append(head);
+
+  const ops = Array.isArray(cs.ops) ? cs.ops : [];
+  const conflicts = Array.isArray(cs.conflicts) ? cs.conflicts : [];
+  const note = document.createElement("p");
+  note.className = "review-note";
+  note.textContent = `${ops.length} 操作 · ${conflicts.length} 冲突 · 基于记忆 revision ${Number(cs.basedOnMemoryRevision) || 0}`;
+  draftChangeSet.append(note);
+
+  for (const cf of conflicts) draftChangeSet.append(renderConflict(cf));
+  if (ops.length) {
+    const group = document.createElement("div");
+    group.className = "op-group";
+    const label = document.createElement("p");
+    label.className = "group-title";
+    label.textContent = `变更操作（${ops.length}）`;
+    group.append(label);
+    for (const op of ops) group.append(renderOp(op));
+    draftChangeSet.append(group);
+  } else if (!conflicts.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state small";
+    empty.textContent = "本次提取无记忆变更。";
+    draftChangeSet.append(empty);
+  }
+}
+
+function setDraftDetailBusy(busy, label) {
+  draftDetailBusy = busy;
+  const editable = !busy && persistedDraft && persistedDraft.status === "pending_confirmation";
+  draftTitleInput.disabled = !editable;
+  draftContentInput.disabled = !editable;
+  draftSaveEditButton.disabled = busy;
+  draftExtractButton.disabled = busy;
+  draftConfirmButton.disabled = busy;
+  draftRejectButton.disabled = busy;
+  draftRefreshButton.disabled = busy;
+  if (busy && label) draftDetailStatus.textContent = label;
+}
+
+async function handleDraftActionError(error, fallbackPrefix) {
+  const friendly = {
+    chapter_conflict: "目标章节已变化：草稿基于旧正文，请重新创建或重新提取草稿",
+    revision_conflict: "记忆基线已变化：请重新提取后再确认",
+    draft_needs_recheck: "草稿内容与记忆变更不一致：请重新提取",
+    draft_conflict: "草稿版本已变化：已刷新到最新版本",
+    draft_terminal: "草稿已处于终态，不能继续操作",
+    analysis_running: "故事分析进行中，请稍后再试",
+    config_missing: "请先在「模型设置」中填写 Base URL、模型名与 API Key",
+  };
+  const message = friendly[error.code] || error.message || fallbackPrefix;
+  showToast(message, true);
+  draftDetailBusy = false;
+  await loadDraftList();
+  if (persistedDraft) await openDraftDetail(persistedDraft.id);
+}
+
+async function saveDraftEdit() {
+  if (!persistedDraft || draftDetailBusy || persistedDraft.status !== "pending_confirmation") return;
+  const content = draftContentInput.value.trim();
+  if (!content) {
+    showToast("草稿正文不能为空", true);
+    return;
+  }
+  setDraftDetailBusy(true, "保存中…");
+  try {
+    const data = await api("/api/drafts/" + encodeURIComponent(persistedDraft.id), {
+      method: "PATCH",
+      body: JSON.stringify({
+        draftRevision: persistedDraft.draftRevision,
+        title: draftTitleInput.value.trim(),
+        content,
+      }),
+    });
+    persistedDraft = normalizeDraft(data);
+    renderDraftDetail();
+    markActiveDraftRow();
+    await loadDraftList();
+    showToast("草稿已更新；已提取的记忆变更需重新提取");
+  } catch (error) {
+    await handleDraftActionError(error, "保存草稿失败");
+  } finally {
+    setDraftDetailBusy(false);
+  }
+}
+
+async function extractDraftMemory() {
+  if (!persistedDraft || draftDetailBusy || persistedDraft.status !== "pending_confirmation") return;
+  if (!configured()) {
+    showToast("请先配置模型接口", true);
+    openSettings();
+    return;
+  }
+  if (draftTitleInput.value.trim() !== persistedDraft.title || draftContentInput.value.trim() !== persistedDraft.content) {
+    showToast("正文有未保存的修改，请先「保存修改」再提取", true);
+    return;
+  }
+  setDraftDetailBusy(true, "正在提取记忆变更…");
+  draftExtractButton.textContent = "提取中…";
+  try {
+    const data = await api("/api/drafts/" + encodeURIComponent(persistedDraft.id) + "/extract", {
+      method: "POST",
+      body: "{}",
+    });
+    if (data && data.draft) persistedDraft = normalizeDraft(data.draft);
+    renderDraftDetail();
+    if (data && data.changeset) renderDraftChangeSet(data.changeset);
+    const ops = data && data.changeset && Array.isArray(data.changeset.ops) ? data.changeset.ops.length : 0;
+    const conflicts = data && data.changeset && Array.isArray(data.changeset.conflicts) ? data.changeset.conflicts.length : 0;
+    draftDetailStatus.textContent = `已提取 ${ops} 操作 · ${conflicts} 冲突；核对后确认提交。`;
+    showToast(`已提取记忆变更：${ops} 操作 · ${conflicts} 冲突`);
+    await loadDraftList();
+  } catch (error) {
+    await handleDraftActionError(error, "提取记忆变更失败");
+  } finally {
+    draftExtractButton.textContent = "提取记忆变更";
+    setDraftDetailBusy(false);
+  }
+}
+
+async function confirmPersistedDraft() {
+  if (!persistedDraft || draftDetailBusy || persistedDraft.status !== "pending_confirmation") return;
+  const saved = await flushChapterSave();
+  if (!saved) {
+    showToast("当前章节尚未保存，暂不能确认提交", true);
+    return;
+  }
+  const action = persistedDraft.newChapter
+    ? "将新建章节"
+    : "将覆盖" + draftTargetLabel(persistedDraft).replace(/^并入/, "");
+  if (!window.confirm(`确认联合提交？${action}，并同时写入已提取的记忆变更。`)) return;
+  setDraftDetailBusy(true, "正在联合提交…");
+  try {
+    const result = await api("/api/drafts/" + encodeURIComponent(persistedDraft.id) + "/confirm", {
+      method: "POST",
+      body: JSON.stringify({
+        draftRevision: persistedDraft.draftRevision,
+        expectedChapterRevision: persistedDraft.newChapter ? 0 : persistedDraft.baseChapterRevision,
+        expectedMemoryRevision: 0,
+      }),
+    });
+    if (result && result.draft) persistedDraft = normalizeDraft(result.draft);
+    if (result && result.project) applyProjectMeta(result.project);
+    if (draft.persisted && draft.persistedDraftID && draft.persistedDraftID === persistedDraft.id) {
+      finishGeneration("appended", "已联合提交 · 正文与记忆已写入");
+    }
+    renderDraftDetail();
+    await loadDraftList();
+    markActiveDraftRow();
+    await refreshPendingDraftCount();
+    const chapterID = result && result.chapter ? result.chapter.id : persistedDraft.targetChapterId;
+    const memoryRevision = result ? Number(result.memoryRevision) || 0 : 0;
+    const conflicts = result && Array.isArray(result.conflicts) ? result.conflicts.length : 0;
+    showToast(`已联合提交 · commit ${result.commitId} · 记忆 revision ${memoryRevision}` + (conflicts ? ` · ${conflicts} 冲突` : ""));
+    if (chapterID) {
+      closeDialog(draftBoxDialog);
+      await openChapter(chapterID);
+    }
+    ensureAnalysisPolling();
+  } catch (error) {
+    await handleDraftActionError(error, "确认提交失败");
+  } finally {
+    setDraftDetailBusy(false);
+  }
+}
+
+async function rejectPersistedDraft() {
+  if (!persistedDraft || draftDetailBusy || persistedDraft.status !== "pending_confirmation") return;
+  if (!window.confirm("拒绝后该草稿及其记忆变更将不再可用，确定拒绝？")) return;
+  setDraftDetailBusy(true, "正在拒绝…");
+  try {
+    const data = await api("/api/drafts/" + encodeURIComponent(persistedDraft.id) + "/reject", {
+      method: "POST",
+      body: JSON.stringify({ reason: draftRejectReason.value.trim() }),
+    });
+    persistedDraft = normalizeDraft(data);
+    if (draft.persisted && draft.persistedDraftID && draft.persistedDraftID === persistedDraft.id) {
+      draft.persisted = false;
+      draft.persistedDraftID = "";
+      setDraftStatus("草稿已拒绝 · 可重新存入草稿台");
+      setDraftPhase("done");
+    }
+    renderDraftDetail();
+    markActiveDraftRow();
+    await loadDraftList();
+    await refreshPendingDraftCount();
+    showToast("已拒绝草稿");
+  } catch (error) {
+    await handleDraftActionError(error, "拒绝草稿失败");
+  } finally {
+    setDraftDetailBusy(false);
+  }
+}
+
+async function openCommittedDraftChapter() {
+  if (!persistedDraft) return;
+  const saved = await flushChapterSave();
+  if (!saved) {
+    showToast("当前章节尚未保存，暂不能切换", true);
+    return;
+  }
+  closeDialog(draftBoxDialog);
+  await openChapter(persistedDraft.targetChapterId);
+}
+
+async function saveGenerationToDraftBox() {
+  if (draft.streaming || draft.appended || draft.persisted) return;
+  const addition = draft.text.replace(/\s+$/u, "");
+  if (!addition.trim()) {
+    showToast("草稿为空，无法存入草稿台", true);
+    return;
+  }
+  const saved = await flushChapterSave();
+  if (!saved) {
+    showToast("当前章节尚未保存，暂不能存入草稿台", true);
+    return;
+  }
+  const asNewChapter = persistTarget.value === "new";
+  let chapterID = "";
+  let title = "";
+  let content = addition;
+  if (!asNewChapter) {
+    const targetID = draft.targetChapterID || lastChapterID();
+    if (!targetID) {
+      showToast("没有可并入的章节", true);
+      return;
+    }
+    const base = chapter.id === targetID
+      ? { title: chapter.title, content: chapter.content }
+      : await api("/api/chapters/" + encodeURIComponent(targetID));
+    const baseContent = readString(base && base.content);
+    content = baseContent.trim() ? baseContent.replace(/\s+$/u, "") + "\n\n" + addition : addition;
+    chapterID = targetID;
+    title = readString(base && base.title);
+  }
+
+  persistDraftButton.disabled = true;
+  persistTarget.disabled = true;
+  try {
+    const created = await api("/api/drafts", {
+      method: "POST",
+      body: JSON.stringify({ chapterId: chapterID, title, content }),
+    });
+    draft.persisted = true;
+    draft.persistedDraftID = created && created.id ? created.id : "";
+    persistDraftButton.hidden = true;
+    persistTargetWrap.hidden = true;
+    appendButton.hidden = true;
+    newChapterButton.hidden = true;
+    setDraftStatus("已存入草稿台 · 请在草稿台提取记忆并确认");
+    showToast("已存入草稿台：确认前不会改动正文与记忆");
+    await openDraftBox(created && created.id ? created.id : "");
+  } catch (error) {
+    showToast("存入草稿台失败：" + error.message, true);
+  } finally {
+    persistDraftButton.disabled = false;
+    persistTarget.disabled = false;
+  }
 }
 
 function showDialog(dialog) {
@@ -1107,6 +2115,479 @@ function updateKeyHint() {
       : "已保存 API Key。留空表示不修改。";
   } else {
     apiKeyHint.textContent = "尚未保存 API Key。本地模型服务可以留空。";
+  }
+}
+
+// ---- 记忆审阅面板（I2-7，iter2-详设 §7）----
+
+function openMemoryReview() {
+  showDialog(memoryReviewDialog);
+  void loadMemoryReview();
+}
+
+async function loadMemoryReview() {
+  await Promise.all([loadExtractStatus(), loadChangeSets(), loadCandidates()]);
+}
+
+function formatTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("zh-CN", { hour12: false });
+}
+
+// 提取任务：状态轮询（复用分析进度轮询模式）。
+async function loadExtractStatus() {
+  try {
+    const state = await api("/api/memory/extract/status");
+    renderExtractStatus(state || {});
+    ensureExtractPolling(state || {});
+  } catch (error) {
+    extractStatusText.textContent = "读取提取状态失败：" + error.message;
+  }
+}
+
+function renderExtractStatus(state) {
+  const running = state.status === "extracting";
+  const stats = state.stats || {};
+  let text = "";
+  switch (state.status) {
+    case "idle":
+      text = "空闲";
+      break;
+    case "extracting":
+      text = `提取中 · 已处理 ${stats.chaptersDone || 0} 章 · 暂存 ${stats.changeSetsCreated || 0} 变更集 · 候选 ${stats.candidatesCreated || 0}`;
+      break;
+    case "done":
+      text = `完成 · 变更集 ${stats.changeSetsCreated || 0} · 候选 ${stats.candidatesCreated || 0} · 跳过 ${stats.skippedUpToDate || 0}`;
+      break;
+    case "failed":
+      text = "失败：" + (state.lastError || "未知错误");
+      break;
+    case "partial":
+      text = `部分完成 · 失败 ${stats.failedChapters || 0} 章`;
+      break;
+    default:
+      text = String(state.status || "未知");
+  }
+  extractStatusText.textContent = text;
+  extractStartButton.disabled = running;
+}
+
+function ensureExtractPolling(state) {
+  if (state.status === "extracting") {
+    if (reviewExtractTimer) return;
+    reviewExtractTimer = window.setTimeout(() => {
+      reviewExtractTimer = 0;
+      void loadExtractStatus();
+    }, 2500);
+  } else if (reviewExtractTimer) {
+    clearTimeout(reviewExtractTimer);
+    reviewExtractTimer = 0;
+  }
+}
+
+async function startExtract() {
+  if (!configured()) {
+    showToast("请先配置模型接口", true);
+    openSettings();
+    return;
+  }
+  extractStartButton.disabled = true;
+  try {
+    const data = await api("/api/memory/extract", {
+      method: "POST",
+      body: JSON.stringify({ force: extractForceInput.checked }),
+    });
+    showToast(data.extractStatus === "extracting" ? "已启动深度提取" : "无需提取（已是最新）");
+    void loadExtractStatus();
+  } catch (error) {
+    showToast("启动提取失败：" + error.message, true);
+    extractStartButton.disabled = false;
+  }
+}
+
+async function reconcileMemory() {
+  reconcileButton.disabled = true;
+  try {
+    const data = await api("/api/memory/reconcile", { method: "POST", body: "{}" });
+    showToast(`证据复核完成：标记 ${data.marked} 处（revision ${data.memoryRevision}）`);
+  } catch (error) {
+    showToast("证据复核失败：" + error.message, true);
+  } finally {
+    reconcileButton.disabled = false;
+  }
+}
+
+// 变更集列表与详情。
+async function loadChangeSets() {
+  try {
+    const sets = await api("/api/memory/changesets?status=proposed");
+    renderChangeSetList(sets || []);
+  } catch (error) {
+    showToast("读取变更集失败：" + error.message, true);
+  }
+}
+
+function renderChangeSetList(sets) {
+  changesetList.replaceChildren();
+  changesetDetail.hidden = true;
+  if (!sets.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state small";
+    empty.textContent = "没有待审变更集。";
+    changesetList.append(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  for (const cs of sets) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "changeset-row";
+    row.dataset.id = cs.id;
+    const meta = document.createElement("span");
+    meta.className = "changeset-meta";
+    meta.textContent = `${cs.reason || cs.id} · ${cs.opCount} 操作 · ${cs.conflictCount} 冲突`;
+    const time = document.createElement("span");
+    time.className = "changeset-time";
+    time.textContent = formatTime(cs.createdAt);
+    row.append(meta, time);
+    row.addEventListener("click", () => void openChangeSet(cs.id));
+    fragment.append(row);
+  }
+  changesetList.append(fragment);
+}
+
+async function openChangeSet(id) {
+  try {
+    const cs = await api("/api/memory/changesets/" + encodeURIComponent(id));
+    renderChangeSetDetail(cs);
+  } catch (error) {
+    showToast("读取变更集详情失败：" + error.message, true);
+  }
+}
+
+function renderChangeSetDetail(cs) {
+  changesetDetail.hidden = false;
+  changesetDetail.replaceChildren();
+
+  const head = document.createElement("div");
+  head.className = "detail-head";
+  const title = document.createElement("h4");
+  title.textContent = cs.reason || cs.id;
+  head.append(title);
+  if (cs.status === "proposed") {
+    const actions = document.createElement("div");
+    actions.className = "review-actions";
+    const accept = document.createElement("button");
+    accept.type = "button";
+    accept.className = "btn btn-primary btn-sm";
+    accept.textContent = "采纳";
+    accept.addEventListener("click", () => void acceptChangeSet(cs.id));
+    const reject = document.createElement("button");
+    reject.type = "button";
+    reject.className = "btn btn-danger btn-sm";
+    reject.textContent = "驳回";
+    reject.addEventListener("click", () => void rejectChangeSet(cs.id));
+    const rebase = document.createElement("button");
+    rebase.type = "button";
+    rebase.className = "btn btn-quiet btn-sm";
+    rebase.textContent = "重算基线";
+    rebase.addEventListener("click", () => void rebaseChangeSet(cs.id));
+    actions.append(accept, reject, rebase);
+    head.append(actions);
+  } else {
+    const badge = document.createElement("span");
+    badge.className = "detail-status is-" + cs.status;
+    badge.textContent = cs.status;
+    head.append(badge);
+  }
+  changesetDetail.append(head);
+
+  if (cs.conflicts && cs.conflicts.length) {
+    const group = document.createElement("div");
+    group.className = "conflict-group";
+    const label = document.createElement("p");
+    label.className = "group-title conflict-title";
+    label.textContent = `冲突项（${cs.conflicts.length} · 不自动提交）`;
+    group.append(label);
+    for (const cf of cs.conflicts) group.append(renderConflict(cf));
+    changesetDetail.append(group);
+  }
+
+  if (cs.ops && cs.ops.length) {
+    const group = document.createElement("div");
+    group.className = "op-group";
+    const label = document.createElement("p");
+    label.className = "group-title";
+    label.textContent = `变更操作（${cs.ops.length}）`;
+    group.append(label);
+    for (const op of cs.ops) group.append(renderOp(op));
+    changesetDetail.append(group);
+  } else if (!cs.conflicts || !cs.conflicts.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state small";
+    empty.textContent = "无操作、无冲突。";
+    changesetDetail.append(empty);
+  }
+}
+
+function renderConflict(cf) {
+  const wrap = document.createElement("div");
+  wrap.className = "conflict-card";
+  const head = document.createElement("div");
+  head.className = "conflict-head";
+  const kind = document.createElement("span");
+  kind.className = "conflict-kind";
+  kind.textContent = cf.kind || "conflict";
+  head.append(kind);
+  if (cf.targetId) {
+    const target = document.createElement("span");
+    target.className = "op-target";
+    target.textContent = cf.targetId;
+    head.append(target);
+  }
+  if (cf.detail) {
+    const detail = document.createElement("span");
+    detail.className = "conflict-detail";
+    detail.textContent = cf.detail;
+    head.append(detail);
+  }
+  wrap.append(head);
+  if (cf.proposed) {
+    wrap.append(renderJsonBlock(cf.proposed, "提议值"));
+  }
+  if (cf.old) {
+    wrap.append(renderJsonBlock(cf.old, "现值"));
+  }
+  return wrap;
+}
+
+function renderOp(op) {
+  const wrap = document.createElement("div");
+  wrap.className = "op-card";
+  const head = document.createElement("div");
+  head.className = "op-head";
+  const type = document.createElement("span");
+  type.className = "op-type";
+  type.textContent = op.op || "op";
+  head.append(type);
+  if (op.targetId) {
+    const target = document.createElement("span");
+    target.className = "op-target";
+    target.textContent = "→ " + op.targetId + (op.expectedRecordVersion ? " @v" + op.expectedRecordVersion : "");
+    head.append(target);
+  }
+  wrap.append(head);
+
+  let record = null;
+  try {
+    record = JSON.parse(op.record);
+  } catch {
+    record = null;
+  }
+  if (record && typeof record === "object") {
+    wrap.append(renderRecordSummary(record));
+    if (Array.isArray(record.sourceRefs)) {
+      const refs = record.sourceRefs.filter((ref) => ref && ref.quote);
+      if (refs.length) {
+        const ev = document.createElement("div");
+        ev.className = "op-evidence";
+        for (const ref of refs) {
+          const quote = document.createElement("blockquote");
+          quote.className = "evidence-quote";
+          quote.textContent = ref.quote;
+          const cap = document.createElement("span");
+          cap.className = "evidence-cap";
+          cap.textContent = (ref.chapterId || "") + (ref.chapterRevision ? " @r" + ref.chapterRevision : "");
+          quote.append(cap);
+          ev.append(quote);
+        }
+        wrap.append(ev);
+      }
+    }
+  } else {
+    wrap.append(renderJsonBlock(op.record, null));
+  }
+  if (op.evidenceNote) {
+    const note = document.createElement("p");
+    note.className = "op-note";
+    note.textContent = "标记：" + op.evidenceNote;
+    wrap.append(note);
+  }
+  return wrap;
+}
+
+function renderRecordSummary(record) {
+  const div = document.createElement("div");
+  div.className = "record-summary";
+  const lines = [];
+  if (typeof record.summary === "string" && record.summary) lines.push(record.summary);
+  if (typeof record.title === "string" && record.title) {
+    lines.push("伏笔：" + record.title + (record.status ? "（" + record.status + "）" : ""));
+  }
+  if (record.category || record.attribute || record.value) {
+    lines.push(`${record.subjectId || "?"} · ${record.category || ""} · ${record.attribute || ""} = ${record.value || ""}`);
+  }
+  if (Array.isArray(record.participants) && record.participants.length) {
+    lines.push("参与者：" + record.participants.join("、"));
+  }
+  if (record.participantsKnown === false) lines.push("（参与者未识别）");
+  if (record.needsReview) lines.push("待复核：" + (record.reviewReason || "needsReview"));
+  const text = document.createElement("p");
+  text.className = "record-text";
+  text.textContent = lines.join("　|　");
+  div.append(text);
+  div.append(renderJsonBlock(record, "完整记录"));
+  return div;
+}
+
+function renderJsonBlock(raw, caption) {
+  const pre = document.createElement("pre");
+  pre.className = "op-json";
+  let value = raw;
+  if (typeof raw === "string") {
+    try {
+      value = JSON.stringify(JSON.parse(raw), null, 2);
+    } catch {
+      value = raw;
+    }
+  } else {
+    value = JSON.stringify(raw, null, 2);
+  }
+  pre.textContent = caption ? caption + "\n" + value : value;
+  return pre;
+}
+
+async function acceptChangeSet(id) {
+  try {
+    const data = await api("/api/memory/changesets/" + encodeURIComponent(id) + "/accept", { method: "POST" });
+    showToast("已采纳：" + (data.commitId || "") + "（revision " + data.memoryRevision + "）");
+    await loadChangeSets();
+    changesetDetail.hidden = true;
+  } catch (error) {
+    if (error.message.indexOf("revision_conflict") >= 0) {
+      showToast("基线已过期：请先「重算基线」再采纳", true);
+    } else {
+      showToast("采纳失败：" + error.message, true);
+    }
+  }
+}
+
+async function rejectChangeSet(id) {
+  const reason = window.prompt("驳回原因（可选，≤200 字）：", "");
+  if (reason === null) return;
+  try {
+    await api("/api/memory/changesets/" + encodeURIComponent(id) + "/reject", {
+      method: "POST",
+      body: JSON.stringify({ reason: reason.trim() }),
+    });
+    showToast("已驳回");
+    await loadChangeSets();
+    changesetDetail.hidden = true;
+  } catch (error) {
+    showToast("驳回失败：" + error.message, true);
+  }
+}
+
+async function rebaseChangeSet(id) {
+  try {
+    await api("/api/memory/changesets/" + encodeURIComponent(id) + "/rebase", { method: "POST" });
+    showToast("已重算基线，可重新采纳");
+    await openChangeSet(id);
+  } catch (error) {
+    showToast("重算失败：" + error.message, true);
+  }
+}
+
+// 实体候选。
+async function loadCandidates() {
+  try {
+    const cands = await api("/api/memory/candidates?status=pending");
+    renderCandidateList(cands || []);
+  } catch (error) {
+    showToast("读取候选失败：" + error.message, true);
+  }
+}
+
+function renderCandidateList(cands) {
+  candidateList.replaceChildren();
+  if (!cands.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state small";
+    empty.textContent = "没有待确认实体候选。";
+    candidateList.append(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  for (const cand of cands) fragment.append(renderCandidate(cand));
+  candidateList.append(fragment);
+}
+
+function renderCandidate(cand) {
+  const wrap = document.createElement("div");
+  wrap.className = "candidate-card";
+  const head = document.createElement("div");
+  head.className = "candidate-head";
+  const name = document.createElement("span");
+  name.className = "candidate-name";
+  name.textContent = cand.name || cand.id;
+  head.append(name);
+  if (cand.reason) {
+    const reason = document.createElement("span");
+    reason.className = "candidate-reason";
+    reason.textContent = cand.reason;
+    head.append(reason);
+  }
+  wrap.append(head);
+  if (Array.isArray(cand.aliases) && cand.aliases.length) {
+    const aliases = document.createElement("p");
+    aliases.className = "candidate-aliases";
+    aliases.textContent = "别名：" + cand.aliases.join("、");
+    wrap.append(aliases);
+  }
+  if (Array.isArray(cand.possibleIds) && cand.possibleIds.length) {
+    const ids = document.createElement("p");
+    ids.className = "candidate-aliases";
+    ids.textContent = "可能命中：" + cand.possibleIds.join("、");
+    wrap.append(ids);
+  }
+  const actions = document.createElement("div");
+  actions.className = "review-actions";
+  const register = document.createElement("button");
+  register.type = "button";
+  register.className = "btn btn-primary btn-sm";
+  register.textContent = "注册为新实体";
+  register.addEventListener("click", () => void resolveCandidate(cand.id, "register", ""));
+  const merge = document.createElement("button");
+  merge.type = "button";
+  merge.className = "btn btn-ghost btn-sm";
+  merge.textContent = "并入实体";
+  merge.addEventListener("click", () => {
+    const target = window.prompt("并入目标实体 ID（c_ 或 w_ 开头）：", "");
+    if (!target || !target.trim()) return;
+    void resolveCandidate(cand.id, "merge", target.trim());
+  });
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.className = "btn btn-quiet btn-sm";
+  dismiss.textContent = "忽略";
+  dismiss.addEventListener("click", () => void resolveCandidate(cand.id, "dismiss", ""));
+  actions.append(register, merge, dismiss);
+  wrap.append(actions);
+  return wrap;
+}
+
+async function resolveCandidate(id, action, resolution) {
+  try {
+    const data = await api("/api/memory/candidates/" + encodeURIComponent(id) + "/resolve", {
+      method: "POST",
+      body: JSON.stringify({ action, resolution }),
+    });
+    showToast("候选已处理：" + data.status);
+    await loadCandidates();
+  } catch (error) {
+    showToast("确认失败：" + error.message, true);
   }
 }
 
@@ -1246,6 +2727,59 @@ function bindEvents() {
   modelBadge.addEventListener("click", openSettings);
   settingsButton.addEventListener("click", openSettings);
 
+  planButton.addEventListener("click", openPlanDialog);
+  planRefreshButton.addEventListener("click", () => {
+    void loadPlanTree();
+  });
+  planGenerateButton.addEventListener("click", () => {
+    void generatePlanDrafts();
+  });
+
+  memoryReviewButton.addEventListener("click", openMemoryReview);
+  extractStartButton.addEventListener("click", () => {
+    void startExtract();
+  });
+  reconcileButton.addEventListener("click", () => {
+    void reconcileMemory();
+  });
+  refreshReviewButton.addEventListener("click", () => {
+    void loadChangeSets();
+  });
+  memoryReviewDialog.addEventListener("close", () => {
+    if (reviewExtractTimer) {
+      clearTimeout(reviewExtractTimer);
+      reviewExtractTimer = 0;
+    }
+  });
+
+  draftBoxButton.addEventListener("click", () => {
+    void openDraftBox();
+  });
+  draftRefreshButton.addEventListener("click", () => {
+    void loadDraftList();
+  });
+  draftStatusFilter.addEventListener("change", () => {
+    void loadDraftList();
+  });
+  draftSaveEditButton.addEventListener("click", () => {
+    void saveDraftEdit();
+  });
+  draftExtractButton.addEventListener("click", () => {
+    void extractDraftMemory();
+  });
+  draftConfirmButton.addEventListener("click", () => {
+    void confirmPersistedDraft();
+  });
+  draftRejectButton.addEventListener("click", () => {
+    void rejectPersistedDraft();
+  });
+  draftOpenChapterButton.addEventListener("click", () => {
+    void openCommittedDraftChapter();
+  });
+  draftBoxDialog.addEventListener("close", () => {
+    void refreshPendingDraftCount();
+  });
+
   clearKeyInput.addEventListener("change", () => {
     apiKeyInput.disabled = clearKeyInput.checked;
     if (clearKeyInput.checked) apiKeyInput.value = "";
@@ -1322,6 +2856,25 @@ function bindEvents() {
   generateButton.addEventListener("click", () => {
     void startGeneration();
   });
+  memoryPreviewButton.addEventListener("click", () => {
+    void loadMemoryPreview();
+  });
+  memoryPreviewClose.addEventListener("click", hideMemoryPreview);
+  useMemoryInput.addEventListener("change", () => {
+    if (useMemoryInput.checked) return;
+    hideMemoryPreview();
+    showToast("记忆注入已关闭，本次不会检索记忆");
+  });
+  usePlanInput.addEventListener("change", () => {
+    if (usePlanInput.checked) return;
+    hideMemoryPreview();
+    showToast("计划对齐已关闭，本次不会注入已激活计划");
+  });
+  useRecallSelect.addEventListener("change", () => {
+    hideMemoryPreview();
+    if (useRecallSelect.value === "off") showToast("前文召回已关闭，本次不会检索旧章节");
+    else if (useRecallSelect.value === "on") showToast("前文召回已强制开启；不满 20 章也会检索");
+  });
   stopButton.addEventListener("click", () => {
     if (draft.controller) {
       draft.controller.abort();
@@ -1336,6 +2889,9 @@ function bindEvents() {
   });
   newChapterButton.addEventListener("click", () => {
     void saveDraftAsChapter();
+  });
+  persistDraftButton.addEventListener("click", () => {
+    void saveGenerationToDraftBox();
   });
   discardButton.addEventListener("click", discardDraft);
 
@@ -1370,6 +2926,7 @@ async function init() {
   await loadProject();
   updateConfigUI();
   updateContextInfo();
+  await refreshPendingDraftCount();
 }
 
 void init();

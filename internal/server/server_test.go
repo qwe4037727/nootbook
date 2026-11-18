@@ -37,7 +37,7 @@ func newTestHandler(t *testing.T) (http.Handler, *store.Store, *fakeAnalyzer) {
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	analyzer := &fakeAnalyzer{}
-	return New(st, static, logger, analyzer), st, analyzer
+	return New(st, static, logger, analyzer, nil), st, analyzer
 }
 
 func serveJSON(t *testing.T, h http.Handler, method, path string, body any) *httptest.ResponseRecorder {
@@ -118,11 +118,11 @@ func TestImportAndChapterAPI(t *testing.T) {
 	importText := `书名：雨夜旧事
 作者：某某
 
-第1章 初始
+第1章 开端
 
 雨落到青石板上。
 
-第2章 重瞳
+第2章 转折
 
 林砚推门而入。
 `
@@ -169,7 +169,7 @@ func TestImportAndChapterAPI(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &chapter); err != nil {
 		t.Fatalf("decode chapter: %v", err)
 	}
-	if chapter.Content != "雨落到青石板上。" || chapter.Title != "第1章 初始" {
+	if chapter.Content != "雨落到青石板上。" || chapter.Title != "第1章 开端" {
 		t.Errorf("chapter = %+v", chapter)
 	}
 
@@ -219,7 +219,7 @@ func TestImportAndChapterAPI(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &deleted); err != nil {
 		t.Fatalf("decode delete response: %v", err)
 	}
-	if len(deleted.Project.Chapters) != 2 || deleted.Project.Chapters[0].Title != "第2章 重瞳" {
+	if len(deleted.Project.Chapters) != 2 || deleted.Project.Chapters[0].Title != "第2章 转折" {
 		t.Errorf("chapters after delete = %+v", deleted.Project.Chapters)
 	}
 	if analyzer.notified != 4 {
@@ -257,7 +257,7 @@ func TestAnalyzeWithoutManager(t *testing.T) {
 		t.Fatalf("store.New: %v", err)
 	}
 	static := fstest.MapFS{"index.html": &fstest.MapFile{Data: []byte("ok")}}
-	h := New(st, static, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+	h := New(st, static, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, nil)
 	rec := serveJSON(t, h, http.MethodPost, "/api/analyze", nil)
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("POST /api/analyze without manager = %d, want 503", rec.Code)

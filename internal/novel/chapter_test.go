@@ -6,19 +6,19 @@ import (
 )
 
 func TestSplitChaptersChineseHeadings(t *testing.T) {
-	text := `书名：无边悔恨
-作者：作手
+	text := `书名：测试小说
+作者：测试作者
 状态：完结
 
-第1章 初始
+第1章 开端
 
 　　天空下着雨。
 
-第2章 重瞳
+第2章 转折
 
 　　他睁开眼，看见了两道影子。
 
-第3章 女帝（本章字数：1200）
+第3章 终局（本章字数：1200）
 
 　　她来了。
 
@@ -28,7 +28,7 @@ func TestSplitChaptersChineseHeadings(t *testing.T) {
 	if len(chapters) != 3 {
 		t.Fatalf("len(chapters) = %d, want 3", len(chapters))
 	}
-	wantTitles := []string{"第1章 初始", "第2章 重瞳", "第3章 女帝"}
+	wantTitles := []string{"第1章 开端", "第2章 转折", "第3章 终局"}
 	for i, want := range wantTitles {
 		if chapters[i].Title != want {
 			t.Errorf("chapters[%d].Title = %q, want %q", i, chapters[i].Title, want)

@@ -27,7 +27,7 @@ func newMemoryTestHandler(t *testing.T) (http.Handler, *store.Store, string) {
 	static := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<!doctype html><title>novel test</title>")},
 	}
-	return New(st, static, nil, &fakeAnalyzer{}), st, dir
+	return New(st, static, nil, &fakeAnalyzer{}, nil), st, dir
 }
 
 // writeKnowledgeFile 直写 knowledge.json（store 每次读盘，无需注入方法）。

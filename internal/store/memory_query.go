@@ -223,3 +223,31 @@ func (s *Store) loadMemoryPlansLocked() ([]novel.StoryPlan, error) {
 	}
 	return plans, nil
 }
+
+// LoadMemoryRecords 一次性读取五类正式记忆文件（memoryMu 域内，只读），供深度提取管线组装
+// "相关正式记忆快照"提示词上下文。
+func (s *Store) LoadMemoryRecords() ([]novel.StoryEvent, []novel.StoryState, []novel.Cognition, []novel.StoryThread, []novel.StoryPlan, error) {
+	s.memoryMu.Lock()
+	defer s.memoryMu.Unlock()
+	events, err := s.loadMemoryEventsLocked()
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	states, err := s.loadMemoryStatesLocked()
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	cognitions, err := s.loadMemoryCognitionsLocked()
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	threads, err := s.loadMemoryThreadsLocked()
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	plans, err := s.loadMemoryPlansLocked()
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	return events, states, cognitions, threads, plans, nil
+}
