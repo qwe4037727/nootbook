@@ -1,0 +1,15 @@
+{
+  "id": "corpus-wubian-v1",
+  "title": "无边悔恨（真实语料导入）",
+  "description": "用本地 511KB 真实文本验证导入分章与停点预算；未运行分析/记忆初始化，因此没有知识与记忆注入。",
+  "source": {
+    "corpus": "../../corpus/无边悔恨.txt"
+  },
+  "stopPoints": [
+    {
+      "name": "tail",
+      "afterChapter": 0,
+      "notes": "全书最后一个停点；仅验证真实文本导入规模与 prompt 预算。"
+    }
+  ]
+}

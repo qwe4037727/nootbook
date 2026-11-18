@@ -1,0 +1,16 @@
+[
+  {
+    "id": "cog_1",
+    "status": "known",
+    "subjectId": "c_lin",
+    "content": "知道青玉符与旧朝有关。",
+    "updatedAt": "2026-10-03T00:00:00Z"
+  },
+  {
+    "id": "cog_2",
+    "status": "wrong",
+    "subjectId": "c_lin",
+    "content": "误以为沈青禾是旧案的主谋。",
+    "updatedAt": "2026-10-04T00:00:00Z"
+  }
+]

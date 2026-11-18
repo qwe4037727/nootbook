@@ -1,0 +1,6 @@
+{
+  "inputPerMillion": 1.0,
+  "outputPerMillion": 2.0,
+  "currency": "USD",
+  "note": "示例价，仅用于演示度量口径；请替换为实际供应商的每百万 token 单价。"
+}

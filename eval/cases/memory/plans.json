@@ -1,0 +1,11 @@
+[
+  {
+    "id": "plan_near",
+    "status": "active",
+    "level": "near_term",
+    "title": "追查青玉符",
+    "objective": "在离城前找到青玉符的另一半。",
+    "involvedCharacters": ["c_lin"],
+    "flexibility": "medium"
+  }
+]

@@ -1,0 +1,19 @@
+[
+  {
+    "id": "thread_jade",
+    "status": "open",
+    "title": "青玉符的来历",
+    "question": "青玉符为何会出现在旧宅？",
+    "involvedCharacters": ["c_lin"],
+    "knownClues": ["半枚青玉符", "账册上的同款印记"],
+    "updatedAt": "2026-10-01T00:00:00Z"
+  },
+  {
+    "id": "thread_resolved",
+    "status": "resolved",
+    "title": "旧信是谁寄的",
+    "question": "旧信来自何处？",
+    "involvedCharacters": ["c_lin"],
+    "updatedAt": "2026-10-02T00:00:00Z"
+  }
+]

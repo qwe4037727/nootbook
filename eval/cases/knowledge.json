@@ -1,0 +1,61 @@
+{
+  "overview": "县城连月阴雨，林砚在追查一桩旧案，沈青禾替他处理伤口，陆行舟的商队带来外地的消息。",
+  "style": {
+    "perspective": "第三人称限知",
+    "tone": "冷峻克制",
+    "sentence": "短句为主",
+    "dialogue": "对白简短",
+    "pacing": "缓慢推进",
+    "samples": ["雨声一直没有停。", "他没有回头。"]
+  },
+  "characters": [
+    {
+      "id": "c_lin",
+      "name": "林砚",
+      "aliases": ["砚哥"],
+      "role": "县衙捕快",
+      "state": "左臂旧伤未愈",
+      "personality": "寡言",
+      "relationships": "与沈青禾是旧识",
+      "confidence": 0.95,
+      "lastSeen": 40
+    },
+    {
+      "id": "c_shen",
+      "name": "沈青禾",
+      "role": "医女",
+      "personality": "冷静",
+      "confidence": 0.9,
+      "lastSeen": 40
+    },
+    {
+      "id": "c_lu",
+      "name": "陆行舟",
+      "role": "商队护卫",
+      "confidence": 0.8,
+      "lastSeen": 40
+    }
+  ],
+  "world": [
+    {
+      "id": "w_jade",
+      "title": "青玉符",
+      "category": "物品",
+      "content": "来历不明的青色玉符，林砚随身携带。",
+      "confidence": 0.9,
+      "lastSeen": 40
+    }
+  ],
+  "summaries": [
+    { "index": 1, "title": "雨夜", "summary": "林砚在长街追查旧案，遇到沈青禾。" },
+    { "index": 2, "title": "旧信", "summary": "陆行舟带来一封没有署名的旧信。" },
+    { "index": 3, "title": "断桥", "summary": "林砚在断桥边找到半枚青玉符。" },
+    { "index": 4, "title": "灯影", "summary": "沈青禾替林砚处理左臂伤口。" },
+    { "index": 5, "title": "渡口", "summary": "三人在渡口确认旧案与商队有关。" },
+    { "index": 6, "title": "山雨", "summary": "林砚追查线索，在山道遇到伏击。" },
+    { "index": 7, "title": "空宅", "summary": "旧宅中的账册指向县城里的某个人。" },
+    { "index": 8, "title": "长街", "summary": "沈青禾发现账册上的印记与青玉符一致。" },
+    { "index": 9, "title": "夜行", "summary": "林砚夜行查探，旧伤复发。" },
+    { "index": 10, "title": "归人", "summary": "陆行舟的商队回到县城，带来新的线索。" }
+  ]
+}

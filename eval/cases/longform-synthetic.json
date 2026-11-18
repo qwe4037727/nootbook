@@ -1,0 +1,57 @@
+{
+  "id": "longform-synthetic-v1",
+  "title": "长篇回归样例（合成 40 章）",
+  "description": "确定性合成长篇 + 记忆夹具；用于预算、成本与停点回归，不评价文笔。",
+  "source": {
+    "synthetic": {
+      "chapters": 40,
+      "chapterChars": 1000,
+      "seed": 20261023,
+      "planted": [
+        { "text": "青玉符", "chapter": 3 },
+        { "text": "左臂旧伤在阴雨天反复发作。", "chapter": 12 }
+      ]
+    },
+    "knowledge": "knowledge.json",
+    "memory": "memory"
+  },
+  "defaultTargetChars": 800,
+  "stopPoints": [
+    {
+      "name": "early",
+      "afterChapter": 10,
+      "mustLand": ["左臂旧伤"],
+      "mustNot": ["林砚的左臂已经完全痊愈"],
+      "notes": "早期停点用于验证正文截断与预算；记忆夹具是当前快照，不做历史回放。"
+    },
+    {
+      "name": "late",
+      "afterChapter": 40,
+      "mustLand": ["青玉符", "左臂旧伤"],
+      "mustNot": ["林砚的左臂已经完全痊愈", "沈青禾已经死亡"],
+      "notes": "后期停点：正文窗口覆盖不到第 3 章时，应靠记忆与摘要维持设定。"
+    },
+    {
+      "name": "recall-on",
+      "afterChapter": 40,
+      "targetChars": 600,
+      "direction": "继续追查青玉符的来历，让它在章末再次出现。",
+      "useMemory": false,
+      "useRecall": true,
+      "mustLand": ["青玉符"],
+      "mustNot": ["青玉符从未出现过"],
+      "notes": "R4 A/B 对照组：关闭记忆、只开召回，考察第 3 章埋设的旧物能否被历史召回带回。"
+    },
+    {
+      "name": "recall-off",
+      "afterChapter": 40,
+      "targetChars": 600,
+      "direction": "继续追查青玉符的来历，让它在章末再次出现。",
+      "useMemory": false,
+      "useRecall": false,
+      "mustLand": ["青玉符"],
+      "mustNot": ["青玉符从未出现过"],
+      "notes": "R4 A/B 基线组：与 recall-on 同方向、同预算，仅关闭召回，用于盲评与成本差值对照。"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "evt_1",
+    "status": "confirmed",
+    "eventType": "discovery",
+    "summary": "林砚在旧宅找到半枚青玉符。",
+    "storyOrder": 3,
+    "participantsKnown": true,
+    "participants": ["c_lin"]
+  },
+  {
+    "id": "evt_2",
+    "status": "confirmed",
+    "eventType": "injury",
+    "summary": "林砚左臂被断刃划伤。",
+    "storyOrder": 12,
+    "participantsKnown": true,
+    "participants": ["c_lin"]
+  },
+  {
+    "id": "evt_3",
+    "status": "proposed",
+    "eventType": "betrayal",
+    "summary": "陆行舟暗中投靠官府。",
+    "storyOrder": 39,
+    "participantsKnown": true,
+    "participants": ["c_lin"]
+  }
+]

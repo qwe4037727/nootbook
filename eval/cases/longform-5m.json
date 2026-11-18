@@ -1,0 +1,28 @@
+{
+  "id": "longform-scale-5m-v1",
+  "title": "长篇规模样例（合成 500 万字）",
+  "description": "合成 500 章 × 10000 字，验证 500 万字级导入、停点组装与预算计量的可复现性；不含质量结论。",
+  "source": {
+    "synthetic": {
+      "chapters": 500,
+      "chapterChars": 10000,
+      "seed": 20261024,
+      "planted": [
+        { "text": "青玉符", "chapter": 3 },
+        { "text": "左臂旧伤在阴雨天反复发作。", "chapter": 12 }
+      ]
+    },
+    "knowledge": "knowledge.json",
+    "memory": "memory"
+  },
+  "defaultTargetChars": 800,
+  "stopPoints": [
+    {
+      "name": "final",
+      "afterChapter": 500,
+      "mustLand": ["左臂旧伤"],
+      "mustNot": ["林砚的左臂已经完全痊愈"],
+      "notes": "规模停点：正文窗口只覆盖末尾章节，早期设定依赖记忆与摘要。"
+    }
+  ]
+}

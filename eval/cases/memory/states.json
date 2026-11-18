@@ -1,0 +1,34 @@
+[
+  {
+    "id": "state_lin_wound",
+    "status": "active",
+    "subjectId": "c_lin",
+    "category": "状态",
+    "attribute": "伤势",
+    "value": "左臂旧伤未愈，阴雨天会复发",
+    "recordVersion": 3,
+    "confidence": 0.95,
+    "needsReview": false,
+    "origin": { "type": "manual" },
+    "lastSource": "manual_edit"
+  },
+  {
+    "id": "state_lin_stale",
+    "status": "superseded",
+    "subjectId": "c_lin",
+    "category": "状态",
+    "attribute": "伤势",
+    "value": "已经完全痊愈",
+    "recordVersion": 1
+  },
+  {
+    "id": "state_lin_review",
+    "status": "active",
+    "subjectId": "c_lin",
+    "category": "计划",
+    "attribute": "行程",
+    "value": "三日后离城",
+    "recordVersion": 2,
+    "needsReview": true
+  }
+]
