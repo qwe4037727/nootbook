@@ -95,6 +95,53 @@ const draftMemorySyncBodyOnlyButton = $("draftMemorySyncBodyOnlyButton");
 const draftMemorySyncCancelButton = $("draftMemorySyncCancelButton");
 const draftMemorySyncCancel = $("draftMemorySyncCancel");
 
+const imageCenterButton = $("imageCenterButton");
+const imageCenterDialog = $("imageCenterDialog");
+const imageKindInput = $("imageKindInput");
+const imageEntryField = $("imageEntryField");
+const imageEntryInput = $("imageEntryInput");
+const imageChapterField = $("imageChapterField");
+const imageChapterInput = $("imageChapterInput");
+const imageStyleInput = $("imageStyleInput");
+const imageNegativeInput = $("imageNegativeInput");
+const imageSizeInput = $("imageSizeInput");
+const imageStepsInput = $("imageStepsInput");
+const imageSeedInput = $("imageSeedInput");
+const imagePromptInput = $("imagePromptInput");
+const imagePreviewButton = $("imagePreviewButton");
+const imageGenerateButton = $("imageGenerateButton");
+const imageRefreshButton = $("imageRefreshButton");
+const imageAssetKindFilter = $("imageAssetKindFilter");
+const imageAssetList = $("imageAssetList");
+const imageStatusText = $("imageStatusText");
+const imagePromptPreview = $("imagePromptPreview");
+const imageModelButton = $("imageModelButton");
+const imageModelDialog = $("imageModelDialog");
+const imageModelForm = $("imageModelForm");
+const imageModelBackend = $("imageModelBackend");
+const imageModelBaseUrl = $("imageModelBaseUrl");
+const imageModelName = $("imageModelName");
+const imageModelApiKey = $("imageModelApiKey");
+const imageModelKeyHint = $("imageModelKeyHint");
+const imageModelClearKey = $("imageModelClearKey");
+const imageModelStyle = $("imageModelStyle");
+const imageModelNegative = $("imageModelNegative");
+const imageModelWidth = $("imageModelWidth");
+const imageModelHeight = $("imageModelHeight");
+const imageModelSteps = $("imageModelSteps");
+const imageModelTimeout = $("imageModelTimeout");
+
+const exportButton = $("exportButton");
+const exportDialog = $("exportDialog");
+const exportFormat = $("exportFormat");
+const exportTitleInput = $("exportTitleInput");
+const exportImagesField = $("exportImagesField");
+const exportIncludeImages = $("exportIncludeImages");
+const exportSubmitButton = $("exportSubmitButton");
+const exportRefreshButton = $("exportRefreshButton");
+const exportStatus = $("exportStatus");
+const exportList = $("exportList");
+
 const toast = $("toast");
 
 const settingsDialog = $("settingsDialog");
@@ -183,6 +230,11 @@ let toastTimer = 0;
 
 let persistedDraft = null;
 let draftDetailBusy = false;
+
+let features = { images: false, export: false };
+let imageEntries = [];
+let imageAssetsTimer = 0;
+let imageBusy = false;
 
 function readString(value) {
   return typeof value === "string" ? value : "";
@@ -2899,6 +2951,507 @@ async function resolveCandidate(id, action, resolution) {
   }
 }
 
+// ---- 图像中心（M6）----
+
+const imageKindLabels = {
+  character: "角色",
+  scene: "场景",
+  item: "物品",
+  illustration: "插图",
+  cover: "封面",
+};
+
+const imageStatusLabels = {
+  pending: "排队中",
+  running: "生成中",
+  done: "已完成",
+  failed: "失败",
+};
+
+async function loadFeatures() {
+  try {
+    const data = await api("/api/features");
+    features = data || features;
+  } catch {
+    features = { images: false, export: false };
+  }
+  imageCenterButton.hidden = !features.images;
+  exportButton.hidden = !features.export;
+}
+
+async function openImageCenter() {
+  if (!features.images) {
+    showToast("图像功能未启用", true);
+    return;
+  }
+  showDialog(imageCenterDialog);
+  await Promise.all([loadImageEntries(), loadImageAssets()]);
+}
+
+async function loadImageEntries() {
+  try {
+    const entries = await api("/api/world/entries");
+    imageEntries = Array.isArray(entries) ? entries : [];
+  } catch {
+    imageEntries = [];
+  }
+  renderImageEntryOptions();
+  renderImageChapterOptions();
+  updateImageKindFields();
+}
+
+function imageEntryKinds(kind) {
+  switch (kind) {
+    case "character":
+      return ["character"];
+    case "scene":
+      return ["location", "setting"];
+    case "item":
+      return ["item"];
+    default:
+      return [];
+  }
+}
+
+function renderImageEntryOptions() {
+  const kinds = imageEntryKinds(imageKindInput.value);
+  const previous = imageEntryInput.value;
+  imageEntryInput.replaceChildren();
+  const matched = imageEntries.filter((entry) => kinds.includes(entry.kind));
+  if (!matched.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "没有可选词条（请先在大世界维护）";
+    imageEntryInput.append(option);
+    return;
+  }
+  for (const entry of matched) {
+    const option = document.createElement("option");
+    option.value = entry.id;
+    option.textContent = `${entry.name || entry.id}（${entry.id}）`;
+    imageEntryInput.append(option);
+  }
+  if (matched.some((entry) => entry.id === previous)) imageEntryInput.value = previous;
+}
+
+function renderImageChapterOptions() {
+  const previous = imageChapterInput.value;
+  imageChapterInput.replaceChildren();
+  const chapters = project.chapters || [];
+  if (!chapters.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "还没有章节";
+    imageChapterInput.append(option);
+    return;
+  }
+  for (const meta of chapters) {
+    const option = document.createElement("option");
+    option.value = meta.id;
+    option.textContent = `${meta.index}. ${meta.title || "未命名"}`;
+    imageChapterInput.append(option);
+  }
+  if (chapters.some((meta) => meta.id === previous)) imageChapterInput.value = previous;
+}
+
+function updateImageKindFields() {
+  const kind = imageKindInput.value;
+  imageEntryField.hidden = kind === "illustration" || kind === "cover";
+  imageChapterField.hidden = kind !== "illustration";
+  renderImageEntryOptions();
+}
+
+function imageRequestPayload() {
+  const kind = imageKindInput.value;
+  const payload = {
+    kind,
+    styleTag: imageStyleInput.value.trim(),
+    negative: imageNegativeInput.value.trim(),
+    prompt: imagePromptInput.value.trim(),
+  };
+  if (kind === "illustration") {
+    payload.chapterId = imageChapterInput.value;
+  } else if (kind !== "cover") {
+    payload.entryId = imageEntryInput.value;
+  }
+  const size = String(imageSizeInput.value || "").split("x");
+  const width = Number(size[0]);
+  const height = Number(size[1]);
+  if (width && height) {
+    payload.width = width;
+    payload.height = height;
+  }
+  const steps = Number(imageStepsInput.value);
+  if (steps > 0) payload.steps = steps;
+  const seed = Number(imageSeedInput.value);
+  if (seed > 0) payload.seed = seed;
+  return payload;
+}
+
+async function previewImagePrompt() {
+  imagePreviewButton.disabled = true;
+  try {
+    const spec = await api("/api/images/preview-prompt", {
+      method: "POST",
+      body: JSON.stringify(imageRequestPayload()),
+    });
+    const featuresText = Array.isArray(spec.features) && spec.features.length
+      ? spec.features.join(" / ")
+      : "无（可在词条外观字段中补充特征）";
+    imagePromptPreview.hidden = false;
+    imagePromptPreview.textContent = [
+      `画风：${spec.styleTag || "未设置"}`,
+      `正向：${spec.positive || "（空）"}`,
+      `负面：${spec.negative || "（空）"}`,
+      `特征：${featuresText}`,
+    ].join("\n");
+  } catch (error) {
+    showToast("预览提示词失败：" + error.message, true);
+  } finally {
+    imagePreviewButton.disabled = false;
+  }
+}
+
+async function submitImageGeneration() {
+  if (imageBusy) return;
+  const payload = imageRequestPayload();
+  if (payload.kind === "illustration" && !payload.chapterId) {
+    showToast("请先选择要配图的章节", true);
+    return;
+  }
+  if (payload.kind !== "illustration" && payload.kind !== "cover" && !payload.entryId) {
+    showToast("请先选择词条", true);
+    return;
+  }
+  imageBusy = true;
+  imageGenerateButton.disabled = true;
+  try {
+    const asset = await api("/api/images/generate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    showToast(`已加入队列：${asset.id}`);
+    await loadImageAssets();
+  } catch (error) {
+    showToast("提交生成失败：" + error.message, true);
+  } finally {
+    imageBusy = false;
+    imageGenerateButton.disabled = false;
+  }
+}
+
+async function loadImageAssets({ quiet = false } = {}) {
+  const params = new URLSearchParams();
+  if (imageAssetKindFilter.value) params.set("kind", imageAssetKindFilter.value);
+  params.set("limit", "100");
+  try {
+    const data = await api("/api/images/assets?" + params.toString());
+    renderImageAssets(data.assets || []);
+    const pending = Number(data.pending || 0);
+    imageStatusText.textContent = pending ? `队列中 ${pending} 个` : "队列空闲";
+    ensureImagePolling(pending);
+  } catch (error) {
+    if (!quiet) showToast("读取图像资产失败：" + error.message, true);
+  }
+}
+
+function ensureImagePolling(pending) {
+  if (pending > 0) {
+    if (imageAssetsTimer) return;
+    imageAssetsTimer = window.setTimeout(() => {
+      imageAssetsTimer = 0;
+      void loadImageAssets({ quiet: true });
+    }, 2000);
+  } else if (imageAssetsTimer) {
+    clearTimeout(imageAssetsTimer);
+    imageAssetsTimer = 0;
+  }
+}
+
+function renderImageAssets(assets) {
+  imageAssetList.replaceChildren();
+  if (!assets.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state small";
+    empty.textContent = "还没有图像资产。选择词条后开始生成。";
+    imageAssetList.append(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  for (const asset of [...assets].reverse()) fragment.append(renderImageCard(asset));
+  imageAssetList.append(fragment);
+}
+
+function renderImageCard(asset) {
+  const card = document.createElement("article");
+  card.className = "image-card";
+
+  const thumb = document.createElement("div");
+  thumb.className = "image-card-thumb";
+  if (asset.status === "done" && (asset.thumbKey || asset.fileKey)) {
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.alt = `${imageKindLabels[asset.kind] || asset.kind} ${asset.entryId || asset.chapterId || ""}`;
+    img.src = asset.thumbKey ? `/api/images/${asset.id}/thumb` : `/api/images/${asset.id}/file`;
+    thumb.append(img);
+  } else {
+    const placeholder = document.createElement("span");
+    placeholder.className = "image-placeholder";
+    placeholder.textContent = imageStatusLabels[asset.status] || asset.status || "—";
+    if (asset.error) placeholder.title = asset.error;
+    thumb.append(placeholder);
+  }
+  if (asset.isAnchor) {
+    const anchorBadge = document.createElement("span");
+    anchorBadge.className = "image-badge is-anchor";
+    anchorBadge.textContent = "基准";
+    thumb.append(anchorBadge);
+  }
+  card.append(thumb);
+
+  const body = document.createElement("div");
+  body.className = "image-card-body";
+  const title = document.createElement("p");
+  title.className = "image-card-title";
+  title.textContent = `${imageKindLabels[asset.kind] || asset.kind} · ${asset.entryId || asset.chapterId || "全书"}`;
+  const meta = document.createElement("p");
+  meta.className = "image-card-meta";
+  const bits = [imageStatusLabels[asset.status] || asset.status];
+  if (asset.status === "done") bits.push(`一致性 ${Number(asset.consistencyScore || 0).toFixed(2)}`);
+  if (asset.seed) bits.push(`seed ${asset.seed}`);
+  meta.textContent = bits.join(" · ");
+  if (asset.consistencyNote) meta.title = asset.consistencyNote;
+  body.append(title, meta);
+
+  const actions = document.createElement("div");
+  actions.className = "image-card-actions";
+  if (asset.status === "done") {
+    const view = document.createElement("a");
+    view.className = "btn btn-quiet btn-sm";
+    view.href = `/api/images/${asset.id}/file`;
+    view.target = "_blank";
+    view.rel = "noopener";
+    view.textContent = "查看";
+    actions.append(view);
+    if (!asset.isAnchor) {
+      actions.append(imageActionButton("设为基准", "btn btn-ghost btn-sm", () => void imageAction(asset.id, "anchor", "已设为基准图")));
+    }
+  }
+  if (asset.status === "failed" || asset.status === "done") {
+    actions.append(imageActionButton("重试", "btn btn-quiet btn-sm", () => void imageAction(asset.id, "retry", "已重新排队")));
+  }
+  actions.append(imageActionButton("删除", "btn btn-danger btn-sm", () => void deleteImageAsset(asset)));
+  body.append(actions);
+  card.append(body);
+  return card;
+}
+
+function imageActionButton(label, className, handler) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.addEventListener("click", handler);
+  return button;
+}
+
+async function imageAction(id, action, message) {
+  try {
+    await api(`/api/images/${encodeURIComponent(id)}/${action}`, { method: "POST" });
+    showToast(message);
+    await loadImageAssets();
+  } catch (error) {
+    showToast("操作失败：" + error.message, true);
+  }
+}
+
+async function deleteImageAsset(asset) {
+  if (!window.confirm("删除这张图像资产？文件会一并删除。")) return;
+  try {
+    await api(`/api/images/${encodeURIComponent(asset.id)}`, { method: "DELETE" });
+    showToast("已删除");
+    await loadImageAssets();
+  } catch (error) {
+    showToast("删除失败：" + error.message, true);
+  }
+}
+
+async function openImageModelSettings() {
+  try {
+    const cfg = await api("/api/config/image-model");
+    imageModelBackend.value = cfg.backend === "sdwebui" ? "sdwebui" : "openai";
+    imageModelBaseUrl.value = cfg.baseUrl || "";
+    imageModelName.value = cfg.model || "";
+    imageModelStyle.value = cfg.styleTag || "";
+    imageModelNegative.value = cfg.negativePrompt || "";
+    imageModelWidth.value = String(cfg.width || 1024);
+    imageModelHeight.value = String(cfg.height || 1024);
+    imageModelSteps.value = String(cfg.steps || 20);
+    imageModelTimeout.value = String(cfg.timeoutSeconds || 120);
+    imageModelApiKey.value = "";
+    imageModelApiKey.disabled = false;
+    imageModelClearKey.checked = false;
+    if (cfg.apiKeyFromEnv) {
+      imageModelKeyHint.textContent = "已从环境变量 IMAGE_API_KEY 读取，将优先使用。";
+    } else if (cfg.hasApiKey) {
+      imageModelKeyHint.textContent = cfg.apiKeyHint ? `已保存：${cfg.apiKeyHint}。留空表示不修改。` : "已保存 API Key。留空表示不修改。";
+    } else {
+      imageModelKeyHint.textContent = "尚未保存 API Key。本地 WebUI 可以留空。";
+    }
+  } catch (error) {
+    showToast("读取图像模型设置失败：" + error.message, true);
+    return;
+  }
+  showDialog(imageModelDialog);
+}
+
+async function saveImageModelSettings(event) {
+  event.preventDefault();
+  const backend = imageModelBackend.value;
+  const baseUrl = imageModelBaseUrl.value.trim().replace(/\/+$/, "");
+  const model = imageModelName.value.trim();
+  if (baseUrl) {
+    let parsed = null;
+    try {
+      parsed = new URL(baseUrl);
+    } catch {
+      parsed = null;
+    }
+    if (!parsed || (parsed.protocol !== "http:" && parsed.protocol !== "https:") || !parsed.host) {
+      showToast("Base URL 需要是 http:// 或 https:// 地址", true);
+      return;
+    }
+  }
+  if (backend === "openai" && baseUrl && !model) {
+    showToast("OpenAI 兼容后端需要填写模型名", true);
+    return;
+  }
+  const submitButton = imageModelForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  try {
+    const saved = await api("/api/config/image-model", {
+      method: "PUT",
+      body: JSON.stringify({
+        backend,
+        baseUrl,
+        model,
+        apiKey: imageModelApiKey.value,
+        clearApiKey: imageModelClearKey.checked,
+        styleTag: imageModelStyle.value.trim(),
+        negativePrompt: imageModelNegative.value.trim(),
+        width: Number(imageModelWidth.value) || 0,
+        height: Number(imageModelHeight.value) || 0,
+        steps: Number(imageModelSteps.value) || 0,
+        timeoutSeconds: Number(imageModelTimeout.value) || 0,
+      }),
+    });
+    if (saved && saved.styleTag) imageStyleInput.value = saved.styleTag;
+    closeDialog(imageModelDialog);
+    showToast("图像模型设置已保存");
+  } catch (error) {
+    showToast("保存图像设置失败：" + error.message, true);
+  } finally {
+    submitButton.disabled = false;
+  }
+}
+
+// ---- 导出（M7）----
+
+const exportFormatLabels = { txt: "TXT", md: "Markdown", epub: "EPUB3" };
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / 1024 / 1024).toFixed(2)} MB`;
+}
+
+async function openExportDialog() {
+  if (!features.export) {
+    showToast("导出功能未启用", true);
+    return;
+  }
+  exportStatus.textContent = "";
+  updateExportImageField();
+  showDialog(exportDialog);
+  await loadExports();
+}
+
+function updateExportImageField() {
+  exportImagesField.hidden = exportFormat.value === "epub";
+}
+
+async function loadExports() {
+  try {
+    const data = await api("/api/exports");
+    renderExportList(data.exports || []);
+  } catch (error) {
+    showToast("读取导出记录失败：" + error.message, true);
+  }
+}
+
+function renderExportList(records) {
+  exportList.replaceChildren();
+  if (!records.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state small";
+    empty.textContent = "还没有导出记录。选择格式后开始导出。";
+    exportList.append(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  for (const record of records) {
+    const row = document.createElement("div");
+    row.className = "export-row";
+    const info = document.createElement("div");
+    info.className = "export-row-info";
+    const title = document.createElement("strong");
+    title.textContent = record.title || record.fileName;
+    const meta = document.createElement("span");
+    meta.className = "export-row-meta";
+    const bits = [
+      exportFormatLabels[record.format] || record.format,
+      `${record.chapterCount} 章`,
+    ];
+    if (record.imageCount) bits.push(`${record.imageCount} 张图`);
+    bits.push(formatBytes(record.sizeBytes));
+    if (record.createdAt) bits.push(formatTime(record.createdAt));
+    meta.textContent = bits.join(" · ");
+    info.append(title, meta);
+    const download = document.createElement("a");
+    download.className = "btn btn-quiet btn-sm";
+    download.href = `/api/exports/${encodeURIComponent(record.id)}/download`;
+    download.textContent = "下载";
+    row.append(info, download);
+    fragment.append(row);
+  }
+  exportList.append(fragment);
+}
+
+async function createExport() {
+  const format = exportFormat.value;
+  exportSubmitButton.disabled = true;
+  exportStatus.textContent = "导出中…";
+  try {
+    const record = await api("/api/export", {
+      method: "POST",
+      body: JSON.stringify({
+        format,
+        title: exportTitleInput.value.trim(),
+        includeImages: format !== "epub" && exportIncludeImages.checked,
+      }),
+    });
+    exportStatus.textContent = "";
+    showToast(`已生成 ${exportFormatLabels[record.format] || record.format}（${formatBytes(record.sizeBytes)}）`);
+    await loadExports();
+  } catch (error) {
+    exportStatus.textContent = "";
+    showToast("导出失败：" + error.message, true);
+  } finally {
+    exportSubmitButton.disabled = false;
+  }
+}
+
 function bindEvents() {
   titleInput.addEventListener("input", () => {
     project.title = titleInput.value;
@@ -3046,6 +3599,28 @@ function bindEvents() {
   });
 
   memoryReviewButton.addEventListener("click", openMemoryReview);
+  imageCenterButton.addEventListener("click", () => void openImageCenter());
+  imageKindInput.addEventListener("change", updateImageKindFields);
+  imageAssetKindFilter.addEventListener("change", () => void loadImageAssets());
+  imageRefreshButton.addEventListener("click", () => void loadImageAssets());
+  imagePreviewButton.addEventListener("click", () => void previewImagePrompt());
+  imageGenerateButton.addEventListener("click", () => void submitImageGeneration());
+  imageModelButton.addEventListener("click", () => void openImageModelSettings());
+  imageModelForm.addEventListener("submit", (event) => void saveImageModelSettings(event));
+  imageModelClearKey.addEventListener("change", () => {
+    imageModelApiKey.disabled = imageModelClearKey.checked;
+    if (imageModelClearKey.checked) imageModelApiKey.value = "";
+  });
+  imageCenterDialog.addEventListener("close", () => {
+    if (imageAssetsTimer) {
+      clearTimeout(imageAssetsTimer);
+      imageAssetsTimer = 0;
+    }
+  });
+  exportButton.addEventListener("click", () => void openExportDialog());
+  exportFormat.addEventListener("change", updateExportImageField);
+  exportRefreshButton.addEventListener("click", () => void loadExports());
+  exportSubmitButton.addEventListener("click", () => void createExport());
   extractStartButton.addEventListener("click", () => {
     void startExtract();
   });
@@ -3232,6 +3807,7 @@ function bindEvents() {
 
 async function init() {
   bindEvents();
+  await loadFeatures();
   await loadConfig();
   await loadProject();
   updateConfigUI();

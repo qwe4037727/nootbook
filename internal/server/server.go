@@ -16,6 +16,8 @@ import (
 	"novelagent/internal/agent"
 	"novelagent/internal/analysis"
 	"novelagent/internal/continuation"
+	"novelagent/internal/export"
+	"novelagent/internal/imagegen"
 	"novelagent/internal/llm"
 	"novelagent/internal/milestone"
 	"novelagent/internal/novel"
@@ -41,16 +43,33 @@ type Server struct {
 	world     *world.Service
 	adapt     *adapt.Service
 	tasks     *task.Service
+	images    *imagegen.Service
+	exports   *export.Service
 	cont      *continuation.Service
+}
+
+// Services 装配项目级长驻服务；nil 表示该项目未启用对应里程碑。
+type Services struct {
+	Tasks  *task.Service
+	Images *imagegen.Service
 }
 
 func New(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNotifier, extractor *analysis.ExtractLauncher) http.Handler {
 	return NewWithMilestone(st, static, logger, analyzer, extractor, milestone.Load(""))
 }
 
-// NewWithMilestone 由 app.Router 传入项目所属的里程碑配置；New 保留给测试与单项目嵌入，
-// 使用内置默认（M1–M5 启用）。tasks 可选：M4/M5 路由需要任务调度中心。
+// NewWithMilestone 由测试与单项目嵌入使用，可选的 task 服务供 M4/M5 路由使用；
+// 项目级装配请用 NewWithServices。New 使用内置默认（M1–M7 启用）。
 func NewWithMilestone(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNotifier, extractor *analysis.ExtractLauncher, cfg milestone.Config, taskServices ...*task.Service) http.Handler {
+	svc := Services{}
+	if len(taskServices) > 0 {
+		svc.Tasks = taskServices[0]
+	}
+	return NewWithServices(st, static, logger, analyzer, extractor, cfg, svc)
+}
+
+// NewWithServices 是完整的项目处理器构造入口。
+func NewWithServices(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNotifier, extractor *analysis.ExtractLauncher, cfg milestone.Config, svc Services) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -64,13 +83,16 @@ func NewWithMilestone(st *store.Store, static fs.FS, logger *slog.Logger, analyz
 		world:     world.NewService(st, logger),
 		adapt:     adapt.NewService(st, logger),
 		cont:      continuation.NewService(st, logger),
+		images:    svc.Images,
 	}
-	if len(taskServices) > 0 {
-		s.tasks = taskServices[0]
-	}
+	s.tasks = svc.Tasks
 	s.planner = plan.NewGenerator(st, logger)
+	if cfg.M7Enabled {
+		s.exports = export.NewService(st, logger)
+	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/features", s.handleFeatures)
 	mux.HandleFunc("GET /api/project", s.handleGetProject)
 	mux.HandleFunc("PUT /api/project", s.handlePutProject)
 	mux.HandleFunc("POST /api/import", s.handleImport)
@@ -102,6 +124,12 @@ func NewWithMilestone(st *store.Store, static fs.FS, logger *slog.Logger, analyz
 	}
 	if cfg.M5Enabled {
 		s.registerAuditRoutes(mux)
+	}
+	if cfg.M6Enabled && s.images != nil {
+		s.registerImageRoutes(mux)
+	}
+	if cfg.M7Enabled {
+		s.registerExportRoutes(mux)
 	}
 	mux.Handle("/", http.FileServer(http.FS(static)))
 

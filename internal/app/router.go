@@ -91,7 +91,10 @@ func (r *Router) handlerFor(id string, rt *project.Runtime) (http.Handler, error
 	if h, ok := r.handlers[id]; ok {
 		return h, nil
 	}
-	h := server.NewWithMilestone(rt.Store, r.static, r.log, rt.Analyzer, rt.Extractor, rt.Milestone, rt.Tasks)
+	h := server.NewWithServices(rt.Store, r.static, r.log, rt.Analyzer, rt.Extractor, rt.Milestone, server.Services{
+		Tasks:  rt.Tasks,
+		Images: rt.Images,
+	})
 	r.handlers[id] = h
 	return h, nil
 }

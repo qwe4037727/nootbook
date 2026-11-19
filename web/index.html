@@ -25,6 +25,8 @@
       <button id="planButton" class="btn btn-ghost" type="button">大纲规划</button>
       <button id="agentCenterButton" class="btn btn-ghost" type="button">Agent 中心</button>
       <button id="memoryReviewButton" class="btn btn-ghost" type="button">记忆审阅</button>
+      <button id="imageCenterButton" class="btn btn-ghost" type="button" hidden>图像中心</button>
+      <button id="exportButton" class="btn btn-ghost" type="button" hidden>导出</button>
       <button id="draftBoxButton" class="btn btn-ghost" type="button">草稿台 <span id="draftBoxCount" class="count" hidden>0</span></button>
       <button id="settingsButton" class="btn btn-ghost" type="button">模型设置</button>
     </div>
@@ -480,6 +482,217 @@
         </div>
         <p class="review-note">提案只入队，不会自动应用到记忆或正文；接受后仍需在记忆审阅中人工处理。</p>
         <div id="agentProposalList" class="agent-list"></div>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="imageCenterDialog" class="dialog dialog-wide" aria-labelledby="imageCenterTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="kicker">IMAGE STUDIO</p>
+        <h2 id="imageCenterTitle">图像中心</h2>
+      </div>
+      <div class="review-actions">
+        <button id="imageModelButton" class="btn btn-quiet btn-sm" type="button">图像模型设置</button>
+        <button type="button" class="icon-button" data-close-dialog="imageCenterDialog" aria-label="关闭">×</button>
+      </div>
+    </div>
+
+    <div class="review-body">
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>生成</h3>
+          <span id="imageStatusText" class="review-note">队列空闲</span>
+        </div>
+        <p class="review-note">生成在后台排队执行。一致性评分为结构化特征代理，尚未接入视觉相似度模型；基准图会作为参考图传入支持图生图的后端。</p>
+        <div class="image-form">
+          <label class="field">
+            <span>类型</span>
+            <select id="imageKindInput">
+              <option value="character">角色立绘</option>
+              <option value="scene">场景</option>
+              <option value="item">物品</option>
+              <option value="illustration">章节插图</option>
+              <option value="cover">封面</option>
+            </select>
+          </label>
+          <label id="imageEntryField" class="field">
+            <span>词条</span>
+            <select id="imageEntryInput"></select>
+          </label>
+          <label id="imageChapterField" class="field" hidden>
+            <span>章节</span>
+            <select id="imageChapterInput"></select>
+          </label>
+          <label class="field">
+            <span>画风锚（可选）</span>
+            <input id="imageStyleInput" type="text" maxlength="120" autocomplete="off" placeholder="例如：水墨风，淡彩，工笔">
+          </label>
+          <label class="field">
+            <span>额外负面词（可选）</span>
+            <input id="imageNegativeInput" type="text" maxlength="200" autocomplete="off" placeholder="例如：现代服装，文字水印">
+          </label>
+          <label class="field">
+            <span>尺寸</span>
+            <select id="imageSizeInput">
+              <option value="1024x1024" selected>1024 × 1024</option>
+              <option value="768x1024">768 × 1024（竖版）</option>
+              <option value="1024x768">1024 × 768（横版）</option>
+              <option value="768x768">768 × 768</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>步数（可选）</span>
+            <input id="imageStepsInput" type="number" min="1" max="80" inputmode="numeric" placeholder="默认 20">
+          </label>
+          <label class="field">
+            <span>种子（可选）</span>
+            <input id="imageSeedInput" type="number" min="0" inputmode="numeric" placeholder="留空随机">
+          </label>
+          <label class="field image-form-wide">
+            <span>提示词覆写（可选）</span>
+            <textarea id="imagePromptInput" rows="2" maxlength="2000" placeholder="留空则按词条与画风自动组装"></textarea>
+          </label>
+        </div>
+        <div class="review-actions">
+          <button id="imagePreviewButton" class="btn btn-quiet btn-sm" type="button">预览提示词</button>
+          <button id="imageGenerateButton" class="btn btn-primary btn-sm" type="button">开始生成</button>
+        </div>
+        <pre id="imagePromptPreview" class="op-json" hidden></pre>
+      </section>
+
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>资产</h3>
+          <div class="review-actions">
+            <label class="inline-field">类型
+              <select id="imageAssetKindFilter">
+                <option value="" selected>全部</option>
+                <option value="character">角色</option>
+                <option value="scene">场景</option>
+                <option value="item">物品</option>
+                <option value="illustration">插图</option>
+                <option value="cover">封面</option>
+              </select>
+            </label>
+            <button id="imageRefreshButton" class="btn btn-quiet btn-sm" type="button">刷新</button>
+          </div>
+        </div>
+        <div id="imageAssetList" class="image-grid"></div>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="imageModelDialog" class="dialog" aria-labelledby="imageModelTitle">
+    <form id="imageModelForm" class="dialog-form" novalidate>
+      <div class="dialog-head">
+        <div>
+          <p class="kicker">IMAGE PROVIDER</p>
+          <h2 id="imageModelTitle">图像模型设置</h2>
+        </div>
+        <button type="button" class="icon-button" data-close-dialog="imageModelDialog" aria-label="关闭">×</button>
+      </div>
+      <p class="dialog-note">支持 OpenAI 兼容的 <code>/images/generations</code> 与本地 Stable Diffusion WebUI 的 <code>/sdapi/v1/txt2img</code>。留空 Base URL 时不接受生成任务。</p>
+      <label class="field">
+        <span>后端</span>
+        <select id="imageModelBackend">
+          <option value="openai" selected>OpenAI 兼容</option>
+          <option value="sdwebui">Stable Diffusion WebUI</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Base URL</span>
+        <input id="imageModelBaseUrl" type="url" autocomplete="off" placeholder="https://api.example.com/v1 或 http://127.0.0.1:7860">
+      </label>
+      <label class="field">
+        <span>模型名（OpenAI 兼容必填）</span>
+        <input id="imageModelName" type="text" autocomplete="off" placeholder="dall-e-3 / flux / 本地模型名">
+      </label>
+      <label class="field">
+        <span>API Key</span>
+        <input id="imageModelApiKey" type="password" autocomplete="new-password" placeholder="留空表示不修改">
+        <small id="imageModelKeyHint" class="field-hint"></small>
+      </label>
+      <label class="checkbox-field">
+        <input id="imageModelClearKey" type="checkbox">
+        <span>清除已保存的图像 API Key</span>
+      </label>
+      <label class="field">
+        <span>默认画风锚（可选）</span>
+        <input id="imageModelStyle" type="text" maxlength="120" autocomplete="off" placeholder="例如：水墨风，淡彩，工笔">
+      </label>
+      <label class="field">
+        <span>默认负面词（可选）</span>
+        <input id="imageModelNegative" type="text" maxlength="200" autocomplete="off" placeholder="例如：现代元素，文字水印">
+      </label>
+      <div class="plan-form">
+        <label class="field">
+          <span>宽</span>
+          <input id="imageModelWidth" type="number" min="256" max="2048" step="64" inputmode="numeric">
+        </label>
+        <label class="field">
+          <span>高</span>
+          <input id="imageModelHeight" type="number" min="256" max="2048" step="64" inputmode="numeric">
+        </label>
+        <label class="field">
+          <span>步数</span>
+          <input id="imageModelSteps" type="number" min="1" max="80" inputmode="numeric">
+        </label>
+        <label class="field">
+          <span>超时（秒）</span>
+          <input id="imageModelTimeout" type="number" min="10" max="600" inputmode="numeric">
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-quiet" data-close-dialog="imageModelDialog">取消</button>
+        <button type="submit" class="btn btn-primary">保存图像设置</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="exportDialog" class="dialog" aria-labelledby="exportTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="kicker">EXPORT</p>
+        <h2 id="exportTitle">导出整书</h2>
+      </div>
+      <button type="button" class="icon-button" data-close-dialog="exportDialog" aria-label="关闭">×</button>
+    </div>
+    <div class="review-body">
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>生成导出</h3>
+          <span id="exportStatus" class="review-note"></span>
+        </div>
+        <p class="review-note">导出为当前快照，不影响正文。EPUB 会自动嵌入已有插图与封面，并附图像图鉴；TXT / Markdown 勾选「打包图像」后生成 zip 素材包。</p>
+        <div class="plan-form">
+          <label class="field">
+            <span>格式</span>
+            <select id="exportFormat">
+              <option value="txt">TXT</option>
+              <option value="md">Markdown</option>
+              <option value="epub" selected>EPUB3</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>书名（可选）</span>
+            <input id="exportTitleInput" type="text" maxlength="120" autocomplete="off" placeholder="留空则使用当前书名">
+          </label>
+          <label class="field inline-check" id="exportImagesField" hidden>
+            <input id="exportIncludeImages" type="checkbox">
+            <span>同时打包图像素材</span>
+          </label>
+        </div>
+        <div class="review-actions">
+          <button id="exportSubmitButton" class="btn btn-primary btn-sm" type="button">开始导出</button>
+          <button id="exportRefreshButton" class="btn btn-quiet btn-sm" type="button">刷新记录</button>
+        </div>
+      </section>
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>导出记录</h3>
+        </div>
+        <div id="exportList" class="export-list"></div>
       </section>
     </div>
   </dialog>

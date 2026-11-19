@@ -53,6 +53,21 @@
 
 单章 Revision 与 meta 修复、独立 memoryRevision、五类模型与基础校验、实体复用、knowledge 低成本回填、initialize/reconcile 提交与恢复、章节删除联动、四个基础记忆 API、导入隔离及在途任务失效。事件回填仅 proposed；显式全量重初始化请求被拒绝，不提供重建功能。
 
+### G. M6 图像与 M7 导出（2026-11-19）
+
+> M6/M7 是 M5 之后的功能批次编号，接口契约见 [api_m6_m7.md](api_m6_m7.md)。
+> 图像一致性分数为结构化特征代理，视觉相似度未接入，不能作为视觉结论。
+
+| 编号 | 功能 | 说明 | 对应实现 |
+|---|---|---|---|
+| F24 | 图像模型配置 | 独立于文本模型的 `config.json#image`；支持 OpenAI 兼容与 SD WebUI 双后端；Key 优先读 `IMAGE_API_KEY`；尺寸/steps/超时归一化 | `server.handleGetImageConfig/handlePutImageConfig`；`store.ImageConfig.Normalized` |
+| F25 | 提示词组装与预览 | 画风锚 + 词条字段/章节摘录 + 类型镜头 + 通用负面；预览只组装不调用模型 | `imagegen.BuildPrompt`；`POST /api/images/preview-prompt` |
+| F26 | 图像生成队列 | `pending/running/done/failed`；项目启动恢复 running→pending；单项目 2 协程 FIFO；失败可单条重试 | `imagegen.Service.RunOnce`；`store.NextPendingImage/MarkImageRunning` |
+| F27 | 基准图与缩略图 | 基准图按范围唯一（插图按章节，其他按 kind+entryId）；最长边 320px PNG 缩略图 | `store.SetImageAnchor`；`imagegen.resizeNearest` |
+| F28 | 一致性评分与审计 | 0.6 特征命中 + 0.3 特征代理 + 0.1 画风；`visualProxy=true`；<0.75 写 A8 报告；运行记入 `agent_run` | `imagegen.ScoreConsistency/maybeReport` |
+| F29 | 整书导出 | TXT / Markdown / EPUB3；txt/md 可选图片 zip；EPUB 内嵌插图、封面与资产画廊 | `export.Service.Create`；`POST /api/export` |
+| F30 | 导出记录与下载 | `exports/<id>.json` 快照；列表倒序；attachment 下载、no-store | `GET /api/exports[/{id}/download]` |
+
 ## 二、规划中功能（🚧 迭代 2：大纲规划模块 = StoryPlan，V1.2 冻结）
 
 > 前置：必须有知识库 `knowledge.json`（走 F1+F6 链路）。新书旧书通用。

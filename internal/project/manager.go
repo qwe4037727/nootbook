@@ -20,6 +20,7 @@ import (
 	"novelagent/internal/agentruntime"
 	agentspkg "novelagent/internal/agents"
 	"novelagent/internal/analysis"
+	"novelagent/internal/imagegen"
 	"novelagent/internal/milestone"
 	"novelagent/internal/store"
 	"novelagent/internal/task"
@@ -58,6 +59,7 @@ type Runtime struct {
 	Extractor *analysis.ExtractLauncher
 	Agents    *agentruntime.Runtime
 	Tasks     *task.Service
+	Images    *imagegen.Service
 	Milestone milestone.Config
 }
 
@@ -188,6 +190,9 @@ func (m *Manager) Start(ctx context.Context) error {
 		if rt.Tasks != nil {
 			rt.Tasks.Start(ctx)
 		}
+		if rt.Images != nil {
+			rt.Images.Start(ctx)
+		}
 	}
 	return nil
 }
@@ -209,6 +214,9 @@ func (m *Manager) Stop() {
 	m.mu.Unlock()
 
 	for _, rt := range runtimes {
+		if rt.Images != nil {
+			rt.Images.Stop()
+		}
 		if rt.Tasks != nil {
 			rt.Tasks.Stop()
 		}
@@ -439,6 +447,9 @@ func (m *Manager) Delete(id string) error {
 	delete(m.runtimes, id)
 	m.mu.Unlock()
 	if rt != nil {
+		if rt.Images != nil {
+			rt.Images.Stop()
+		}
 		if rt.Tasks != nil {
 			rt.Tasks.Stop()
 		}
@@ -525,6 +536,9 @@ func (m *Manager) runtimeFor(id string) (*Runtime, error) {
 	if m.milestone.M4Enabled || m.milestone.M5Enabled {
 		rt.Tasks = task.NewService(st, agents, m.log)
 	}
+	if m.milestone.M6Enabled {
+		rt.Images = imagegen.NewService(st, id, m.log)
+	}
 
 	m.mu.Lock()
 	if existing, ok := m.runtimes[id]; ok {
@@ -538,6 +552,9 @@ func (m *Manager) runtimeFor(id string) (*Runtime, error) {
 		rt.Agents.Start(ctx)
 		if rt.Tasks != nil {
 			rt.Tasks.Start(ctx)
+		}
+		if rt.Images != nil {
+			rt.Images.Start(ctx)
 		}
 	}
 	m.mu.Unlock()

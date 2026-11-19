@@ -80,11 +80,33 @@ func chapterIndexMap(metas []novel.ChapterMeta) map[string]int {
 }
 
 type Config struct {
-	BaseURL      string `json:"baseUrl"`
-	Model        string `json:"model"`
-	APIKey       string `json:"apiKey,omitempty"`
-	ContextChars int    `json:"contextChars"`
+	BaseURL      string      `json:"baseUrl"`
+	Model        string      `json:"model"`
+	APIKey       string      `json:"apiKey,omitempty"`
+	ContextChars int         `json:"contextChars"`
+	Image        ImageConfig `json:"image,omitempty"`
 }
+
+// ImageConfig 是图像模型的独立配置（M6）。Backend 支持 openai 与 sdwebui：
+//   - openai：Base URL 填到 /v1，客户端追加 /images/generations；
+//   - sdwebui：Base URL 填到根路径，客户端追加 /sdapi/v1/txt2img。
+type ImageConfig struct {
+	Backend        string `json:"backend,omitempty"`
+	BaseURL        string `json:"baseUrl,omitempty"`
+	Model          string `json:"model,omitempty"`
+	APIKey         string `json:"apiKey,omitempty"`
+	StyleTag       string `json:"styleTag,omitempty"`
+	NegativePrompt string `json:"negativePrompt,omitempty"`
+	Width          int    `json:"width,omitempty"`
+	Height         int    `json:"height,omitempty"`
+	Steps          int    `json:"steps,omitempty"`
+	TimeoutSeconds int    `json:"timeoutSeconds,omitempty"`
+}
+
+const (
+	ImageBackendOpenAI  = "openai"
+	ImageBackendSDWebUI = "sdwebui"
+)
 
 func DefaultConfig() Config {
 	return Config{ContextChars: defaultContextChars}
@@ -98,6 +120,41 @@ func (c *Config) Normalize() {
 		c.ContextChars = defaultContextChars
 	}
 	c.ContextChars = min(max(c.ContextChars, minContextChars), maxContextChars)
+	c.Image = c.Image.Normalized()
+}
+
+// Normalized 返回补齐默认值并约束取值范围后的图像配置。
+func (c ImageConfig) Normalized() ImageConfig {
+	c.Backend = strings.ToLower(strings.TrimSpace(c.Backend))
+	switch c.Backend {
+	case ImageBackendSDWebUI:
+	case ImageBackendOpenAI, "":
+		c.Backend = ImageBackendOpenAI
+	default:
+		c.Backend = ImageBackendOpenAI
+	}
+	c.BaseURL = strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")
+	c.Model = strings.TrimSpace(c.Model)
+	c.APIKey = strings.TrimSpace(c.APIKey)
+	c.StyleTag = strings.TrimSpace(c.StyleTag)
+	c.NegativePrompt = strings.TrimSpace(c.NegativePrompt)
+	if c.Width == 0 {
+		c.Width = 1024
+	}
+	if c.Height == 0 {
+		c.Height = 1024
+	}
+	c.Width = min(max(c.Width, 256), 2048)
+	c.Height = min(max(c.Height, 256), 2048)
+	if c.Steps == 0 {
+		c.Steps = 20
+	}
+	c.Steps = min(max(c.Steps, 1), 80)
+	if c.TimeoutSeconds == 0 {
+		c.TimeoutSeconds = 120
+	}
+	c.TimeoutSeconds = min(max(c.TimeoutSeconds, 10), 600)
+	return c
 }
 
 func (c Config) EffectiveAPIKey() (string, bool) {
@@ -105,6 +162,15 @@ func (c Config) EffectiveAPIKey() (string, bool) {
 		return key, true
 	}
 	return c.APIKey, false
+}
+
+// EffectiveImageAPIKey 优先读取 IMAGE_API_KEY，其次使用图像配置里保存的 Key。
+// 图像通道与文本通道可以指向不同服务，因此不默认复用文本 Key。
+func (c Config) EffectiveImageAPIKey() (string, bool) {
+	if key := strings.TrimSpace(os.Getenv("IMAGE_API_KEY")); key != "" {
+		return key, true
+	}
+	return c.Image.APIKey, false
 }
 
 type Store struct {

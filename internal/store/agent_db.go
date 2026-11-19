@@ -31,6 +31,9 @@ var manuscriptSchema string
 //go:embed migrations/0005_m5_task.sql
 var taskSchema string
 
+//go:embed migrations/0006_m6_image.sql
+var imageSchema string
+
 var (
 	ErrAgentRecordNotFound = errors.New("store: agent record not found")
 )
@@ -174,6 +177,7 @@ func (s *Store) agentDatabase() (*sql.DB, error) {
 		{"0003_m3_adapt", adaptSchema},
 		{"0004_m4_manuscript", manuscriptSchema},
 		{"0005_m5_task", taskSchema},
+		{"0006_m6_image", imageSchema},
 	} {
 		if _, err := db.Exec(schema.sql); err != nil {
 			db.Close()

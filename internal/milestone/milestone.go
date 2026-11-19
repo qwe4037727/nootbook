@@ -1,9 +1,8 @@
 // Package milestone 读取 milestone.yaml，控制各里程碑功能与 Agent 的装配及默认权限。
-// 未配置文件时使用内置默认值（M1–M5 可用）；任何 Agent 的默认权限都是 observe。
+// 未配置文件时使用内置默认值（M1–M7 可用）；任何 Agent 的默认权限都是 observe。
 package milestone
 
 import (
-	_ "embed"
 	"errors"
 	"os"
 	"path/filepath"
@@ -13,9 +12,6 @@ import (
 
 	"novelagent/internal/agentruntime"
 )
-
-//go:embed default.yaml
-var defaultYAML []byte
 
 type agentSetting struct {
 	Enabled *bool  `yaml:"enabled"`
@@ -50,6 +46,8 @@ type Config struct {
 	M3Enabled bool
 	M4Enabled bool
 	M5Enabled bool
+	M6Enabled bool
+	M7Enabled bool
 	Defaults  map[string]agentruntime.AgentDefaults
 	Source    string
 }
@@ -90,6 +88,8 @@ func defaults() Config {
 		M3Enabled: true,
 		M4Enabled: true,
 		M5Enabled: true,
+		M6Enabled: true,
+		M7Enabled: true,
 		Defaults:  make(map[string]agentruntime.AgentDefaults),
 	}
 	for _, key := range knownAgents {
@@ -113,6 +113,12 @@ func apply(cfg *Config, parsed fileConfig) {
 	}
 	if parsed.Milestones.M5.Enabled != nil {
 		cfg.M5Enabled = *parsed.Milestones.M5.Enabled
+	}
+	if parsed.Milestones.M6.Enabled != nil {
+		cfg.M6Enabled = *parsed.Milestones.M6.Enabled
+	}
+	if parsed.Milestones.M7.Enabled != nil {
+		cfg.M7Enabled = *parsed.Milestones.M7.Enabled
 	}
 	applyAgentSettings(cfg, parsed.Milestones.M1.Agents)
 	applyAgentSettings(cfg, parsed.Milestones.M5.Agents)

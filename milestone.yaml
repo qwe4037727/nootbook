@@ -42,8 +42,9 @@ milestones:
       task:
         enabled: true
         level: observe
-  # M6 图像、M7 导出/素材库尚未开发，保持关闭。
+  # M6 图像链路（OpenAI 兼容 / SD WebUI 双后端）与 M7 整书导出已交付。
+  # 图像生成需要另配「图像模型」或 IMAGE_API_KEY，仓库不自带模型。
   m6:
-    enabled: false
+    enabled: true
   m7:
-    enabled: false
+    enabled: true
