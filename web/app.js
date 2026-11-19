@@ -3904,6 +3904,15 @@ async function init() {
   updateConfigUI();
   updateContextInfo();
   await refreshPendingDraftCount();
+  const homeShortcuts = {
+    '#world': 'world-center-btn',
+    '#agents': 'agentCenterButton',
+    '#memory': 'memoryReviewButton',
+    '#settings': 'settingsButton',
+    '#tasks': 'task-center-btn',
+  };
+  const shortcut = homeShortcuts[location.hash];
+  if (shortcut) $(shortcut)?.click();
 }
 
 void init();
