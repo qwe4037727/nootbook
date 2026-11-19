@@ -79,7 +79,12 @@ func (s *Store) RetrieveContinuationMemory(knowledge novel.Knowledge, recentText
 			return result, fmt.Errorf("store: load memory %s for retrieval: %w", loader.name, err)
 		}
 	}
-	if len(events)+len(states)+len(cognitions)+len(threads)+len(plans) == 0 {
+	fuseThreshold := startIndex
+	if fuseThreshold <= 0 {
+		fuseThreshold = 1 << 30
+	}
+	injectableForeshadows, _ := s.foreshadowsForInjectionIfPresent(fuseThreshold, 3)
+	if len(events)+len(states)+len(cognitions)+len(threads)+len(plans)+len(injectableForeshadows) == 0 {
 		result.DisabledReason = novel.MemoryDisabledAbsent
 		return result, nil
 	}
@@ -108,6 +113,7 @@ func (s *Store) RetrieveContinuationMemory(knowledge novel.Knowledge, recentText
 		novel.MemoryKindState:      {},
 		novel.MemoryKindCognition:  {},
 		novel.MemoryKindThread:     {},
+		novel.MemoryKindFuse:       {},
 		novel.MemoryKindEvent:      {},
 		novel.MemoryKindPlan:       {},
 	}
@@ -201,6 +207,31 @@ func (s *Store) RetrieveContinuationMemory(knowledge novel.Knowledge, recentText
 		if record, ok := threadRecord(thread); ok {
 			groups[novel.MemoryKindThread] = append(groups[novel.MemoryKindThread], record)
 		}
+	}
+
+	// A3 伏笔台账（P1）：已确认/待确认的未回收伏笔，按埋设章节近因注入（修复 #60）。
+	// 读取失败不阻断续写：伏笔只是增益上下文。
+	for _, fs := range injectableForeshadows {
+		label := fmt.Sprintf("第 %d 章", fs.ChapterIndex)
+		if strings.TrimSpace(fs.Title) != "" {
+			label += "「" + fs.Title + "」"
+		}
+		status := "待确认"
+		if fs.Status == "confirmed" {
+			status = "已确认"
+		}
+		text := fmt.Sprintf("%s（%s）：%s", label, status, fs.Quote)
+		if strings.TrimSpace(fs.Kind) != "" {
+			text = "[" + fs.Kind + "] " + text
+		}
+		groups[novel.MemoryKindFuse] = append(groups[novel.MemoryKindFuse], novel.MemoryRecord{
+			ID:       fs.ID,
+			Kind:     novel.MemoryKindFuse,
+			Subject:  label,
+			Text:     text,
+			Order:    fs.ChapterIndex,
+			Priority: novel.MemoryPriorityP1,
+		})
 	}
 
 	// 关键事件（P1）：confirmed；proposed/conflicted/invalidated 一律不入事实集（R1）。

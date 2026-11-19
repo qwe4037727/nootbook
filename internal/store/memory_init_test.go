@@ -241,11 +241,11 @@ func TestInitManualEditProtected(t *testing.T) {
 			Origin:        novel.Origin{Type: novel.OriginManual},
 			LastSource:    novel.LastSourceManualEdit,
 		},
-		Status:     novel.StateActive,
-		SubjectID:  "c_a1",
-		Category:   "general",
-		Attribute:  "profile",
-		Value:      "伤愈复出",
+		Status:    novel.StateActive,
+		SubjectID: "c_a1",
+		Category:  "general",
+		Attribute: "profile",
+		Value:     "伤愈复出",
 	}
 	st.memoryMu.Lock()
 	_ = st.writeMemoryFileLocked("states.json", []novel.StoryState{manual})

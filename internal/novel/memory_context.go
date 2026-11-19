@@ -50,6 +50,7 @@ const (
 	MemoryKindState      = "state"
 	MemoryKindEvent      = "event"
 	MemoryKindThread     = "thread"
+	MemoryKindFuse       = "fuse"
 	MemoryKindCognition  = "cognition"
 	MemoryKindPlan       = "plan"
 
@@ -98,6 +99,7 @@ const (
 	memoryStateBudget      = 1000
 	memoryCognitionBudget  = 400
 	memoryThreadBudget     = 600
+	memoryFuseBudget       = 300
 	memoryEventBudget      = 400
 	memoryPlanBudget       = 300
 )
@@ -107,6 +109,7 @@ var memorySectionOrder = []string{
 	MemoryKindState,
 	MemoryKindCognition,
 	MemoryKindThread,
+	MemoryKindFuse,
 	MemoryKindEvent,
 	MemoryKindPlan,
 }
@@ -116,6 +119,7 @@ var memoryGroupHeaders = map[string]string{
 	MemoryKindState:      "人物当前状态：\n",
 	MemoryKindCognition:  "人物认知：\n",
 	MemoryKindThread:     "未解决伏笔：\n",
+	MemoryKindFuse:       "待回收伏笔（A3 台账，含待确认）：\n",
 	MemoryKindEvent:      "关键事件（近因优先）：\n",
 	MemoryKindPlan:       "近期计划（仅约束走向，不得覆盖已确认事实）：\n",
 }
@@ -142,6 +146,8 @@ func MemorySubBudget(kind string) int {
 		return memoryCognitionBudget
 	case MemoryKindThread:
 		return memoryThreadBudget
+	case MemoryKindFuse:
+		return memoryFuseBudget
 	case MemoryKindEvent:
 		return memoryEventBudget
 	case MemoryKindPlan:

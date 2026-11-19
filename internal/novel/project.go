@@ -12,11 +12,11 @@ import (
 )
 
 type Chapter struct {
-	ID        string    `json:"id"`
-	Index     int       `json:"index"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	CharCount int       `json:"charCount"`
+	ID        string `json:"id"`
+	Index     int    `json:"index"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	CharCount int    `json:"charCount"`
 	// Revision 为章节级版本号（决策 8）：章节文件是真源，Title 或 Content
 	// 实际变化时递增；与 Project.Revision 职责分离，不互相推导。
 	Revision  int64     `json:"revision"`
@@ -24,10 +24,10 @@ type Chapter struct {
 }
 
 type ChapterMeta struct {
-	ID        string    `json:"id"`
-	Index     int       `json:"index"`
-	Title     string    `json:"title"`
-	CharCount int       `json:"charCount"`
+	ID        string `json:"id"`
+	Index     int    `json:"index"`
+	Title     string `json:"title"`
+	CharCount int    `json:"charCount"`
 	// Revision 为章节文件 Revision 的缓存；不一致时加载以 chapter 文件修复。
 	Revision  int64     `json:"revision"`
 	UpdatedAt time.Time `json:"updatedAt"`
@@ -297,7 +297,8 @@ func (k *Knowledge) Normalize() {
 	k.Summaries = summaries
 }
 
-func mergeCharacter(base, update Character) Character {	if update.ID != "" {
+func mergeCharacter(base, update Character) Character {
+	if update.ID != "" {
 		base.ID = update.ID
 	}
 	if update.Name != "" {

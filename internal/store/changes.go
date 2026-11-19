@@ -6,10 +6,13 @@ import "log"
 type ChapterChangeKind string
 
 const (
-	ChapterSaved     ChapterChangeKind = "chapter.saved"
-	ChapterCreated   ChapterChangeKind = "chapter.created"
-	ChapterDeleted   ChapterChangeKind = "chapter.deleted"
-	ChaptersImported ChapterChangeKind = "chapters.imported"
+	ChapterSaved      ChapterChangeKind = "chapter.saved"
+	ChapterCreated    ChapterChangeKind = "chapter.created"
+	ChapterDeleted    ChapterChangeKind = "chapter.deleted"
+	ChaptersImported  ChapterChangeKind = "chapters.imported"
+	ChaptersAppended  ChapterChangeKind = "chapters.appended"
+	ChaptersReordered ChapterChangeKind = "chapters.reordered"
+	BookRestored      ChapterChangeKind = "book.restored"
 )
 
 // ChapterChange 是章节变更钩子的最小载荷；不携带正文，消费方按需读取真源。

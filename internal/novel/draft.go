@@ -1,6 +1,8 @@
 package novel
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -42,6 +44,8 @@ type Draft struct {
 	Content             string      `json:"content"`
 	Revision            int64       `json:"draftRevision"`
 	ChangeSetID         string      `json:"memoryChangeSetId,omitempty"`
+	MemorySyncedHash    string      `json:"memorySyncedHash,omitempty"` // 最近一次记忆同步时的正文 hash（#63 提交闸门基线）
+	MemorySyncState     string      `json:"memorySyncState,omitempty"`  // pending / synced / stale / body_only
 	CommitID            string      `json:"commitId,omitempty"`
 	ChapterRevision     int64       `json:"chapterRevision,omitempty"` // 提交成功后的正式章节版本
 	CreatedAt           time.Time   `json:"createdAt"`
@@ -86,6 +90,12 @@ func (d Draft) PendingChapterRevision() int64 {
 		return 1
 	}
 	return d.BaseChapterRevision + 1
+}
+
+// ContentHash 返回草稿正文的 SHA-256（十六进制），用于 #63 提交闸门判断正文是否变化。
+func ContentHash(content string) string {
+	sum := sha256.Sum256([]byte(content))
+	return hex.EncodeToString(sum[:])
 }
 
 func ValidateDraft(d *Draft) error {

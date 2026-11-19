@@ -23,7 +23,9 @@ var (
 	ErrDraftConflict     = errors.New("store: draft revision conflict")
 	ErrDraftTerminal     = errors.New("store: draft is already terminal")
 	ErrDraftNeedsRecheck = errors.New("store: draft changed after memory extraction")
-	ErrChapterConflict   = errors.New("store: chapter revision conflict")
+	// ErrDraftMemoryStale 表示草稿正文在记忆同步后被修改，确认时必须显式选择重提取或仅提交正文（#63）。
+	ErrDraftMemoryStale = errors.New("store: draft content changed after memory sync")
+	ErrChapterConflict  = errors.New("store: chapter revision conflict")
 	// ErrDraftManagedChangeSet 拒绝绕过草稿确认单独采纳/重定基草稿派生批次（G6 原子性）。
 	ErrDraftManagedChangeSet = errors.New("store: changeset is managed by a draft")
 )
@@ -38,16 +40,20 @@ type DraftConfirmParams struct {
 	DraftRevision           int64
 	ExpectedChapterRevision int64
 	ExpectedMemoryRevision  int64
+	// AllowBodyOnly 明确允许「仅提交正文、记忆不更新」；正文 hash 与同步基线不一致时必填（#63）。
+	AllowBodyOnly bool
 }
 
 type DraftCommitResult struct {
-	Draft          novel.Draft          `json:"draft"`
-	Chapter        novel.Chapter        `json:"chapter"`
-	Project        novel.Project        `json:"project"`
-	MemoryRevision int64                `json:"memoryRevision"`
-	CommitID       string               `json:"commitId"`
-	ChangeSetID    string               `json:"memoryChangeSetId,omitempty"`
-	Conflicts      []novel.ConflictItem `json:"conflicts,omitempty"`
+	Draft           novel.Draft          `json:"draft"`
+	Chapter         novel.Chapter        `json:"chapter"`
+	Project         novel.Project        `json:"project"`
+	MemoryRevision  int64                `json:"memoryRevision"`
+	CommitID        string               `json:"commitId"`
+	ChangeSetID     string               `json:"memoryChangeSetId,omitempty"`
+	MemorySynced    bool                 `json:"memorySynced"`
+	MemorySyncState string               `json:"memorySyncState"`
+	Conflicts       []novel.ConflictItem `json:"conflicts,omitempty"`
 }
 
 func (s *Store) loadDraftsLocked() ([]novel.Draft, error) {
@@ -132,13 +138,15 @@ func (s *Store) CreateDraft(p DraftCreateParams) (novel.Draft, error) {
 
 	now := time.Now().UTC()
 	draft := novel.Draft{
-		ID:        novel.NewID("draft"),
-		WorkID:    novel.InternalWorkID(),
-		Status:    novel.DraftPending,
-		Content:   content,
-		Revision:  1,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:               novel.NewID("draft"),
+		WorkID:           novel.InternalWorkID(),
+		Status:           novel.DraftPending,
+		Content:          content,
+		Revision:         1,
+		MemorySyncedHash: novel.ContentHash(content),
+		MemorySyncState:  "pending",
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if p.ChapterID == "" {
 		draft.NewChapter = true
@@ -223,6 +231,10 @@ func (s *Store) UpdateDraft(id string, expectedRevision int64, title, content st
 	draft.Content = content
 	draft.Revision++
 	draft.UpdatedAt = time.Now().UTC()
+	// #63：正文变化后记忆基线失效；确认时必须显式选择重提取或仅提交正文。
+	if draft.MemorySyncedHash != "" && draft.MemorySyncedHash != novel.ContentHash(content) {
+		draft.MemorySyncState = "stale"
+	}
 	if draft.ChangeSetID != "" {
 		if err := s.rejectChangeSetIfProposedLocked(draft.ChangeSetID, "superseded_by_recheck"); err != nil {
 			return novel.Draft{}, err
@@ -382,6 +394,8 @@ func (s *Store) StashDraftChangeSet(draftID string, expectedRevision int64, cs n
 	}
 	draft.ChangeSetID = cs.ID
 	draft.BaseMemoryRevision = meta.MemoryRevision
+	draft.MemorySyncedHash = novel.ContentHash(draft.Content)
+	draft.MemorySyncState = "synced"
 	draft.UpdatedAt = now
 	drafts[index] = draft
 	if err := s.writeDraftsLocked(drafts); err != nil {
@@ -457,12 +471,14 @@ func (s *Store) ConfirmDraft(id string, p DraftConfirmParams) (DraftCommitResult
 			return DraftCommitResult{}, err
 		}
 		return DraftCommitResult{
-			Draft:          draft,
-			Chapter:        chapter,
-			Project:        project,
-			MemoryRevision: meta.MemoryRevision,
-			CommitID:       draft.CommitID,
-			ChangeSetID:    draft.ChangeSetID,
+			Draft:           draft,
+			Chapter:         chapter,
+			Project:         project,
+			MemoryRevision:  meta.MemoryRevision,
+			CommitID:        draft.CommitID,
+			ChangeSetID:     draft.ChangeSetID,
+			MemorySynced:    draft.MemorySyncState == "synced",
+			MemorySyncState: draft.MemorySyncState,
 		}, nil
 	}
 	if draft.Status.IsTerminal() {
@@ -471,6 +487,12 @@ func (s *Store) ConfirmDraft(id string, p DraftConfirmParams) (DraftCommitResult
 	if p.DraftRevision != draft.Revision {
 		return DraftCommitResult{}, fmt.Errorf("%w: draftRevision=%d current=%d", ErrDraftConflict, p.DraftRevision, draft.Revision)
 	}
+	// #63 提交闸门：正文在记忆同步后被修改 → 必须显式二选一（重提取 / 仅正文）。
+	staleContent := draft.MemorySyncedHash != "" && draft.MemorySyncedHash != novel.ContentHash(draft.Content)
+	if staleContent && !p.AllowBodyOnly {
+		return DraftCommitResult{}, fmt.Errorf("%w: content changed after memory sync; re-extract or allow body-only commit", ErrDraftMemoryStale)
+	}
+	bodyOnly := staleContent || draft.ChangeSetID == ""
 	if p.ExpectedMemoryRevision > 0 && p.ExpectedMemoryRevision != meta.MemoryRevision {
 		return DraftCommitResult{}, fmt.Errorf("%w: expected=%d current=%d", ErrRevisionConflict, p.ExpectedMemoryRevision, meta.MemoryRevision)
 	}
@@ -511,6 +533,7 @@ func (s *Store) ConfirmDraft(id string, p DraftConfirmParams) (DraftCommitResult
 		if p.ExpectedChapterRevision > 0 && p.ExpectedChapterRevision != existing.Revision {
 			return DraftCommitResult{}, fmt.Errorf("%w: expected=%d current=%d", ErrChapterConflict, p.ExpectedChapterRevision, existing.Revision)
 		}
+		s.recordChapterVersion(existing, ChapterVersionDraftCommit)
 		chapter = existing
 		if strings.TrimSpace(draft.Title) != "" {
 			chapter.Title = strings.TrimSpace(draft.Title)
@@ -530,7 +553,7 @@ func (s *Store) ConfirmDraft(id string, p DraftConfirmParams) (DraftCommitResult
 	if err != nil {
 		return DraftCommitResult{}, err
 	}
-	if draft.ChangeSetID != "" {
+	if draft.ChangeSetID != "" && !bodyOnly {
 		for i := range sets {
 			if sets[i].ID != draft.ChangeSetID {
 				continue
@@ -664,6 +687,12 @@ func (s *Store) ConfirmDraft(id string, p DraftConfirmParams) (DraftCommitResult
 	draft.CommittedAt = now
 	draft.UpdatedAt = now
 	draft.ChapterRevision = chapter.Revision
+	if bodyOnly {
+		draft.MemorySyncState = "body_only"
+	} else {
+		draft.MemorySyncState = "synced"
+		draft.MemorySyncedHash = novel.ContentHash(draft.Content)
+	}
 	drafts[draftIndex] = draft
 	payload["drafts.json"] = drafts
 
@@ -692,12 +721,14 @@ func (s *Store) ConfirmDraft(id string, p DraftConfirmParams) (DraftCommitResult
 		return DraftCommitResult{}, err
 	}
 	return DraftCommitResult{
-		Draft:          draft,
-		Chapter:        chapter,
-		Project:        project,
-		MemoryRevision: record.TargetMemoryRevision,
-		CommitID:       record.CommitID,
-		ChangeSetID:    draft.ChangeSetID,
-		Conflicts:      conflicts,
+		Draft:           draft,
+		Chapter:         chapter,
+		Project:         project,
+		MemoryRevision:  record.TargetMemoryRevision,
+		CommitID:        record.CommitID,
+		ChangeSetID:     draft.ChangeSetID,
+		MemorySynced:    !bodyOnly,
+		MemorySyncState: draft.MemorySyncState,
+		Conflicts:       conflicts,
 	}, nil
 }

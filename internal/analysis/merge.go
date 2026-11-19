@@ -44,6 +44,12 @@ func parseJSONObject(text string, dst any) error {
 }
 
 func applyChapter(knowledge *novel.Knowledge, chapter novel.Chapter, result chapterResult) {
+	applyChapterWithLocks(knowledge, chapter, result, nil)
+}
+
+// applyChapterWithLocks 在合并时跳过人工锁定字段：锁定字段只允许人工编辑覆盖，
+// 重分析/重抽取不得改写（验收判据 2）。
+func applyChapterWithLocks(knowledge *novel.Knowledge, chapter novel.Chapter, result chapterResult, locks novel.FieldLockSet) {
 	for _, incoming := range result.Characters {
 		incoming.Name = clip(strings.TrimSpace(incoming.Name), 40)
 		if incoming.Name == "" {
@@ -65,12 +71,12 @@ func applyChapter(knowledge *novel.Knowledge, chapter novel.Chapter, result chap
 		existing := &knowledge.Characters[index]
 		newer := chapter.Index >= existing.LastSeen
 		if newer {
-			existing.Role = firstNonEmpty(incoming.Role, existing.Role)
-			existing.Personality = firstNonEmpty(incoming.Personality, existing.Personality)
-			existing.Appearance = firstNonEmpty(incoming.Appearance, existing.Appearance)
-			existing.Relationships = firstNonEmpty(incoming.Relationships, existing.Relationships)
-			existing.State = firstNonEmpty(incoming.State, existing.State)
-			existing.Notes = firstNonEmpty(incoming.Notes, existing.Notes)
+			setUnlessLocked(locks, existing.ID, "role", incoming.Role, &existing.Role)
+			setUnlessLocked(locks, existing.ID, "personality", incoming.Personality, &existing.Personality)
+			setUnlessLocked(locks, existing.ID, "appearance", incoming.Appearance, &existing.Appearance)
+			setUnlessLocked(locks, existing.ID, "relationships", incoming.Relationships, &existing.Relationships)
+			setUnlessLocked(locks, existing.ID, "state", incoming.State, &existing.State)
+			setUnlessLocked(locks, existing.ID, "notes", incoming.Notes, &existing.Notes)
 		}
 		existing.Aliases = mergeList(existing.Aliases, incoming.Aliases, 8, existing.Name)
 		if incoming.Name != existing.Name {
@@ -101,8 +107,8 @@ func applyChapter(knowledge *novel.Knowledge, chapter novel.Chapter, result chap
 		existing := &knowledge.World[index]
 		newer := chapter.Index >= existing.LastSeen
 		if newer {
-			existing.Category = firstNonEmpty(incoming.Category, existing.Category)
-			existing.Content = firstNonEmpty(incoming.Content, existing.Content)
+			setUnlessLocked(locks, existing.ID, "category", incoming.Category, &existing.Category)
+			setUnlessLocked(locks, existing.ID, "content", incoming.Content, &existing.Content)
 		}
 		existing.Aliases = mergeList(existing.Aliases, incoming.Aliases, 8, existing.Title)
 		if incoming.Title != existing.Title {
@@ -229,4 +235,12 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// setUnlessLocked 仅当字段未被人工锁定时写入；锁定时保留现值。
+func setUnlessLocked(locks novel.FieldLockSet, entryID, field, incoming string, dst *string) {
+	if locks.Locked(entryID, field) || incoming == "" {
+		return
+	}
+	*dst = incoming
 }

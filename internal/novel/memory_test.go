@@ -113,11 +113,11 @@ func TestPlanNormalizeFlexibilityDefault(t *testing.T) {
 
 func validEventForValidation() StoryEvent {
 	return StoryEvent{
-		ID:        "evt_a1",
+		ID:         "evt_a1",
 		MemoryMeta: baseMeta(),
-		Status:    EventProposed,
-		EventType: "other",
-		Summary:   "事件摘要",
+		Status:     EventProposed,
+		EventType:  "other",
+		Summary:    "事件摘要",
 	}
 }
 

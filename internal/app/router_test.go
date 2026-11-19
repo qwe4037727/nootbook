@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"novelagent/internal/agentruntime"
+	"novelagent/internal/novel"
 	"novelagent/internal/project"
+	"novelagent/internal/store"
 )
 
 type mockProject struct {
@@ -156,17 +158,25 @@ func TestRouterRoutesProjectsAndRecordsEcho(t *testing.T) {
 			t.Fatalf("GET runs status = %d: %s", status, data)
 		}
 		var payload struct {
-			ProjectID string                   `json:"projectId"`
-			Runs      []agentruntime.RunRecord `json:"runs"`
+			Runs []agentruntime.RunRecord `json:"runs"`
 		}
 		if err := json.Unmarshal(data, &payload); err != nil {
 			t.Fatalf("decode runs: %v", err)
 		}
-		if payload.ProjectID != first.ID {
-			t.Fatalf("runs project = %q, want %q", payload.ProjectID, first.ID)
+		for _, run := range payload.Runs {
+			if run.ProjectID != first.ID {
+				t.Fatalf("run project = %q, want %q", run.ProjectID, first.ID)
+			}
 		}
 		runs = payload.Runs
-		if len(runs) > 0 {
+		hasEcho := false
+		for _, run := range runs {
+			if run.Agent == "echo" && run.Status == agentruntime.StatusDone {
+				hasEcho = true
+				break
+			}
+		}
+		if hasEcho {
 			break
 		}
 		time.Sleep(25 * time.Millisecond)
@@ -174,8 +184,15 @@ func TestRouterRoutesProjectsAndRecordsEcho(t *testing.T) {
 	if len(runs) == 0 {
 		t.Fatalf("Echo run not recorded after chapter save")
 	}
-	if runs[0].Status != agentruntime.StatusDone || runs[0].Agent != "echo" {
-		t.Fatalf("echo run = %+v", runs[0])
+	hasEcho := false
+	for _, run := range runs {
+		if run.Agent == "echo" && run.Status == agentruntime.StatusDone {
+			hasEcho = true
+			break
+		}
+	}
+	if !hasEcho {
+		t.Fatalf("echo run missing: %+v", runs)
 	}
 
 	status, data = doJSON(t, server.Client(), server.URL, "GET", "/api/agents/runs?limit=20", second.ID, nil)
@@ -245,6 +262,93 @@ func TestRouterProjectCRUD(t *testing.T) {
 	status, data = doJSON(t, server.Client(), server.URL, "GET", "/api/project", created.ID, nil)
 	if status != http.StatusNotFound {
 		t.Fatalf("deleted project status = %d: %s", status, data)
+	}
+}
+
+func TestWorldDataIsolatedPerProject(t *testing.T) {
+	manager, handler := newTestRouter(t)
+	first, err := manager.Create("作品甲")
+	if err != nil {
+		t.Fatalf("create first: %v", err)
+	}
+	second, err := manager.Create("作品乙")
+	if err != nil {
+		t.Fatalf("create second: %v", err)
+	}
+	firstRT, err := manager.Runtime(first.ID)
+	if err != nil {
+		t.Fatalf("first runtime: %v", err)
+	}
+	secondRT, err := manager.Runtime(second.ID)
+	if err != nil {
+		t.Fatalf("second runtime: %v", err)
+	}
+	seed := func(st *store.Store, role string) (novel.Character, error) {
+		project, err := st.ImportChapters("同名角色", []novel.Chapter{{Title: "第一章", Content: "林砚登场。"}})
+		if err != nil {
+			return novel.Character{}, err
+		}
+		character := novel.Character{ID: novel.NewID("c"), Name: "林砚", Role: role, LastSeen: 1}
+		knowledge := novel.NewKnowledge()
+		knowledge.Characters = []novel.Character{character}
+		if _, ok, err := st.CommitAnalysis(project.Revision, 1, knowledge); err != nil || !ok {
+			return novel.Character{}, err
+		}
+		project, err = st.LoadProject()
+		if err != nil {
+			return novel.Character{}, err
+		}
+		if _, ok, err := st.FinishAnalysis(project.Revision, knowledge); err != nil || !ok {
+			return novel.Character{}, err
+		}
+		return character, nil
+	}
+	characterA, err := seed(firstRT.Store, "甲-project-捕快")
+	if err != nil {
+		t.Fatalf("seed A: %v", err)
+	}
+	characterB, err := seed(secondRT.Store, "乙-project-掌柜")
+	if err != nil {
+		t.Fatalf("seed B: %v", err)
+	}
+	if characterA.ID == characterB.ID {
+		t.Fatalf("character ids crossed projects")
+	}
+	if err := firstRT.Store.SetKBFieldLocks(characterA.ID, []string{"role"}); err != nil {
+		t.Fatalf("lock A: %v", err)
+	}
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	status, data := doJSON(t, server.Client(), server.URL, "GET", "/api/world/entries", first.ID, nil)
+	if status != http.StatusOK {
+		t.Fatalf("GET entries A = %d: %s", status, data)
+	}
+	var entriesA []novel.KBEntry
+	if err := json.Unmarshal(data, &entriesA); err != nil {
+		t.Fatalf("decode entries A: %v", err)
+	}
+	if len(entriesA) != 1 || entriesA[0].ID != characterA.ID || entriesA[0].Fields["role"] != "甲-project-捕快" {
+		t.Fatalf("entries A = %+v", entriesA)
+	}
+	if len(entriesA[0].LockedFields) != 1 || entriesA[0].LockedFields[0] != "role" {
+		t.Fatalf("locks A = %+v", entriesA[0].LockedFields)
+	}
+
+	status, data = doJSON(t, server.Client(), server.URL, "GET", "/api/world/entries", second.ID, nil)
+	if status != http.StatusOK {
+		t.Fatalf("GET entries B = %d: %s", status, data)
+	}
+	var entriesB []novel.KBEntry
+	if err := json.Unmarshal(data, &entriesB); err != nil {
+		t.Fatalf("decode entries B: %v", err)
+	}
+	if len(entriesB) != 1 || entriesB[0].ID != characterB.ID || entriesB[0].Fields["role"] != "乙-project-掌柜" {
+		t.Fatalf("entries B = %+v", entriesB)
+	}
+	if len(entriesB[0].LockedFields) != 0 {
+		t.Fatalf("project B inherited locks from A: %+v", entriesB[0].LockedFields)
 	}
 }
 

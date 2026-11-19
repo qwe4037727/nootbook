@@ -21,6 +21,7 @@ func newReviewTestHandler(t *testing.T) (http.Handler, *store.Store, string) {
 	if err != nil {
 		t.Fatalf("store.New: %v", err)
 	}
+	t.Cleanup(func() { _ = st.Close() })
 	static := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<!doctype html><title>novel test</title>")},
 	}

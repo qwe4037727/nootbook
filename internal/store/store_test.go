@@ -18,6 +18,7 @@ func newTestStore(t *testing.T) (*Store, string) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
+	t.Cleanup(func() { _ = st.Close() })
 	return st, dir
 }
 

@@ -12,12 +12,17 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"novelagent/internal/adapt"
 	"novelagent/internal/agent"
 	"novelagent/internal/analysis"
+	"novelagent/internal/continuation"
 	"novelagent/internal/llm"
+	"novelagent/internal/milestone"
 	"novelagent/internal/novel"
 	"novelagent/internal/plan"
 	"novelagent/internal/store"
+	"novelagent/internal/task"
+	"novelagent/internal/world"
 )
 
 type AnalysisNotifier interface {
@@ -32,13 +37,37 @@ type Server struct {
 	analyzer  AnalysisNotifier
 	extractor *analysis.ExtractLauncher
 	planner   *plan.Generator
+	milestone milestone.Config
+	world     *world.Service
+	adapt     *adapt.Service
+	tasks     *task.Service
+	cont      *continuation.Service
 }
 
 func New(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNotifier, extractor *analysis.ExtractLauncher) http.Handler {
+	return NewWithMilestone(st, static, logger, analyzer, extractor, milestone.Load(""))
+}
+
+// NewWithMilestone 由 app.Router 传入项目所属的里程碑配置；New 保留给测试与单项目嵌入，
+// 使用内置默认（M1–M5 启用）。tasks 可选：M4/M5 路由需要任务调度中心。
+func NewWithMilestone(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNotifier, extractor *analysis.ExtractLauncher, cfg milestone.Config, taskServices ...*task.Service) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	s := &Server{store: st, static: static, log: logger, analyzer: analyzer, extractor: extractor}
+	s := &Server{
+		store:     st,
+		static:    static,
+		log:       logger,
+		analyzer:  analyzer,
+		extractor: extractor,
+		milestone: cfg,
+		world:     world.NewService(st, logger),
+		adapt:     adapt.NewService(st, logger),
+		cont:      continuation.NewService(st, logger),
+	}
+	if len(taskServices) > 0 {
+		s.tasks = taskServices[0]
+	}
 	s.planner = plan.NewGenerator(st, logger)
 
 	mux := http.NewServeMux()
@@ -58,6 +87,22 @@ func New(st *store.Store, static fs.FS, logger *slog.Logger, analyzer AnalysisNo
 	s.registerMemoryReviewRoutes(mux)
 	s.registerPlanRoutes(mux)
 	s.registerDraftRoutes(mux)
+	s.registerAgentRoutes(mux)
+	if cfg.M2Enabled {
+		s.registerWorldRoutes(mux)
+	}
+	if cfg.M3Enabled {
+		s.registerAdaptRoutes(mux)
+	}
+	if cfg.M4Enabled {
+		s.registerManuscriptRoutes(mux)
+	}
+	if cfg.M4Enabled || cfg.M5Enabled {
+		s.registerTaskRoutes(mux)
+	}
+	if cfg.M5Enabled {
+		s.registerAuditRoutes(mux)
+	}
 	mux.Handle("/", http.FileServer(http.FS(static)))
 
 	return withHeaders(mux)
@@ -131,12 +176,15 @@ const maxImportChars = 5_000_000
 type importRequest struct {
 	Title string `json:"title"`
 	Text  string `json:"text"`
+	// Mode 为空/overwrite 覆盖导入；append 追加导入（只新增章节，保留记忆与既有章节）。
+	Mode string `json:"mode"`
 }
 
 type importResponse struct {
 	Project          publicProject `json:"project"`
 	ImportedChapters int           `json:"importedChapters"`
 	ImportedChars    int           `json:"importedChars"`
+	TotalChars       int           `json:"totalChars"`
 }
 
 func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
@@ -173,22 +221,42 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 		title = "未命名小说"
 	}
 
-	project, err := s.store.ImportChapters(title, chapters)
+	mode := strings.ToLower(strings.TrimSpace(req.Mode))
+	var err error
+	var project novel.Project
+	if mode == "append" {
+		if !s.milestone.M4Enabled {
+			writeError(w, http.StatusNotFound, "追加导入未启用")
+			return
+		}
+		var appended []novel.Chapter
+		project, appended, err = s.store.AppendImport(title, chapters)
+		if err == nil {
+			chapters = appended
+		}
+	} else {
+		project, err = s.store.ImportChapters(title, chapters)
+	}
 	if err != nil {
-		s.log.Error("import chapters", "err", err)
+		s.log.Error("import chapters", "err", err, "mode", mode)
 		writeError(w, http.StatusInternalServerError, "导入文稿失败")
 		return
 	}
 	s.notifyAnalysis()
 
+	imported := 0
+	for _, chapter := range chapters {
+		imported += chapter.CharCount
+	}
 	total := 0
 	for _, chapter := range project.Chapters {
 		total += chapter.CharCount
 	}
 	writeJSON(w, http.StatusOK, importResponse{
 		Project:          publicProjectOf(project),
-		ImportedChapters: len(project.Chapters),
-		ImportedChars:    total,
+		ImportedChapters: len(chapters),
+		ImportedChars:    imported,
+		TotalChars:       total,
 	})
 }
 

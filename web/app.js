@@ -79,6 +79,22 @@ const draftRejectReason = $("draftRejectReason");
 const draftChangeSet = $("draftChangeSet");
 const draftDetailStatus = $("draftDetailStatus");
 
+const agentCenterButton = $("agentCenterButton");
+const agentCenterDialog = $("agentCenterDialog");
+const agentRefreshButton = $("agentRefreshButton");
+const agentConfigList = $("agentConfigList");
+const agentStatsList = $("agentStatsList");
+const agentRunList = $("agentRunList");
+const agentRunHint = $("agentRunHint");
+const agentReportList = $("agentReportList");
+const foreshadowList = $("foreshadowList");
+const agentProposalList = $("agentProposalList");
+const draftMemorySyncDialog = $("draftMemorySyncDialog");
+const draftMemorySyncReextractButton = $("draftMemorySyncReextractButton");
+const draftMemorySyncBodyOnlyButton = $("draftMemorySyncBodyOnlyButton");
+const draftMemorySyncCancelButton = $("draftMemorySyncCancelButton");
+const draftMemorySyncCancel = $("draftMemorySyncCancel");
+
 const toast = $("toast");
 
 const settingsDialog = $("settingsDialog");
@@ -1944,18 +1960,20 @@ async function extractDraftMemory() {
   }
 }
 
-async function confirmPersistedDraft() {
+async function confirmPersistedDraft(memorySync = "") {
   if (!persistedDraft || draftDetailBusy || persistedDraft.status !== "pending_confirmation") return;
-  const saved = await flushChapterSave();
-  if (!saved) {
-    showToast("当前章节尚未保存，暂不能确认提交", true);
-    return;
+  if (!memorySync) {
+    const saved = await flushChapterSave();
+    if (!saved) {
+      showToast("当前章节尚未保存，暂不能确认提交", true);
+      return;
+    }
+    const action = persistedDraft.newChapter
+      ? "将新建章节"
+      : "将覆盖" + draftTargetLabel(persistedDraft).replace(/^并入/, "");
+    if (!window.confirm(`确认联合提交？${action}，并同时写入已提取的记忆变更。`)) return;
   }
-  const action = persistedDraft.newChapter
-    ? "将新建章节"
-    : "将覆盖" + draftTargetLabel(persistedDraft).replace(/^并入/, "");
-  if (!window.confirm(`确认联合提交？${action}，并同时写入已提取的记忆变更。`)) return;
-  setDraftDetailBusy(true, "正在联合提交…");
+  setDraftDetailBusy(true, memorySync === "reextract" ? "正在重新提取记忆并提交…" : "正在联合提交…");
   try {
     const result = await api("/api/drafts/" + encodeURIComponent(persistedDraft.id) + "/confirm", {
       method: "POST",
@@ -1963,6 +1981,7 @@ async function confirmPersistedDraft() {
         draftRevision: persistedDraft.draftRevision,
         expectedChapterRevision: persistedDraft.newChapter ? 0 : persistedDraft.baseChapterRevision,
         expectedMemoryRevision: 0,
+        memorySync,
       }),
     });
     if (result && result.draft) persistedDraft = normalizeDraft(result.draft);
@@ -1977,13 +1996,21 @@ async function confirmPersistedDraft() {
     const chapterID = result && result.chapter ? result.chapter.id : persistedDraft.targetChapterId;
     const memoryRevision = result ? Number(result.memoryRevision) || 0 : 0;
     const conflicts = result && Array.isArray(result.conflicts) ? result.conflicts.length : 0;
-    showToast(`已联合提交 · commit ${result.commitId} · 记忆 revision ${memoryRevision}` + (conflicts ? ` · ${conflicts} 冲突` : ""));
+    const syncState = result && result.memorySyncState;
+    const syncLabel = syncState === "body_only" ? "正文已提交（记忆未更新）" : "正文与记忆已提交";
+    showToast(`${syncLabel} · commit ${result.commitId} · 记忆 revision ${memoryRevision}` + (conflicts ? ` · ${conflicts} 冲突` : ""));
     if (chapterID) {
       closeDialog(draftBoxDialog);
       await openChapter(chapterID);
     }
     ensureAnalysisPolling();
   } catch (error) {
+    if (error.code === "draft_memory_stale" && !memorySync) {
+      setDraftDetailBusy(false);
+      const choice = await askDraftMemorySync();
+      if (choice) await confirmPersistedDraft(choice);
+      return;
+    }
     await handleDraftActionError(error, "确认提交失败");
   } finally {
     setDraftDetailBusy(false);
@@ -2082,6 +2109,287 @@ async function saveGenerationToDraftBox() {
     persistDraftButton.disabled = false;
     persistTarget.disabled = false;
   }
+}
+
+
+function agentEl(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function agentEmpty(container, message) {
+  container.replaceChildren();
+  container.append(agentEl("p", "empty-state small", message));
+}
+
+function formatAgentTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("zh-CN", { hour12: false });
+}
+
+function openAgentCenter() {
+  showDialog(agentCenterDialog);
+  void refreshAgentCenter();
+}
+
+async function refreshAgentCenter() {
+  agentRefreshButton.disabled = true;
+  await Promise.all([
+    loadAgentConfig(),
+    loadAgentStats(),
+    loadAgentRuns(),
+    loadAgentReports(),
+    loadForeshadowLedger(),
+    loadAgentProposals(),
+  ]);
+  agentRefreshButton.disabled = false;
+}
+
+async function loadAgentConfig() {
+  try {
+    const data = await api("/api/agents/config");
+    const agents = Array.isArray(data && data.agents) ? data.agents : [];
+    agentConfigList.replaceChildren();
+    if (!agents.length) {
+      agentEmpty(agentConfigList, "本里程碑没有可配置的 Agent。");
+      return;
+    }
+    for (const agent of agents) {
+      const row = agentEl("div", "agent-config-row");
+      const toggle = document.createElement("input");
+      toggle.type = "checkbox";
+      toggle.checked = Boolean(agent.enabled);
+      toggle.setAttribute("aria-label", (agent.name || agent.key) + " 开关");
+      const meta = agentEl("div", "agent-meta");
+      meta.append(agentEl("strong", "", agent.name || agent.key));
+      const source = agent.source === "project" ? "项目配置" : "里程碑默认";
+      meta.append(agentEl("small", "", `${agent.key} · ${source} · 触发：${(agent.triggers || []).join(" / ")}`));
+      const level = document.createElement("select");
+      for (const [value, label] of [["observe", "observe 只报告"], ["propose", "propose 提案送审"], ["autonomous", "autonomous 低风险自动"]]) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        option.selected = agent.level === value;
+        level.append(option);
+      }
+      const save = async () => {
+        toggle.disabled = true;
+        level.disabled = true;
+        try {
+          await api("/api/agents/config/" + encodeURIComponent(agent.key), {
+            method: "PUT",
+            body: JSON.stringify({ enabled: toggle.checked, level: level.value }),
+          });
+          showToast(`${agent.name || agent.key} 已更新`);
+          await loadAgentConfig();
+        } catch (error) {
+          showToast("更新 Agent 配置失败：" + error.message, true);
+          await loadAgentConfig();
+        }
+      };
+      toggle.addEventListener("change", () => void save());
+      level.addEventListener("change", () => void save());
+      row.append(toggle, meta, level);
+      agentConfigList.append(row);
+    }
+  } catch (error) {
+    agentEmpty(agentConfigList, "读取 Agent 配置失败：" + error.message);
+  }
+}
+
+async function loadAgentStats() {
+  try {
+    const data = await api("/api/agents/stats?days=7");
+    const stats = Array.isArray(data && data.stats) ? data.stats : [];
+    agentStatsList.replaceChildren();
+    if (!stats.length) {
+      agentEmpty(agentStatsList, "近 7 天还没有 Agent 运行记录。保存章节或导入文稿后会自动触发。");
+      return;
+    }
+    for (const item of stats) {
+      const row = agentEl("div", "agent-list-row");
+      const meta = agentEl("div", "agent-meta");
+      meta.append(agentEl("strong", "", item.agentName || item.agent));
+      meta.append(agentEl("small", "", `运行 ${item.runs} 次 · 失败 ${item.failed} 次 · 平均耗时 ${item.avgDurationMs} ms · 输入/输出 token ${item.promptTokens}/${item.completionTokens}`));
+      row.append(meta, agentEl("span", "agent-severity is-info", `总 token ${item.totalTokens}`));
+      agentStatsList.append(row);
+    }
+  } catch (error) {
+    agentEmpty(agentStatsList, "读取成本统计失败：" + error.message);
+  }
+}
+
+async function loadAgentRuns() {
+  try {
+    const data = await api("/api/agents/runs?limit=40");
+    const runs = Array.isArray(data && data.runs) ? data.runs : [];
+    agentRunList.replaceChildren();
+    agentRunHint.textContent = runs.length ? `最近 ${runs.length} 条` : "";
+    if (!runs.length) {
+      agentEmpty(agentRunList, "暂无运行日志。");
+      return;
+    }
+    for (const run of runs) {
+      const row = agentEl("div", "agent-log-row");
+      row.append(agentEl("span", "", formatAgentTime(run.startedAt)));
+      const meta = agentEl("span", "");
+      meta.append(agentEl("strong", "", `${run.agentName || run.agent} · ${run.status}`));
+      meta.append(document.createTextNode(" " + (run.summary || run.error || "")));
+      row.append(meta);
+      const tokens = Number(run.tokens) || 0;
+      row.append(agentEl("span", "", `${run.durationMs} ms · ${tokens} token`));
+      agentRunList.append(row);
+    }
+  } catch (error) {
+    agentEmpty(agentRunList, "读取运行日志失败：" + error.message);
+  }
+}
+
+async function loadAgentReports() {
+  try {
+    const data = await api("/api/agents/reports?limit=30");
+    const reports = Array.isArray(data && data.reports) ? data.reports : [];
+    agentReportList.replaceChildren();
+    if (!reports.length) {
+      agentEmpty(agentReportList, "暂无审计报告。");
+      return;
+    }
+    for (const report of reports) {
+      const row = agentEl("div", "agent-list-row");
+      const meta = agentEl("div", "agent-meta");
+      meta.append(agentEl("strong", "", `${report.agentName || report.agent} · ${formatAgentTime(report.createdAt)}`));
+      meta.append(agentEl("small", "", report.summary || ""));
+      const findings = Array.isArray(report.findings) ? report.findings : [];
+      for (const finding of findings.slice(0, 4)) {
+        const detail = agentEl("small", "", `· [${finding.severity || "info"}] ${finding.detail || finding.type || ""}${finding.quote ? "｜" + finding.quote : ""}`);
+        meta.append(detail);
+        if (finding.chapterId) {
+          const link = agentEl("button", "btn btn-quiet btn-sm", `打开第 ${finding.chapterIndex || "?"} 章证据`);
+          link.type = "button";
+          link.addEventListener("click", () => {
+            closeDialog(agentCenterDialog);
+            void openChapter(finding.chapterId);
+          });
+          meta.append(link);
+        }
+      }
+      const severity = agentEl("span", "agent-severity is-" + (report.severity || "info"), report.severity || "info");
+      row.append(meta, severity);
+      agentReportList.append(row);
+    }
+  } catch (error) {
+    agentEmpty(agentReportList, "读取审计报告失败：" + error.message);
+  }
+}
+
+async function loadForeshadowLedger() {
+  try {
+    const data = await api("/api/foreshadows?limit=80");
+    const records = Array.isArray(data && data.foreshadows) ? data.foreshadows : [];
+    foreshadowList.replaceChildren();
+    if (!records.length) {
+      agentEmpty(foreshadowList, "暂无伏笔候选。A3 会在章节保存后自动扫描。");
+      return;
+    }
+    for (const record of records) {
+      const row = agentEl("div", "agent-list-row");
+      const meta = agentEl("div", "agent-meta");
+      meta.append(agentEl("strong", "", `第 ${record.chapterIndex} 章「${record.title}」 · ${record.status}`));
+      meta.append(agentEl("small", "", `${record.kind} · ${record.quote || ""}`));
+      const actions = agentEl("div", "agent-actions");
+      if (record.status !== "confirmed") {
+        const confirm = agentEl("button", "btn btn-quiet btn-sm", "确认");
+        confirm.type = "button";
+        confirm.addEventListener("click", () => void updateForeshadow(record.id, "confirmed"));
+        actions.append(confirm);
+      }
+      if (record.status !== "dismissed") {
+        const dismiss = agentEl("button", "btn btn-quiet btn-sm", "废弃");
+        dismiss.type = "button";
+        dismiss.addEventListener("click", () => void updateForeshadow(record.id, "dismissed"));
+        actions.append(dismiss);
+      }
+      row.append(meta, actions);
+      foreshadowList.append(row);
+    }
+  } catch (error) {
+    agentEmpty(foreshadowList, "读取伏笔台账失败：" + error.message);
+  }
+}
+
+async function updateForeshadow(id, status) {
+  try {
+    await api("/api/foreshadows/" + encodeURIComponent(id), { method: "PATCH", body: JSON.stringify({ status }) });
+    showToast(status === "confirmed" ? "伏笔已确认" : "伏笔已废弃");
+    await loadForeshadowLedger();
+  } catch (error) {
+    showToast("更新伏笔失败：" + error.message, true);
+  }
+}
+
+async function loadAgentProposals() {
+  try {
+    const data = await api("/api/agents/proposals?status=pending&limit=50");
+    const proposals = Array.isArray(data && data.proposals) ? data.proposals : [];
+    agentProposalList.replaceChildren();
+    if (!proposals.length) {
+      agentEmpty(agentProposalList, "没有待审提案。");
+      return;
+    }
+    for (const proposal of proposals) {
+      const row = agentEl("div", "agent-list-row");
+      const meta = agentEl("div", "agent-meta");
+      meta.append(agentEl("strong", "", `${proposal.kind} · ${proposal.risk} 风险`));
+      meta.append(agentEl("small", "", proposal.summary || ""));
+      const actions = agentEl("div", "agent-actions");
+      const accept = agentEl("button", "btn btn-quiet btn-sm", "接受");
+      accept.type = "button";
+      accept.addEventListener("click", () => void updateProposal(proposal.id, "accepted"));
+      const reject = agentEl("button", "btn btn-quiet btn-sm", "驳回");
+      reject.type = "button";
+      reject.addEventListener("click", () => void updateProposal(proposal.id, "rejected"));
+      actions.append(accept, reject);
+      row.append(meta, actions);
+      agentProposalList.append(row);
+    }
+  } catch (error) {
+    agentEmpty(agentProposalList, "读取提案失败：" + error.message);
+  }
+}
+
+async function updateProposal(id, status) {
+  try {
+    await api("/api/agents/proposals/" + encodeURIComponent(id), { method: "PATCH", body: JSON.stringify({ status }) });
+    showToast(status === "accepted" ? "提案已接受（仍需在记忆审阅中人工处理）" : "提案已驳回");
+    await loadAgentProposals();
+  } catch (error) {
+    showToast("更新提案失败：" + error.message, true);
+  }
+}
+
+function askDraftMemorySync() {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      closeDialog(draftMemorySyncDialog);
+      resolve(value);
+    };
+    draftMemorySyncReextractButton.onclick = () => finish("reextract");
+    draftMemorySyncBodyOnlyButton.onclick = () => finish("body_only");
+    draftMemorySyncCancelButton.onclick = () => finish("");
+    draftMemorySyncCancel.onclick = () => finish("");
+    draftMemorySyncDialog.oncancel = (event) => {
+      event.preventDefault();
+      finish("");
+    };
+    showDialog(draftMemorySyncDialog);
+  });
 }
 
 function showDialog(dialog) {
@@ -2728,6 +3036,8 @@ function bindEvents() {
   settingsButton.addEventListener("click", openSettings);
 
   planButton.addEventListener("click", openPlanDialog);
+  agentCenterButton.addEventListener("click", openAgentCenter);
+  agentRefreshButton.addEventListener("click", () => void refreshAgentCenter());
   planRefreshButton.addEventListener("click", () => {
     void loadPlanTree();
   });

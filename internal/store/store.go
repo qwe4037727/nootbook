@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -115,6 +116,9 @@ type Store struct {
 	// changeHook/changeHookMu 为实例级章节变更事件钩子（Agent 运行时消费）。
 	changeHookMu sync.RWMutex
 	changeHook   ChapterChangeHook
+	// agentDBMu 守护本项目的 agent.db（运行日志/伏笔台账/报告/提案/配置）。
+	agentDBMu sync.Mutex
+	agentDB   *sql.DB
 	// memoryMu 独立守护 data/memory/（spec §10/§4.1.4：与 store.mu 无嵌套；
 	// 需要两者数据的操作先取 store.mu 读、释放后再取 memoryMu 写）。
 	memoryMu sync.Mutex
@@ -139,6 +143,9 @@ type Store struct {
 	extractRunCounter uint64
 	extractCurrentRun uint64
 }
+
+// Dir 返回项目数据目录（只读路径信息，供里程碑配置定位使用）。
+func (s *Store) Dir() string { return s.dir }
 
 func New(dir string) (*Store, error) {
 	if strings.TrimSpace(dir) == "" {
@@ -433,6 +440,7 @@ func (s *Store) SaveChapter(chapter novel.Chapter) (novel.Chapter, novel.Project
 	if err := s.writeChapterLocked(chapter); err != nil {
 		return novel.Chapter{}, novel.Project{}, err
 	}
+	s.recordChapterVersion(existing, ChapterVersionSave)
 
 	project.Chapters[metaIndex] = chapter.Meta()
 	state := project.Analysis

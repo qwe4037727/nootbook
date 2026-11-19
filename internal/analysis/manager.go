@@ -130,6 +130,11 @@ func (m *Manager) step(ctx context.Context) bool {
 		m.log.Error("load knowledge", "err", err)
 		return false
 	}
+	locks, err := m.store.LoadFieldLocksIfPresent()
+	if err != nil {
+		m.log.Error("load field locks", "err", err)
+		return false
+	}
 
 	revision := project.Revision
 	if status == novel.AnalysisPending {
@@ -174,7 +179,7 @@ func (m *Manager) step(ctx context.Context) bool {
 				}
 				return m.markFailed(project.Revision, "分析结果格式异常，请重试")
 			}
-			applyChapter(&knowledge, chapter, result)
+			applyChapterWithLocks(&knowledge, chapter, result, locks)
 		}
 
 		updated, ok, err := m.store.CommitAnalysis(project.Revision, chapter.Index, knowledge)

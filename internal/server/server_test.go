@@ -32,6 +32,7 @@ func newTestHandler(t *testing.T) (http.Handler, *store.Store, *fakeAnalyzer) {
 	if err != nil {
 		t.Fatalf("store.New: %v", err)
 	}
+	t.Cleanup(func() { _ = st.Close() })
 	static := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<!doctype html><title>novel test</title>")},
 	}
@@ -256,6 +257,7 @@ func TestAnalyzeWithoutManager(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.New: %v", err)
 	}
+	t.Cleanup(func() { _ = st.Close() })
 	static := fstest.MapFS{"index.html": &fstest.MapFile{Data: []byte("ok")}}
 	h := New(st, static, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, nil)
 	rec := serveJSON(t, h, http.MethodPost, "/api/analyze", nil)

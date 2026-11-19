@@ -18,8 +18,11 @@ import (
 	_ "modernc.org/sqlite"
 
 	"novelagent/internal/agentruntime"
+	agentspkg "novelagent/internal/agents"
 	"novelagent/internal/analysis"
+	"novelagent/internal/milestone"
 	"novelagent/internal/store"
+	"novelagent/internal/task"
 )
 
 const (
@@ -54,6 +57,8 @@ type Runtime struct {
 	Analyzer  *analysis.Manager
 	Extractor *analysis.ExtractLauncher
 	Agents    *agentruntime.Runtime
+	Tasks     *task.Service
+	Milestone milestone.Config
 }
 
 // Manager 管理项目索引与按项目隔离的运行时。
@@ -61,9 +66,10 @@ type Runtime struct {
 // 目录约定：root 本身是默认项目的数据目录（兼容旧版单项目数据，无需搬迁）；
 // 新项目位于 root/projects/<id>/；索引为 root/projects.db。
 type Manager struct {
-	root string
-	log  *slog.Logger
-	db   *sql.DB
+	root      string
+	log       *slog.Logger
+	db        *sql.DB
+	milestone milestone.Config
 
 	mu       sync.Mutex
 	runtimes map[string]*Runtime
@@ -97,10 +103,11 @@ func NewManager(root string, logger *slog.Logger) (*Manager, error) {
 		return nil, fmt.Errorf("project: set busy timeout: %w", err)
 	}
 	m := &Manager{
-		root:     root,
-		log:      logger,
-		db:       db,
-		runtimes: make(map[string]*Runtime),
+		root:      root,
+		log:       logger,
+		db:        db,
+		milestone: milestone.Load(root),
+		runtimes:  make(map[string]*Runtime),
 	}
 	if err := m.initIndex(); err != nil {
 		db.Close()
@@ -178,6 +185,9 @@ func (m *Manager) Start(ctx context.Context) error {
 		// （Start 均为幂等，重复调用安全）。
 		rt.Analyzer.Start(ctx)
 		rt.Agents.Start(ctx)
+		if rt.Tasks != nil {
+			rt.Tasks.Start(ctx)
+		}
 	}
 	return nil
 }
@@ -199,8 +209,12 @@ func (m *Manager) Stop() {
 	m.mu.Unlock()
 
 	for _, rt := range runtimes {
+		if rt.Tasks != nil {
+			rt.Tasks.Stop()
+		}
 		rt.Agents.Stop()
 		rt.Analyzer.Stop()
+		_ = rt.Store.Close()
 	}
 	_ = m.db.Close()
 }
@@ -252,6 +266,61 @@ ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, updated_at DESC`, DefaultID)
 		out = append(out, info)
 	}
 	return out, rows.Err()
+}
+
+// ProjectCost 是全局成本看板中的单项目条目。
+type ProjectCost struct {
+	ProjectID string            `json:"projectId"`
+	Name      string            `json:"name"`
+	Summary   store.CostSummary `json:"summary"`
+}
+
+// GlobalCost 汇总所有项目的 token 成本与任务状态（跨项目只返回聚合数据）。
+type GlobalCost struct {
+	Since      time.Time        `json:"since,omitempty"`
+	Projects   []ProjectCost    `json:"projects"`
+	Total      store.CostBucket `json:"total"`
+	TaskCounts map[string]int64 `json:"taskCounts"`
+}
+
+// GlobalCostSummary 汇总所有项目的成本看板；单个项目读取失败不影响其他项目。
+func (m *Manager) GlobalCostSummary(since time.Time) (GlobalCost, error) {
+	infos, err := m.listRows()
+	if err != nil {
+		return GlobalCost{}, err
+	}
+	out := GlobalCost{
+		Since:      since,
+		Projects:   make([]ProjectCost, 0, len(infos)),
+		TaskCounts: map[string]int64{},
+	}
+	out.Total.Source = "all"
+	for _, info := range infos {
+		rt, err := m.runtimeFor(info.ID)
+		if err != nil {
+			m.log.Warn("cost summary project unavailable", "project", info.ID, "err", err)
+			continue
+		}
+		summary, err := rt.Store.CostSummary(since)
+		if err != nil {
+			m.log.Warn("cost summary failed", "project", info.ID, "err", err)
+			continue
+		}
+		out.Projects = append(out.Projects, ProjectCost{ProjectID: info.ID, Name: info.Name, Summary: summary})
+		out.Total.Calls += summary.Total.Calls
+		out.Total.Failed += summary.Total.Failed
+		out.Total.PromptTokens += summary.Total.PromptTokens
+		out.Total.CompletionTokens += summary.Total.CompletionTokens
+		out.Total.TotalTokens += summary.Total.TotalTokens
+		for status, count := range summary.TaskCounts {
+			out.TaskCounts[status] += count
+		}
+	}
+	return out, nil
+}
+
+func (m *Manager) M5Enabled() bool {
+	return m.milestone.M5Enabled
 }
 
 func (m *Manager) Get(id string) (Info, error) {
@@ -370,8 +439,12 @@ func (m *Manager) Delete(id string) error {
 	delete(m.runtimes, id)
 	m.mu.Unlock()
 	if rt != nil {
+		if rt.Tasks != nil {
+			rt.Tasks.Stop()
+		}
 		rt.Agents.Stop()
 		rt.Analyzer.Stop()
+		_ = rt.Store.Close()
 	}
 	if _, err := m.db.Exec(`DELETE FROM projects WHERE id = ?`, id); err != nil {
 		return fmt.Errorf("project: delete: %w", err)
@@ -423,6 +496,23 @@ func (m *Manager) runtimeFor(id string) (*Runtime, error) {
 	if err != nil {
 		return nil, err
 	}
+	if m.milestone.M1Enabled {
+		agents.SetDefaults(m.milestone.Defaults)
+		agents.Register(
+			&agentspkg.ContinuityAgent{},
+			&agentspkg.FuseAgent{},
+			&agentspkg.MemoryAgent{},
+		)
+	}
+	if m.milestone.M5Enabled {
+		agents.Register(
+			&agentspkg.PlotAgent{},
+			&agentspkg.StyleAgent{},
+			&agentspkg.RelationAgent{},
+			&agentspkg.ProofreadAgent{},
+			&agentspkg.TaskAgent{},
+		)
+	}
 	rt := &Runtime{
 		ID:        id,
 		Dir:       absDir,
@@ -430,6 +520,10 @@ func (m *Manager) runtimeFor(id string) (*Runtime, error) {
 		Analyzer:  analysis.NewManager(st, m.log),
 		Extractor: analysis.NewExtractLauncher(st, m.log),
 		Agents:    agents,
+		Milestone: m.milestone,
+	}
+	if m.milestone.M4Enabled || m.milestone.M5Enabled {
+		rt.Tasks = task.NewService(st, agents, m.log)
 	}
 
 	m.mu.Lock()
@@ -442,6 +536,9 @@ func (m *Manager) runtimeFor(id string) (*Runtime, error) {
 	if m.started && ctx != nil {
 		rt.Analyzer.Start(ctx)
 		rt.Agents.Start(ctx)
+		if rt.Tasks != nil {
+			rt.Tasks.Start(ctx)
+		}
 	}
 	m.mu.Unlock()
 	return rt, nil

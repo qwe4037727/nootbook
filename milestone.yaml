@@ -1,0 +1,49 @@
+# 里程碑开关：M1 世界监修 / 伏笔管家 / 记忆治理；M4 章节增强与快照；M5 剧情推演 / 文风 / 关系情绪 / 校对润色 / 任务执行。
+# Agent 权限三档：observe（只报告）| propose（提案送审）| autonomous（仅低风险自动更新）。
+# 任何 Agent 均禁止自动修改正文、禁止自动删除词条。
+# 本文件可复制到项目数据目录覆盖全局默认；项目级 `/api/agents/config` 可再单独覆盖单个 Agent。
+milestones:
+  m1:
+    enabled: true
+    agents:
+      continuity:
+        enabled: true
+        level: observe
+      fuse:
+        enabled: true
+        level: observe
+      memory:
+        enabled: true
+        level: observe
+  # M2 大世界（统一词条/关系/时间线/字段锁）与 M3 改编工作台已交付。
+  m2:
+    enabled: true
+  m3:
+    enabled: true
+  # M4 章节增强/快照/多候选续写/批量续写已交付。
+  m4:
+    enabled: true
+  # M5 剩余 Agent 与任务/审计/成本中心已交付。
+  m5:
+    enabled: true
+    agents:
+      plot:
+        enabled: true
+        level: observe
+      style:
+        enabled: true
+        level: observe
+      relation:
+        enabled: true
+        level: observe
+      proofread:
+        enabled: true
+        level: observe
+      task:
+        enabled: true
+        level: observe
+  # M6 图像、M7 导出/素材库尚未开发，保持关闭。
+  m6:
+    enabled: false
+  m7:
+    enabled: false

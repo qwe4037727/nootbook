@@ -50,7 +50,9 @@ func TestDraftAPIContractAndTerminalStates(t *testing.T) {
 	}
 	assertMemoryError(t, serveJSON(t, h, http.MethodPatch, "/api/drafts/"+draft.ID, map[string]any{"draftRevision": 1, "content": "x"}), http.StatusConflict, "draft_conflict")
 
-	rec = serveJSON(t, h, http.MethodPost, "/api/drafts/"+draft.ID+"/confirm", map[string]int64{"draftRevision": 2})
+	// #63 闸门：正文在初始记忆同步后被修改，未显式选择时 409。
+	assertMemoryError(t, serveJSON(t, h, http.MethodPost, "/api/drafts/"+draft.ID+"/confirm", map[string]int64{"draftRevision": 2}), http.StatusConflict, "draft_memory_stale")
+	rec = serveJSON(t, h, http.MethodPost, "/api/drafts/"+draft.ID+"/confirm", map[string]any{"draftRevision": 2, "memorySync": "body_only"})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("confirm draft status = %d, body = %s", rec.Code, rec.Body.String())
 	}
@@ -58,7 +60,7 @@ func TestDraftAPIContractAndTerminalStates(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
 		t.Fatalf("decode confirm result: %v", err)
 	}
-	if result.MemoryRevision != 1 || result.Chapter.Content != updated.Content {
+	if result.MemoryRevision != 1 || result.Chapter.Content != updated.Content || result.MemorySyncState != "body_only" {
 		t.Errorf("confirm result = %+v", result)
 	}
 	if loaded, err := st.LoadChapter(draft.TargetChapterID); err != nil || loaded.Content != updated.Content {
@@ -207,6 +209,70 @@ func TestDraftAPIExtractThenAtomicConfirm(t *testing.T) {
 	assertMemoryError(t, serveJSON(t, h, http.MethodPatch, "/api/drafts/"+draft.ID, map[string]any{"draftRevision": 1, "content": "x"}), http.StatusConflict, "draft_terminal")
 }
 
+func TestDraftAPIReextractThenConfirm(t *testing.T) {
+	h, st, dir := newReviewTestHandler(t)
+	knowledge := novel.NewKnowledge()
+	knowledge.Overview = "灵气复苏后的县城。"
+	knowledge.Characters = []novel.Character{{ID: "c_lin", Name: "林越", Role: "捕快", Confidence: 0.9, LastSeen: 1}}
+	writeKnowledgeFile(t, dir, knowledge)
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"choices": []map[string]any{{
+				"message": map[string]string{"role": "assistant", "content": `{"events":[{"summary":"林越推门","eventType":"character_action","participants":["林越"],"participantNamesProvided":true,"quote":"林越推门而入"}]}`},
+			}},
+		})
+	}))
+	defer provider.Close()
+	if _, err := st.SaveConfig(store.Config{BaseURL: provider.URL + "/v1", Model: "mock-model", APIKey: "test-key"}); err != nil {
+		t.Fatalf("SaveConfig: %v", err)
+	}
+
+	rec := serveJSON(t, h, http.MethodPost, "/api/drafts", map[string]string{"content": "林越推门而入。"})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create draft status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var draft novel.Draft
+	if err := json.Unmarshal(rec.Body.Bytes(), &draft); err != nil {
+		t.Fatalf("decode draft: %v", err)
+	}
+	rec = serveJSON(t, h, http.MethodPost, "/api/drafts/"+draft.ID+"/extract", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("extract status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var first struct {
+		ChangeSet novel.ChangeSet `json:"changeset"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &first); err != nil {
+		t.Fatalf("decode extract: %v", err)
+	}
+
+	rec = serveJSON(t, h, http.MethodPatch, "/api/drafts/"+draft.ID, map[string]any{"draftRevision": 1, "content": "林越推门而入。风很冷。"})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("patch status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	rec = serveJSON(t, h, http.MethodPost, "/api/drafts/"+draft.ID+"/confirm", map[string]any{"draftRevision": 2, "memorySync": "reextract"})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("reextract confirm status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var result store.DraftCommitResult
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatalf("decode confirm: %v", err)
+	}
+	if result.MemorySyncState != "synced" || result.MemoryRevision != 1 {
+		t.Errorf("confirm result = %+v", result)
+	}
+	if result.ChangeSetID == "" || result.ChangeSetID == first.ChangeSet.ID {
+		t.Errorf("reextract changeset = %q, want new after %q", result.ChangeSetID, first.ChangeSet.ID)
+	}
+	if events, _, _, _, _, err := st.LoadMemoryRecords(); err != nil || len(events) != 1 {
+		t.Errorf("events after reextract confirm = %+v, err = %v", events, err)
+	}
+	if loaded, err := st.LoadChapter(draft.TargetChapterID); err != nil || loaded.Content != "林越推门而入。风很冷。" {
+		t.Errorf("chapter = %+v, err = %v", loaded.Content, err)
+	}
+}
+
 func TestDraftAPIExtractRequiresEnabledService(t *testing.T) {
 	h, _, _ := newMemoryTestHandler(t)
 	rec := serveJSON(t, h, http.MethodPost, "/api/drafts", map[string]string{"content": "林越推门而入。"})
@@ -266,8 +332,9 @@ func TestDraftAPIExtractConflictAfterEdit(t *testing.T) {
 	}
 	assertMemoryError(t, serveJSON(t, h, http.MethodPost, "/api/memory/changesets/"+extracted.ChangeSet.ID+"/accept", nil), http.StatusConflict, "changeset_terminal")
 
-	// 编辑后旧批次失效：确认仍可提交正文，但不再携带记忆变更。
-	rec = serveJSON(t, h, http.MethodPost, "/api/drafts/"+draft.ID+"/confirm", map[string]int64{"draftRevision": 2})
+	// 编辑后旧批次失效：必须显式选择“仅提交正文”，不再静默只提交正文。
+	assertMemoryError(t, serveJSON(t, h, http.MethodPost, "/api/drafts/"+draft.ID+"/confirm", map[string]int64{"draftRevision": 2}), http.StatusConflict, "draft_memory_stale")
+	rec = serveJSON(t, h, http.MethodPost, "/api/drafts/"+draft.ID+"/confirm", map[string]any{"draftRevision": 2, "memorySync": "body_only"})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("confirm after edit status = %d, body = %s", rec.Code, rec.Body.String())
 	}
@@ -277,6 +344,9 @@ func TestDraftAPIExtractConflictAfterEdit(t *testing.T) {
 	}
 	if result.ChangeSetID != "" {
 		t.Errorf("confirm kept stale changeset %q", result.ChangeSetID)
+	}
+	if result.MemorySyncState != "body_only" {
+		t.Errorf("memory sync state = %q, want body_only", result.MemorySyncState)
 	}
 	if events, _, _, _, _, err := st.LoadMemoryRecords(); err != nil || len(events) != 0 {
 		t.Errorf("stale extraction applied: %+v, err = %v", events, err)

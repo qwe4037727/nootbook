@@ -23,6 +23,7 @@
       </button>
       <span id="saveStatus" class="save-status is-saved" aria-live="polite">已保存</span>
       <button id="planButton" class="btn btn-ghost" type="button">大纲规划</button>
+      <button id="agentCenterButton" class="btn btn-ghost" type="button">Agent 中心</button>
       <button id="memoryReviewButton" class="btn btn-ghost" type="button">记忆审阅</button>
       <button id="draftBoxButton" class="btn btn-ghost" type="button">草稿台 <span id="draftBoxCount" class="count" hidden>0</span></button>
       <button id="settingsButton" class="btn btn-ghost" type="button">模型设置</button>
@@ -420,6 +421,82 @@
         <div id="draftChangeSet" class="changeset-detail" hidden></div>
         <p id="draftDetailStatus" class="review-note" aria-live="polite"></p>
       </section>
+    </div>
+  </dialog>
+
+  <dialog id="agentCenterDialog" class="dialog dialog-wide" aria-labelledby="agentCenterTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="kicker">AGENT CENTER</p>
+        <h2 id="agentCenterTitle">Agent 中心</h2>
+      </div>
+      <button type="button" class="icon-button" data-close-dialog="agentCenterDialog" aria-label="关闭">×</button>
+    </div>
+
+    <div class="review-body">
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>开关与权限</h3>
+          <span class="review-note">默认 observe · 任何 Agent 都不会改正文或删词条</span>
+        </div>
+        <p class="review-note">observe 只出报告；propose 生成提案送审；autonomous 仅允许低风险自动更新。修改立即生效。</p>
+        <div id="agentConfigList" class="agent-config-list"></div>
+      </section>
+
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>成本与稳定性（近 7 天）</h3>
+          <button id="agentRefreshButton" class="btn btn-quiet btn-sm" type="button">刷新</button>
+        </div>
+        <div id="agentStatsList" class="agent-list"></div>
+      </section>
+
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>运行日志</h3>
+          <span id="agentRunHint" class="review-note"></span>
+        </div>
+        <div id="agentRunList" class="agent-log"></div>
+      </section>
+
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>审计报告</h3>
+        </div>
+        <div id="agentReportList" class="agent-list"></div>
+      </section>
+
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>伏笔台账</h3>
+        </div>
+        <p class="review-note">A3 识别的伏笔候选会自动参与续写注入；确认/废弃仅影响台账状态。</p>
+        <div id="foreshadowList" class="agent-list"></div>
+      </section>
+
+      <section class="review-section">
+        <div class="review-section-head">
+          <h3>审阅提案</h3>
+        </div>
+        <p class="review-note">提案只入队，不会自动应用到记忆或正文；接受后仍需在记忆审阅中人工处理。</p>
+        <div id="agentProposalList" class="agent-list"></div>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="draftMemorySyncDialog" class="dialog" aria-labelledby="draftMemorySyncTitle">
+    <div class="dialog-head">
+      <div>
+        <p class="kicker">MEMORY SYNC</p>
+        <h2 id="draftMemorySyncTitle">正文已修改，记忆尚未同步</h2>
+      </div>
+      <button type="button" class="icon-button" id="draftMemorySyncCancel" aria-label="关闭">×</button>
+    </div>
+    <p class="dialog-note">草稿正文在最后一次记忆提取后发生了变化。直接提交会静默跳过记忆更新，因此需要明确选择：</p>
+    <div class="dialog-actions">
+      <button type="button" id="draftMemorySyncCancelButton" class="btn btn-quiet">取消</button>
+      <button type="button" id="draftMemorySyncBodyOnlyButton" class="btn btn-ghost">仅提交正文（记忆不更新）</button>
+      <button type="button" id="draftMemorySyncReextractButton" class="btn btn-primary">先执行记忆重提取</button>
     </div>
   </dialog>
 

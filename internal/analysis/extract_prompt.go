@@ -92,21 +92,21 @@ func buildExtractMessages(title string, chapter novel.Chapter, knowledge novel.K
 
 // extractResult 为模型输出 schema 的 Go 映射（§3.4）。
 type extractEvent struct {
-	Summary                 string   `json:"summary"`
-	EventType               string   `json:"eventType"`
-	Participants            []string `json:"participants"`
-	ParticipantNamesProvided bool    `json:"participantNamesProvided"`
-	Quote                   string   `json:"quote"`
-	Preconditions           []string `json:"preconditions"`
-	Consequences            []string `json:"consequences"`
+	Summary                  string   `json:"summary"`
+	EventType                string   `json:"eventType"`
+	Participants             []string `json:"participants"`
+	ParticipantNamesProvided bool     `json:"participantNamesProvided"`
+	Quote                    string   `json:"quote"`
+	Preconditions            []string `json:"preconditions"`
+	Consequences             []string `json:"consequences"`
 }
 
 type extractState struct {
-	Subject  string `json:"subject"`
-	Category string `json:"category"`
+	Subject   string `json:"subject"`
+	Category  string `json:"category"`
 	Attribute string `json:"attribute"`
-	Value    string `json:"value"`
-	Quote    string `json:"quote"`
+	Value     string `json:"value"`
+	Quote     string `json:"quote"`
 }
 
 type extractCognition struct {

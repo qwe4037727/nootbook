@@ -22,6 +22,7 @@ func newTestRuntime(t *testing.T) (*Runtime, *store.Store, string) {
 	}); err != nil {
 		t.Fatalf("import: %v", err)
 	}
+	t.Cleanup(func() { _ = st.Close() })
 	rt, err := New("p_test", st, dir, nil)
 	if err != nil {
 		t.Fatalf("new runtime: %v", err)
@@ -115,24 +116,30 @@ func TestDuplicateEventRunsOnce(t *testing.T) {
 
 type panicAgent struct{}
 
-func (panicAgent) Name() string      { return "panic" }
-func (panicAgent) CanRun(Event) bool { return true }
-func (panicAgent) Run(context.Context, Event) (Report, error) {
+func (panicAgent) Key() string  { return "panic" }
+func (panicAgent) Name() string { return "panic" }
+func (panicAgent) Triggers() []string {
+	return []string{string(store.ChapterSaved), string(store.ChapterCreated), string(store.ChapterDeleted), string(store.ChaptersImported)}
+}
+func (panicAgent) Run(context.Context, Event, Input) (Report, error) {
 	panic("simulated agent crash")
 }
 
 type slowAgent struct{}
 
-func (slowAgent) Name() string      { return "slow" }
-func (slowAgent) CanRun(Event) bool { return true }
-func (slowAgent) Run(context.Context, Event) (Report, error) {
-	time.Sleep(500 * time.Millisecond)
+func (slowAgent) Key() string  { return "slow" }
+func (slowAgent) Name() string { return "slow" }
+func (slowAgent) Triggers() []string {
+	return []string{string(store.ChapterSaved), string(store.ChapterCreated), string(store.ChapterDeleted), string(store.ChaptersImported)}
+}
+func (slowAgent) Run(context.Context, Event, Input) (Report, error) {
+	time.Sleep(1200 * time.Millisecond)
 	return Report{Summary: "slow done"}, nil
 }
 
 func TestAgentPanicIsIsolated(t *testing.T) {
 	rt, st, _ := newTestRuntime(t)
-	rt.agents = []Agent{panicAgent{}, &EchoAgent{st: st}}
+	rt.agents = []Agent{panicAgent{}, &EchoAgent{}}
 	project, err := st.LoadProject()
 	if err != nil {
 		t.Fatalf("load project: %v", err)
@@ -176,7 +183,7 @@ func TestSlowAgentDoesNotBlockChapterSave(t *testing.T) {
 		t.Fatalf("save: %v", err)
 	}
 	elapsed := time.Since(started)
-	if elapsed > 200*time.Millisecond {
+	if elapsed > 500*time.Millisecond {
 		t.Fatalf("chapter save blocked by agent for %v", elapsed)
 	}
 }

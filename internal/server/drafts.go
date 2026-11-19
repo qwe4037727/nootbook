@@ -197,22 +197,70 @@ func (s *Server) handlePostDraftConfirm(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var req struct {
-		DraftRevision           int64 `json:"draftRevision"`
-		ExpectedChapterRevision int64 `json:"expectedChapterRevision"`
-		ExpectedMemoryRevision  int64 `json:"expectedMemoryRevision"`
+		DraftRevision           int64  `json:"draftRevision"`
+		ExpectedChapterRevision int64  `json:"expectedChapterRevision"`
+		ExpectedMemoryRevision  int64  `json:"expectedMemoryRevision"`
+		MemorySync              string `json:"memorySync"`
 	}
 	if err := decodeStrictJSON(w, r, &req, 4096, false); err != nil {
-		writeDecodeError(w, err, "请求体必须为单个 JSON 对象（draftRevision/expectedChapterRevision/expectedMemoryRevision）")
+		writeDecodeError(w, err, "请求体必须为单个 JSON 对象（draftRevision/expectedChapterRevision/expectedMemoryRevision/memorySync）")
 		return
+	}
+	switch req.MemorySync {
+	case "", "body_only", "reextract":
+	default:
+		writeMemoryError(w, http.StatusBadRequest, "invalid_memory_sync", "memorySync 仅支持 reextract 或 body_only")
+		return
+	}
+
+	// #63：正文在记忆同步后被修改时，先按用户选择重新提取，再联合提交。
+	if req.MemorySync == "reextract" {
+		if s.extractor == nil {
+			writeError(w, http.StatusServiceUnavailable, "提取服务未启用")
+			return
+		}
+		draft, err := s.store.LoadDraft(id)
+		if errors.Is(err, store.ErrDraftNotFound) {
+			writeMemoryError(w, http.StatusNotFound, "draft_not_found", "草稿不存在")
+			return
+		}
+		if err != nil {
+			s.log.Error("load draft for re-extract", "draft", id, "err", err)
+			writeError(w, http.StatusInternalServerError, "读取草稿失败")
+			return
+		}
+		if _, _, err := s.extractor.ExtractDraft(r.Context(), draft); err != nil {
+			switch {
+			case errors.Is(err, store.ErrExtractConfigMissing):
+				writeMemoryError(w, http.StatusConflict, "config_missing", "请先在「模型设置」中填写 Base URL、模型名与 API Key")
+			case errors.Is(err, store.ErrKnowledgeNotReady):
+				writeMemoryError(w, http.StatusConflict, "knowledge_not_ready", "知识库为空：请先完成分析")
+			case errors.Is(err, store.ErrDraftConflict), errors.Is(err, store.ErrDraftNeedsRecheck):
+				writeMemoryError(w, http.StatusConflict, "draft_conflict", "草稿版本已变化，请刷新后重试")
+			case errors.Is(err, store.ErrDraftTerminal):
+				writeMemoryError(w, http.StatusConflict, "draft_terminal", "草稿已处于终态")
+			case errors.Is(err, store.ErrAnalysisRunning):
+				writeMemoryError(w, http.StatusConflict, "analysis_running", "故事分析进行中，请稍后再试")
+			case errors.Is(err, store.ErrMemorySafeState):
+				writeMemoryError(w, http.StatusInternalServerError, "memory_safe_state", "记忆子系统处于安全态：拒绝写入")
+			default:
+				s.log.Error("re-extract draft for confirm", "draft", id, "err", err)
+				writeError(w, http.StatusInternalServerError, "重新提取记忆失败")
+			}
+			return
+		}
 	}
 	result, err := s.store.ConfirmDraft(id, store.DraftConfirmParams{
 		DraftRevision:           req.DraftRevision,
 		ExpectedChapterRevision: req.ExpectedChapterRevision,
 		ExpectedMemoryRevision:  req.ExpectedMemoryRevision,
+		AllowBodyOnly:           req.MemorySync == "body_only",
 	})
 	switch {
 	case err == nil:
 		writeJSON(w, http.StatusOK, result)
+	case errors.Is(err, store.ErrDraftMemoryStale):
+		writeMemoryError(w, http.StatusConflict, "draft_memory_stale", "正文已修改但记忆尚未同步：请选择「重新提取记忆」或「仅提交正文（记忆不更新）」")
 	case errors.Is(err, store.ErrDraftNotFound):
 		writeMemoryError(w, http.StatusNotFound, "draft_not_found", "草稿不存在")
 	case errors.Is(err, store.ErrDraftTerminal):

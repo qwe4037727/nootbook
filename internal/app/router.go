@@ -6,11 +6,9 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 
-	"novelagent/internal/agentruntime"
 	"novelagent/internal/project"
 	"novelagent/internal/server"
 )
@@ -48,18 +46,16 @@ func NewRouter(manager *project.Manager, static fs.FS, logger *slog.Logger) http
 	mux.HandleFunc("POST /api/projects", r.handleCreateProject)
 	mux.HandleFunc("PATCH /api/projects/{id}", r.handleRenameProject)
 	mux.HandleFunc("DELETE /api/projects/{id}", r.handleDeleteProject)
-	mux.HandleFunc("GET /api/agents/runs", r.handleAgentRuns)
+	if manager.M5Enabled() {
+		mux.HandleFunc("GET /api/cost/global", r.handleGlobalCost)
+	}
 	r.mux = mux
 	return r
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	switch {
-	case strings.HasPrefix(req.URL.Path, "/api/projects"):
-		w.Header().Set("Cache-Control", "no-store")
-		r.mux.ServeHTTP(w, req)
-		return
-	case req.URL.Path == "/api/agents/runs":
+	globalCost := req.URL.Path == "/api/cost/global" && r.manager.M5Enabled()
+	if strings.HasPrefix(req.URL.Path, "/api/projects") || globalCost {
 		w.Header().Set("Cache-Control", "no-store")
 		r.mux.ServeHTTP(w, req)
 		return
@@ -95,7 +91,7 @@ func (r *Router) handlerFor(id string, rt *project.Runtime) (http.Handler, error
 	if h, ok := r.handlers[id]; ok {
 		return h, nil
 	}
-	h := server.New(rt.Store, r.static, r.log, rt.Analyzer, rt.Extractor)
+	h := server.NewWithMilestone(rt.Store, r.static, r.log, rt.Analyzer, rt.Extractor, rt.Milestone, rt.Tasks)
 	r.handlers[id] = h
 	return h, nil
 }
@@ -217,38 +213,6 @@ func (r *Router) handleDeleteProject(w http.ResponseWriter, req *http.Request) {
 	delete(r.handlers, id)
 	r.mu.Unlock()
 	writeJSON(w, http.StatusOK, map[string]any{"deleted": true, "id": id})
-}
-
-type agentRunsResponse struct {
-	ProjectID string                   `json:"projectId"`
-	Runs      []agentruntime.RunRecord `json:"runs"`
-}
-
-func (r *Router) handleAgentRuns(w http.ResponseWriter, req *http.Request) {
-	id, explicit := r.resolveProjectID(req)
-	rt, err := r.manager.Runtime(id)
-	if err != nil {
-		if explicit {
-			writeError(w, http.StatusNotFound, "作品不存在或已被删除")
-			return
-		}
-		id = DefaultProject
-		rt, err = r.manager.Runtime(id)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "读取 Agent 记录失败")
-			return
-		}
-	}
-	limit := 20
-	if raw := strings.TrimSpace(req.URL.Query().Get("limit")); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 0 && n <= 100 {
-			limit = n
-		}
-	}
-	writeJSON(w, http.StatusOK, agentRunsResponse{
-		ProjectID: id,
-		Runs:      rt.Agents.RecentRuns(limit),
-	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
