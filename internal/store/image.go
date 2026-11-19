@@ -14,36 +14,45 @@ import (
 // ImageAsset 是一次图像生成请求与结果的持久化记录（image_asset 表）。
 // pending/running 行同时充当图像任务队列；file_key 落盘后才写入。
 type ImageAsset struct {
-	ID               string          `json:"id"`
-	Kind             string          `json:"kind"`
-	EntryID          string          `json:"entryId,omitempty"`
-	ChapterID        string          `json:"chapterId,omitempty"`
-	AnchorOffset     int             `json:"anchorOffset,omitempty"`
-	FileKey          string          `json:"fileKey,omitempty"`
-	ThumbKey         string          `json:"thumbKey,omitempty"`
-	Prompt           json.RawMessage `json:"prompt"`
-	Features         []string        `json:"features,omitempty"`
-	CoreFeatures     []string        `json:"coreFeatures,omitempty"`
-	Model            string          `json:"model,omitempty"`
-	Backend          string          `json:"backend,omitempty"`
-	StyleTag         string          `json:"styleTag,omitempty"`
-	NegativePrompt   string          `json:"negativePrompt,omitempty"`
-	Width            int             `json:"width,omitempty"`
-	Height           int             `json:"height,omitempty"`
-	Steps            int             `json:"steps,omitempty"`
-	Seed             int64           `json:"seed,omitempty"`
-	IsAnchor         bool            `json:"isAnchor"`
-	ParentAsset      string          `json:"parentAsset,omitempty"`
-	VariantOf        string          `json:"variantOf,omitempty"`
-	ConsistencyScore float64         `json:"consistencyScore"`
-	ConsistencyNote  string          `json:"consistencyNote,omitempty"`
-	VisualProxy      bool            `json:"visualProxy"`
-	Status           string          `json:"status"`
-	Error            string          `json:"error,omitempty"`
-	DurationMs       int64           `json:"durationMs"`
-	CostUSD          float64         `json:"costUsd"`
-	CreatedAt        time.Time       `json:"createdAt"`
-	UpdatedAt        time.Time       `json:"updatedAt"`
+	ID               string           `json:"id"`
+	Kind             string           `json:"kind"`
+	EntryID          string           `json:"entryId,omitempty"`
+	ChapterID        string           `json:"chapterId,omitempty"`
+	AnchorOffset     int              `json:"anchorOffset,omitempty"`
+	FileKey          string           `json:"fileKey,omitempty"`
+	ThumbKey         string           `json:"thumbKey,omitempty"`
+	Prompt           json.RawMessage  `json:"prompt"`
+	Features         []string         `json:"features,omitempty"`
+	CoreFeatures     []string         `json:"coreFeatures,omitempty"`
+	Model            string           `json:"model,omitempty"`
+	Backend          string           `json:"backend,omitempty"`
+	StyleTag         string           `json:"styleTag,omitempty"`
+	NegativePrompt   string           `json:"negativePrompt,omitempty"`
+	Width            int              `json:"width,omitempty"`
+	Height           int              `json:"height,omitempty"`
+	Steps            int              `json:"steps,omitempty"`
+	Seed             int64            `json:"seed,omitempty"`
+	IsAnchor         bool             `json:"isAnchor"`
+	ParentAsset      string           `json:"parentAsset,omitempty"`
+	VariantOf        string           `json:"variantOf,omitempty"`
+	ConsistencyScore float64          `json:"consistencyScore"`
+	ConsistencyNote  string           `json:"consistencyNote,omitempty"`
+	VisualProxy      bool             `json:"visualProxy"`
+	Appearance       *ImageAppearance `json:"appearance,omitempty"`
+	Status           string           `json:"status"`
+	Error            string           `json:"error,omitempty"`
+	DurationMs       int64            `json:"durationMs"`
+	CostUSD          float64          `json:"costUsd"`
+	CreatedAt        time.Time        `json:"createdAt"`
+	UpdatedAt        time.Time        `json:"updatedAt"`
+}
+
+type ImageAppearance struct {
+	Status   string   `json:"status"`
+	Reason   string   `json:"reason,omitempty"`
+	AnchorID string   `json:"anchorId,omitempty"`
+	Model    string   `json:"model,omitempty"`
+	Evidence []string `json:"evidence,omitempty"`
 }
 
 // ImageAssetQuery 约束资产列表查询。
@@ -69,6 +78,7 @@ type ImageAssetResult struct {
 	ConsistencyScore float64
 	ConsistencyNote  string
 	VisualProxy      bool
+	Appearance       *ImageAppearance
 	DurationMs       int64
 	CostUSD          float64
 }
@@ -141,22 +151,25 @@ const imageColumns = `id, kind, entry_id, chapter_id, anchor_offset, file_key, t
 	features_json, core_features_json, model, backend, style_tag, negative_prompt,
 	width, height, steps, seed, is_anchor, parent_asset, variant_of,
 	consistency_score, consistency_note, visual_proxy, status, error,
-	duration_ms, cost_usd, created_at, updated_at`
+	duration_ms, cost_usd, created_at, updated_at, appearance_json`
 
 func scanImageAsset(scan func(dest ...any) error) (ImageAsset, error) {
 	var (
-		rec              ImageAsset
-		prompt           string
-		features, core   string
-		isAnchor, proxy  int
-		created, updated int64
+		rec                        ImageAsset
+		prompt                     string
+		features, core, appearance string
+		isAnchor, proxy            int
+		created, updated           int64
 	)
 	if err := scan(&rec.ID, &rec.Kind, &rec.EntryID, &rec.ChapterID, &rec.AnchorOffset,
 		&rec.FileKey, &rec.ThumbKey, &prompt, &features, &core, &rec.Model, &rec.Backend,
 		&rec.StyleTag, &rec.NegativePrompt, &rec.Width, &rec.Height, &rec.Steps, &rec.Seed,
 		&isAnchor, &rec.ParentAsset, &rec.VariantOf, &rec.ConsistencyScore, &rec.ConsistencyNote,
-		&proxy, &rec.Status, &rec.Error, &rec.DurationMs, &rec.CostUSD, &created, &updated); err != nil {
+		&proxy, &rec.Status, &rec.Error, &rec.DurationMs, &rec.CostUSD, &created, &updated, &appearance); err != nil {
 		return ImageAsset{}, err
+	}
+	if err := json.Unmarshal([]byte(appearance), &rec.Appearance); err != nil {
+		return ImageAsset{}, fmt.Errorf("store: decode image appearance: %w", err)
 	}
 	rec.Prompt = json.RawMessage(prompt)
 	_ = json.Unmarshal([]byte(features), &rec.Features)
@@ -263,15 +276,19 @@ func (s *Store) CompleteImageAsset(id string, res ImageAssetResult) error {
 	if err != nil {
 		return err
 	}
+	appearance, err := json.Marshal(res.Appearance)
+	if err != nil {
+		return err
+	}
 	result, err := db.Exec(`UPDATE image_asset SET status = 'done', error = '',
 		file_key = ?, thumb_key = ?, model = ?, backend = ?, style_tag = ?,
 		width = ?, height = ?, steps = ?, seed = ?, consistency_score = ?,
-		consistency_note = ?, visual_proxy = ?, duration_ms = ?, cost_usd = ?, updated_at = ?
+		consistency_note = ?, visual_proxy = ?, duration_ms = ?, cost_usd = ?, updated_at = ?, appearance_json = ?
 		WHERE id = ?`,
 		res.FileKey, res.ThumbKey, res.Model, res.Backend, res.StyleTag,
 		res.Width, res.Height, res.Steps, res.Seed, res.ConsistencyScore,
 		res.ConsistencyNote, boolInt(res.VisualProxy), res.DurationMs, res.CostUSD,
-		unixMillis(time.Now().UTC()), id)
+		unixMillis(time.Now().UTC()), string(appearance), id)
 	if err != nil {
 		return fmt.Errorf("store: complete image asset: %w", err)
 	}
@@ -304,7 +321,8 @@ func (s *Store) ResetImageAsset(id string) error {
 	if err != nil {
 		return err
 	}
-	res, err := db.Exec(`UPDATE image_asset SET status = 'pending', error = '', updated_at = ?
+	res, err := db.Exec(`UPDATE image_asset SET status = 'pending', error = '',
+		is_anchor = CASE WHEN kind = 'character' THEN 0 ELSE is_anchor END, appearance_json = 'null', updated_at = ?
 		WHERE id = ? AND status IN ('failed','done')`, unixMillis(time.Now().UTC()), id)
 	if err != nil {
 		return fmt.Errorf("store: reset image asset: %w", err)

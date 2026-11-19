@@ -91,16 +91,18 @@ type Config struct {
 //   - openai：Base URL 填到 /v1，客户端追加 /images/generations；
 //   - sdwebui：Base URL 填到根路径，客户端追加 /sdapi/v1/txt2img。
 type ImageConfig struct {
-	Backend        string `json:"backend,omitempty"`
-	BaseURL        string `json:"baseUrl,omitempty"`
-	Model          string `json:"model,omitempty"`
-	APIKey         string `json:"apiKey,omitempty"`
-	StyleTag       string `json:"styleTag,omitempty"`
-	NegativePrompt string `json:"negativePrompt,omitempty"`
-	Width          int    `json:"width,omitempty"`
-	Height         int    `json:"height,omitempty"`
-	Steps          int    `json:"steps,omitempty"`
-	TimeoutSeconds int    `json:"timeoutSeconds,omitempty"`
+	Backend           string `json:"backend,omitempty"`
+	BaseURL           string `json:"baseUrl,omitempty"`
+	Model             string `json:"model,omitempty"`
+	APIKey            string `json:"apiKey,omitempty"`
+	StyleTag          string `json:"styleTag,omitempty"`
+	NegativePrompt    string `json:"negativePrompt,omitempty"`
+	Width             int    `json:"width,omitempty"`
+	Height            int    `json:"height,omitempty"`
+	Steps             int    `json:"steps,omitempty"`
+	TimeoutSeconds    int    `json:"timeoutSeconds,omitempty"`
+	AppearanceEnabled bool   `json:"appearanceEnabled,omitempty"`
+	AppearanceModel   string `json:"appearanceModel,omitempty"`
 }
 
 const (
@@ -138,6 +140,7 @@ func (c ImageConfig) Normalized() ImageConfig {
 	c.APIKey = strings.TrimSpace(c.APIKey)
 	c.StyleTag = strings.TrimSpace(c.StyleTag)
 	c.NegativePrompt = strings.TrimSpace(c.NegativePrompt)
+	c.AppearanceModel = strings.TrimSpace(c.AppearanceModel)
 	if c.Width == 0 {
 		c.Width = 1024
 	}

@@ -17,6 +17,7 @@ func (s *Server) registerImageRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/images/{id}", s.handleImageGet)
 	mux.HandleFunc("GET /api/images/{id}/file", s.handleImageFile)
 	mux.HandleFunc("GET /api/images/{id}/thumb", s.handleImageThumb)
+	mux.HandleFunc("GET /api/images/{id}/similarity", s.handleImageSimilarity)
 	mux.HandleFunc("POST /api/images/{id}/anchor", s.handleImageAnchor)
 	mux.HandleFunc("POST /api/images/{id}/retry", s.handleImageRetry)
 	mux.HandleFunc("DELETE /api/images/{id}", s.handleImageDelete)
@@ -103,6 +104,21 @@ func (s *Server) handleImageGet(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, asset)
 }
 
+func (s *Server) handleImageSimilarity(w http.ResponseWriter, r *http.Request) {
+	svc, ok := s.imageService(w)
+	if !ok {
+		return
+	}
+	result, err := svc.CompareCharacterImages(r.Context(), r.PathValue("id"), strings.TrimSpace(r.URL.Query().Get("otherId")))
+	if err != nil {
+		if r.Context().Err() == nil {
+			s.writeImageError(w, err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
 func (s *Server) handleImageFile(w http.ResponseWriter, r *http.Request) {
 	s.serveImageFile(w, r, false)
 }
@@ -182,7 +198,8 @@ func (s *Server) writeImageError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusNotFound, "对象不存在或已被删除")
 	case errors.Is(err, imagegen.ErrImageConfigMissing):
 		writeError(w, http.StatusBadRequest, "请先在「图像模型」中填写 Base URL 与模型名")
-	case errors.Is(err, imagegen.ErrEntryRequired), errors.Is(err, imagegen.ErrChapterNeeded),
+	case errors.Is(err, imagegen.ErrInvalidImagePair),
+		errors.Is(err, imagegen.ErrEntryRequired), errors.Is(err, imagegen.ErrChapterNeeded),
 		errors.Is(err, imagegen.ErrInvalidKind), errors.Is(err, imagegen.ErrPromptRequired):
 		writeError(w, http.StatusBadRequest, err.Error())
 	default:
@@ -192,35 +209,39 @@ func (s *Server) writeImageError(w http.ResponseWriter, err error) {
 }
 
 type publicImageConfig struct {
-	Backend        string `json:"backend"`
-	BaseURL        string `json:"baseUrl"`
-	Model          string `json:"model"`
-	StyleTag       string `json:"styleTag"`
-	NegativePrompt string `json:"negativePrompt"`
-	Width          int    `json:"width"`
-	Height         int    `json:"height"`
-	Steps          int    `json:"steps"`
-	TimeoutSeconds int    `json:"timeoutSeconds"`
-	HasAPIKey      bool   `json:"hasApiKey"`
-	APIKeyHint     string `json:"apiKeyHint"`
-	APIKeyFromEnv  bool   `json:"apiKeyFromEnv"`
+	Backend           string `json:"backend"`
+	BaseURL           string `json:"baseUrl"`
+	Model             string `json:"model"`
+	StyleTag          string `json:"styleTag"`
+	NegativePrompt    string `json:"negativePrompt"`
+	Width             int    `json:"width"`
+	Height            int    `json:"height"`
+	Steps             int    `json:"steps"`
+	TimeoutSeconds    int    `json:"timeoutSeconds"`
+	HasAPIKey         bool   `json:"hasApiKey"`
+	APIKeyHint        string `json:"apiKeyHint"`
+	APIKeyFromEnv     bool   `json:"apiKeyFromEnv"`
+	AppearanceEnabled bool   `json:"appearanceEnabled"`
+	AppearanceModel   string `json:"appearanceModel"`
 }
 
 func publicImageConfigOf(cfg store.Config) publicImageConfig {
 	image := cfg.Image.Normalized()
 	key, fromEnv := cfg.EffectiveImageAPIKey()
 	pub := publicImageConfig{
-		Backend:        image.Backend,
-		BaseURL:        image.BaseURL,
-		Model:          image.Model,
-		StyleTag:       image.StyleTag,
-		NegativePrompt: image.NegativePrompt,
-		Width:          image.Width,
-		Height:         image.Height,
-		Steps:          image.Steps,
-		TimeoutSeconds: image.TimeoutSeconds,
-		HasAPIKey:      key != "",
-		APIKeyFromEnv:  fromEnv,
+		Backend:           image.Backend,
+		BaseURL:           image.BaseURL,
+		Model:             image.Model,
+		StyleTag:          image.StyleTag,
+		NegativePrompt:    image.NegativePrompt,
+		Width:             image.Width,
+		Height:            image.Height,
+		Steps:             image.Steps,
+		TimeoutSeconds:    image.TimeoutSeconds,
+		HasAPIKey:         key != "",
+		APIKeyFromEnv:     fromEnv,
+		AppearanceEnabled: image.AppearanceEnabled,
+		AppearanceModel:   image.AppearanceModel,
 	}
 	switch {
 	case fromEnv:
@@ -242,17 +263,19 @@ func (s *Server) handleGetImageConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 type imageConfigRequest struct {
-	Backend        string  `json:"backend"`
-	BaseURL        string  `json:"baseUrl"`
-	Model          string  `json:"model"`
-	StyleTag       string  `json:"styleTag"`
-	NegativePrompt string  `json:"negativePrompt"`
-	Width          int     `json:"width"`
-	Height         int     `json:"height"`
-	Steps          int     `json:"steps"`
-	TimeoutSeconds int     `json:"timeoutSeconds"`
-	APIKey         *string `json:"apiKey"`
-	ClearAPIKey    bool    `json:"clearApiKey"`
+	Backend           string  `json:"backend"`
+	BaseURL           string  `json:"baseUrl"`
+	Model             string  `json:"model"`
+	StyleTag          string  `json:"styleTag"`
+	NegativePrompt    string  `json:"negativePrompt"`
+	Width             int     `json:"width"`
+	Height            int     `json:"height"`
+	Steps             int     `json:"steps"`
+	TimeoutSeconds    int     `json:"timeoutSeconds"`
+	APIKey            *string `json:"apiKey"`
+	ClearAPIKey       bool    `json:"clearApiKey"`
+	AppearanceEnabled *bool   `json:"appearanceEnabled"`
+	AppearanceModel   *string `json:"appearanceModel"`
 }
 
 func (s *Server) handlePutImageConfig(w http.ResponseWriter, r *http.Request) {
@@ -283,17 +306,26 @@ func (s *Server) handlePutImageConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "读取模型设置失败")
 		return
 	}
+	appearanceEnabled, appearanceModel := cfg.Image.AppearanceEnabled, cfg.Image.AppearanceModel
+	if req.AppearanceEnabled != nil {
+		appearanceEnabled = *req.AppearanceEnabled
+	}
+	if req.AppearanceModel != nil {
+		appearanceModel = *req.AppearanceModel
+	}
 	cfg.Image = store.ImageConfig{
-		Backend:        backend,
-		BaseURL:        baseURL,
-		Model:          strings.TrimSpace(req.Model),
-		StyleTag:       strings.TrimSpace(req.StyleTag),
-		NegativePrompt: strings.TrimSpace(req.NegativePrompt),
-		Width:          req.Width,
-		Height:         req.Height,
-		Steps:          req.Steps,
-		TimeoutSeconds: req.TimeoutSeconds,
-		APIKey:         cfg.Image.APIKey,
+		AppearanceEnabled: appearanceEnabled,
+		AppearanceModel:   appearanceModel,
+		Backend:           backend,
+		BaseURL:           baseURL,
+		Model:             strings.TrimSpace(req.Model),
+		StyleTag:          strings.TrimSpace(req.StyleTag),
+		NegativePrompt:    strings.TrimSpace(req.NegativePrompt),
+		Width:             req.Width,
+		Height:            req.Height,
+		Steps:             req.Steps,
+		TimeoutSeconds:    req.TimeoutSeconds,
+		APIKey:            cfg.Image.APIKey,
 	}
 	if req.ClearAPIKey {
 		cfg.Image.APIKey = ""

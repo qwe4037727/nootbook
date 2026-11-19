@@ -84,6 +84,39 @@ func TestImageAssetLifecycleAndAnchor(t *testing.T) {
 	}
 }
 
+func TestImageAppearanceMigration(t *testing.T) {
+	st, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	asset, err := st.CreateImageAsset(ImageAsset{Kind: "character", EntryID: "c_hero"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SaveAgentReport(AgentReportRecord{AgentKey: "image", Summary: "图像一致性偏低：0.50"}); err != nil {
+		t.Fatal(err)
+	}
+	db, err := st.agentDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`ALTER TABLE image_asset DROP COLUMN appearance_json`); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Close(); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := st.GetImageAsset(asset.ID)
+	if err != nil || loaded.Appearance != nil {
+		t.Fatalf("legacy asset = %+v / %v", loaded, err)
+	}
+	reports, err := st.ListAgentReports("image", "", "", 10)
+	if err != nil || len(reports) != 1 || reports[0].Summary != "提示词与特征一致性偏低：0.50" {
+		t.Fatalf("legacy reports = %+v / %v", reports, err)
+	}
+}
+
 func TestImageConfigNormalize(t *testing.T) {
 	cfg := Config{Image: ImageConfig{Backend: "SDWEBUI", Width: 99, Height: 99999, Steps: 0, TimeoutSeconds: 1}}
 	cfg.Normalize()

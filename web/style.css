@@ -1630,6 +1630,55 @@ select:focus {
   width: min(880px, calc(100vw - 32px));
 }
 
+.manuscript-dialog {
+  padding: 20px 26px 24px;
+}
+
+.manuscript-tool-body,
+.manuscript-tool-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.manuscript-tool-section {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+}
+
+.manuscript-tool-section :is(h3, h4, ul, p) {
+  margin: 0;
+}
+
+.manuscript-tool-section > button {
+  justify-self: start;
+}
+
+.manuscript-tool-section details > * + * {
+  margin-top: 8px;
+}
+
+.manuscript-preview {
+  margin: 0;
+  padding: 10px;
+  max-height: 18rem;
+  overflow: auto;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
+
+.manuscript-diff del { background: #f9d9d7; }
+.manuscript-diff ins { background: #dcebd9; }
+
+.manuscript-candidates {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
 .review-body {
   display: flex;
   flex-direction: column;

@@ -37,7 +37,7 @@ func (k EntryKind) Valid() bool {
 // Extended 报告该类型是否由 kb_entry 表承载（相对 knowledge.json 真源）。
 func (k EntryKind) Extended() bool {
 	switch k {
-	case EntryFaction, EntryLocation, EntryItem, EntrySetting:
+	case EntryFaction, EntryLocation, EntryItem:
 		return true
 	}
 	return false

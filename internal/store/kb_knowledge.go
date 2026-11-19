@@ -14,6 +14,71 @@ import (
 
 var ErrKnowledgeEntryNotFound = errors.New("store: knowledge entry not found")
 
+// CreateKnowledgeEntry 将角色或世界设定写入 knowledge.json。
+func (s *Store) CreateKnowledgeEntry(entry novel.KBEntry) (novel.KBEntry, error) {
+	if entry.Kind != novel.EntryCharacter && entry.Kind != novel.EntrySetting {
+		return novel.KBEntry{}, fmt.Errorf("%w: kind %q is not knowledge-backed", novel.ErrKBValidation, entry.Kind)
+	}
+	if err := entry.Validate(); err != nil {
+		return novel.KBEntry{}, err
+	}
+	if len(entry.SourceRefs) != 0 {
+		return novel.KBEntry{}, fmt.Errorf("%w: sourceRefs are only supported for extended entries", novel.ErrKBValidation)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	knowledge, err := s.loadKnowledgeLocked()
+	if err != nil {
+		return novel.KBEntry{}, err
+	}
+	if err := checkKnowledgeName(knowledge, entry.Kind, "", entry.Name); err != nil {
+		return novel.KBEntry{}, err
+	}
+	var saved novel.KBEntry
+	switch entry.Kind {
+	case novel.EntryCharacter:
+		character := novel.Character{ID: entry.ID, Name: entry.Name, Aliases: entry.Aliases, Notes: entry.Summary}
+		applyCharacterFields(&character, entry.Fields)
+		knowledge.Characters = append(knowledge.Characters, character)
+		knowledge.Normalize()
+		saved = ViewCharacter(knowledge.Characters[len(knowledge.Characters)-1])
+	case novel.EntrySetting:
+		setting := novel.WorldEntry{ID: entry.ID, Title: entry.Name, Aliases: entry.Aliases, Content: entry.Summary}
+		applySettingFields(&setting, entry.Fields)
+		knowledge.World = append(knowledge.World, setting)
+		knowledge.Normalize()
+		saved = ViewSetting(knowledge.World[len(knowledge.World)-1])
+	}
+	knowledge.UpdatedAt = time.Now().UTC()
+	if err := s.writeKnowledgeLocked(knowledge); err != nil {
+		return novel.KBEntry{}, err
+	}
+	return saved, nil
+}
+
+// Match the name key used by Knowledge.Normalize so a write cannot merge two entries.
+func checkKnowledgeName(knowledge novel.Knowledge, kind novel.EntryKind, id, name string) error {
+	nameKey := func(value string) string {
+		return strings.ToLower(strings.Join(strings.Fields(value), ""))
+	}
+	key := nameKey(name)
+	if kind == novel.EntryCharacter {
+		for _, item := range knowledge.Characters {
+			if item.ID != id && nameKey(item.Name) == key {
+				return fmt.Errorf("%w: character name %q already exists", novel.ErrKBValidation, name)
+			}
+		}
+	} else {
+		for _, item := range knowledge.World {
+			if item.ID != id && nameKey(item.Title) == key {
+				return fmt.Errorf("%w: setting name %q already exists", novel.ErrKBValidation, name)
+			}
+		}
+	}
+	return nil
+}
+
 // UpdateKnowledgeEntry 就地更新角色或世界设定的可编辑字段。
 // 扩展类型（势力/地点/物品）走 SaveKBEntry。
 func (s *Store) UpdateKnowledgeEntry(patch novel.KBEntry) (novel.KBEntry, error) {
@@ -46,6 +111,9 @@ func (s *Store) UpdateKnowledgeEntry(patch novel.KBEntry) (novel.KBEntry, error)
 		}
 		character := &knowledge.Characters[idx]
 		if name := strings.TrimSpace(patch.Name); name != "" {
+			if err := checkKnowledgeName(knowledge, kind, patch.ID, name); err != nil {
+				return novel.KBEntry{}, err
+			}
 			character.Name = name
 		}
 		applyCharacterFields(character, patch.Fields)
@@ -67,6 +135,9 @@ func (s *Store) UpdateKnowledgeEntry(patch novel.KBEntry) (novel.KBEntry, error)
 		}
 		entry := &knowledge.World[idx]
 		if title := strings.TrimSpace(patch.Name); title != "" {
+			if err := checkKnowledgeName(knowledge, kind, patch.ID, title); err != nil {
+				return novel.KBEntry{}, err
+			}
 			entry.Title = title
 		}
 		applySettingFields(entry, patch.Fields)

@@ -105,10 +105,8 @@ func (s *Server) handlePostWorldEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	kind := novel.EntryKind(strings.TrimSpace(req.Kind))
-	switch kind {
-	case novel.EntryFaction, novel.EntryLocation, novel.EntryItem:
-	default:
-		writeMemoryError(w, http.StatusBadRequest, "invalid_kind", "kind 必须为 faction|location|item")
+	if !kind.Valid() {
+		writeMemoryError(w, http.StatusBadRequest, "invalid_kind", "kind 必须为 character|faction|location|item|setting")
 		return
 	}
 	entry, err := s.world.CreateEntry(world.EntryCreate{

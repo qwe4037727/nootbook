@@ -148,14 +148,11 @@ M5 之后新增的功能批次编号，与 `详设_V1.1` 里的「迭代 2/3」�
 
 生成完成后计算结构化一致性分数（`consistencyScore`，0–1）：
 
-- 当前实现是**结构化代理**，`visualProxy` 恒为 `true`，说明中固定注明
-  「视觉相似度未接入，按结构化特征代理」。评分 = 0.6×核心特征命中 +
-  0.3×特征代理 + 0.1×画风一致；有基准图时按与基准图的核心特征重叠计算。
-- 未接入视觉嵌入模型，因此该分数**不能**当作视觉相似度结论。
-- 每次生成/失败写入 `agent_run`（AgentKey `image`，名称「图像一致性 Agent」，
-  权限 `observe`），可在 Agent 中心查看成本与耗时。
-- 分数低于 0.75 时写一条 A8 审计报告（`image_consistency`，<0.6 为 critical），
-  只报告、不改稿。
+- `visualProxy=true` 表示该字段衡量提示词与结构化特征。低于 0.75 会产生「提示词与特征一致性偏低」报告（`image_consistency`，<0.6 为 critical）。
+- `GET /api/images/{id}/similarity?otherId={otherId}` 按需比较同一角色的两张原图，返回整图像素相似度。背景、姿势和构图会影响该分数。
+- 在图像模型设置中启用 `appearanceEnabled` 后，新生成的角色图与生成时选定的基准图一同发送到文本模型所配置的 OpenAI 兼容 `/chat/completions`。可通过 `appearanceModel` 覆盖文本模型名。该模型须支持图片输入。
+- 资产的 `appearance.status` 可为 `consistent`、`drift`、`uncertain` 或 `unavailable`，另有 `anchorId`、视觉 `evidence` 或跳过原因。只有 `drift` 生成「角色外观疑似漂移」报告（`image_appearance_drift`）。既有未核验资产无此字段。
+- 核验调用及 token 用量记录到 `agent_run`。失败不影响图片保存。外观判断仍需结合依据和基准图人工复核。
 
 ## 4. 导出（M7）
 

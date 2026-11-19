@@ -210,6 +210,83 @@ func TestWorldAPIEntriesLocksEvidenceAndSnapshot(t *testing.T) {
 	}
 }
 
+func TestWorldAPIKnowledgeEntryWrites(t *testing.T) {
+	h, st, _ := newTestHandler(t)
+	_, _, setting := seedKnowledge(t, st)
+	path := "/api/world/entries"
+	request := func(method, path string, payload any, status int) *httptest.ResponseRecorder {
+		t.Helper()
+		rec := serveJSON(t, h, method, path, payload)
+		if rec.Code != status {
+			t.Fatalf("%s %s = %d, want %d: %s", method, path, rec.Code, status, rec.Body.String())
+		}
+		return rec
+	}
+
+	// Simulate a shadow written by the previous setting update path.
+	if _, err := st.SaveKBEntry(novel.KBEntry{ID: setting.ID, Kind: novel.EntrySetting, Name: "旧副本"}); err != nil {
+		t.Fatalf("seed setting shadow: %v", err)
+	}
+	request(http.MethodPut, path+"/"+setting.ID, map[string]any{
+		"name": "北城古庙", "fields": map[string]string{"content": "只在雨夜开放。"},
+	}, http.StatusOK)
+
+	create := func(kind, name string, fields map[string]string) novel.KBEntry {
+		rec := request(http.MethodPost, path, map[string]any{"kind": kind, "name": name, "fields": fields}, http.StatusOK)
+		var entry novel.KBEntry
+		if err := json.Unmarshal(rec.Body.Bytes(), &entry); err != nil {
+			t.Fatalf("decode created %s: %v", kind, err)
+		}
+		if novel.EntryKindForID(entry.ID) != novel.EntryKind(kind) {
+			t.Fatalf("created %s with wrong ID: %q", kind, entry.ID)
+		}
+		return entry
+	}
+	createdSetting := create("setting", "城门禁令", map[string]string{"category": "规则", "content": "子时闭门。"})
+	createdCharacter := create("character", "守门人", map[string]string{"role": "城卫"})
+	knowledge, err := st.LoadKnowledge()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(knowledge.World) != 2 || len(knowledge.Characters) != 2 {
+		t.Fatalf("knowledge = %+v", knowledge)
+	}
+	updated := knowledge.World[0]
+	if updated.ID != setting.ID || updated.Title != "北城古庙" || updated.Content != "只在雨夜开放。" ||
+		updated.Category != setting.Category || len(updated.Evidence) != 1 || updated.Evidence[0] != setting.Evidence[0] {
+		t.Errorf("updated setting = %+v", updated)
+	}
+	if got := knowledge.World[1]; got.ID != createdSetting.ID || got.Content != "子时闭门。" || got.Category != "规则" {
+		t.Errorf("created setting = %+v", got)
+	}
+	if got := knowledge.Characters[1]; got.ID != createdCharacter.ID || got.Role != "城卫" {
+		t.Errorf("created character = %+v", got)
+	}
+	rows, err := st.ListKBEntries("")
+	if err != nil || len(rows) != 1 || rows[0].ID != setting.ID || rows[0].Name != "旧副本" {
+		t.Fatalf("extended entries = %+v, err = %v", rows, err)
+	}
+
+	rec := request(http.MethodGet, path+"?kind=setting", nil, http.StatusOK)
+	var settings []novel.KBEntry
+	if err := json.Unmarshal(rec.Body.Bytes(), &settings); err != nil || len(settings) != 2 {
+		t.Fatalf("visible settings = %+v, err = %v", settings, err)
+	}
+	request(http.MethodPost, path+"/"+setting.ID+"/locks", map[string]any{
+		"fields": []string{"content"},
+	}, http.StatusOK)
+	request(http.MethodDelete, path+"/"+setting.ID, nil, http.StatusOK)
+	request(http.MethodGet, path+"/"+setting.ID, nil, http.StatusNotFound)
+	locks, err := st.LoadFieldLocksIfPresent()
+	if err != nil || len(locks.Fields(setting.ID)) != 0 {
+		t.Fatalf("setting locks after delete = %v, err = %v", locks.Fields(setting.ID), err)
+	}
+	knowledge, err = st.LoadKnowledge()
+	if err != nil || len(knowledge.World) != 1 || knowledge.World[0].ID != createdSetting.ID {
+		t.Fatalf("settings after delete = %+v, err = %v", knowledge.World, err)
+	}
+}
+
 func TestAdaptRewriteAPI(t *testing.T) {
 	h, st, _ := newTestHandler(t)
 	project, _, _ := seedKnowledge(t, st)

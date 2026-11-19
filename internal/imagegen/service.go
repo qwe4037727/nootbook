@@ -10,7 +10,7 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
-	_ "image/png"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -59,6 +59,8 @@ type Service struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 	wake   chan struct{}
+
+	compareSlots chan struct{}
 }
 
 func NewService(st *store.Store, projectID string, logger *slog.Logger) *Service {
@@ -73,6 +75,7 @@ func NewService(st *store.Store, projectID string, logger *slog.Logger) *Service
 		workers:        2,
 		backendFactory: NewBackend,
 		wake:           make(chan struct{}, 1),
+		compareSlots:   make(chan struct{}, 2),
 	}
 }
 
@@ -208,6 +211,7 @@ func (s *Service) RunOnce(ctx context.Context) (bool, error) {
 	}
 	consistency := ScoreConsistency(spec.Positive, spec, anchorPtr)
 	duration := time.Since(started).Milliseconds()
+	appearance, visualRun := s.reviewAppearance(ctx, cfg, asset, anchorPtr, req.Reference, result.Data)
 	if err := s.st.CompleteImageAsset(asset.ID, store.ImageAssetResult{
 		FileKey:          fileKey,
 		ThumbKey:         thumbKey,
@@ -221,6 +225,7 @@ func (s *Service) RunOnce(ctx context.Context) (bool, error) {
 		ConsistencyScore: consistency.Score,
 		ConsistencyNote:  consistency.Note,
 		VisualProxy:      consistency.VisualProxy,
+		Appearance:       appearance,
 		DurationMs:       duration,
 		CostUSD:          result.CostUSD,
 	}); err != nil {
@@ -228,6 +233,14 @@ func (s *Service) RunOnce(ctx context.Context) (bool, error) {
 	}
 	s.recordRun(asset, spec, backend.Name(), consistency, duration, "", "done")
 	s.maybeReport(asset, consistency)
+	if visualRun != nil {
+		if err := s.st.RecordAgentRun(*visualRun); err != nil {
+			s.log.Warn("record character appearance run", "asset", asset.ID, "err", err)
+		}
+	}
+	if appearance != nil && appearance.Status == "drift" {
+		s.reportAppearanceDrift(asset, *appearance)
+	}
 	return true, nil
 }
 
@@ -431,12 +444,26 @@ func (s *Service) absKey(key string) string {
 }
 
 func (s *Service) readKey(key string) []byte {
-	path := s.absKey(key)
-	if path == "" {
+	path := filepath.Clean(filepath.FromSlash(key))
+	if !filepath.IsLocal(path) || !strings.HasPrefix(filepath.ToSlash(path), "images/") {
 		return nil
 	}
-	data, err := os.ReadFile(path)
+	root, err := os.OpenRoot(s.st.Dir())
 	if err != nil {
+		return nil
+	}
+	defer root.Close()
+	info, err := root.Stat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Size() > maxImageBytes {
+		return nil
+	}
+	file, err := root.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, maxImageBytes+1))
+	if err != nil || len(data) > maxImageBytes {
 		return nil
 	}
 	return data
@@ -528,7 +555,7 @@ func (s *Service) recordRun(asset store.ImageAsset, spec PromptSpec, backend str
 		summary = fmt.Sprintf("%s 图像（章节 %s）", asset.Kind, asset.ChapterID)
 	}
 	if status == "done" {
-		summary += fmt.Sprintf(" · 一致性 %.2f · %s", consistency.Score, backend)
+		summary += fmt.Sprintf(" · 提示词与特征一致性 %.2f · %s", consistency.Score, backend)
 	}
 	now := time.Now().UTC()
 	started := now.Add(-time.Duration(durationMs) * time.Millisecond)
@@ -562,6 +589,74 @@ func (s *Service) imageAgentEnabled() bool {
 	return true
 }
 
+func (s *Service) reviewAppearance(ctx context.Context, cfg store.Config, asset store.ImageAsset, anchor *store.ImageAsset, reference, candidate []byte) (*store.ImageAppearance, *store.AgentRunRecord) {
+	if asset.Kind != "character" {
+		return nil, nil
+	}
+	review := &store.ImageAppearance{Status: "unavailable"}
+	switch {
+	case !cfg.Image.AppearanceEnabled:
+		review.Reason = "disabled"
+	case !s.imageAgentEnabled():
+		review.Reason = "agent_disabled"
+	case anchor == nil || anchor.ID == asset.ID:
+		review.Reason = "no_anchor"
+	default:
+		review.AnchorID = anchor.ID
+		review.Model = firstNonEmpty(cfg.Image.AppearanceModel, cfg.Model)
+		if cfg.BaseURL == "" || review.Model == "" {
+			review.Reason = "model_unconfigured"
+		} else if len(reference) == 0 {
+			review.Reason = "image_unavailable"
+		}
+	}
+	if review.Reason != "" {
+		return review, nil
+	}
+	started := time.Now().UTC()
+	reviewCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	key, _ := cfg.EffectiveAPIKey()
+	assessment, err := assessAppearance(reviewCtx, cfg.BaseURL, review.Model, key, reference, candidate)
+	runStatus := "done"
+	if err == nil {
+		review.Status, review.Evidence = assessment.Verdict, assessment.Evidence
+	} else {
+		runStatus = "failed"
+		switch {
+		case ctx.Err() != nil:
+			review.Reason = "interrupted"
+		case errors.Is(err, errAppearanceImage):
+			review.Reason = "image_unavailable"
+			return review, nil
+		default:
+			review.Reason = "model_error"
+		}
+	}
+	finished := time.Now().UTC()
+	return review, &store.AgentRunRecord{
+		ProjectID: s.projectID, AgentKey: "image", AgentName: "图像一致性 Agent",
+		EventID: asset.ID, EventType: "image_appearance", Permission: "observe", Status: runStatus,
+		StartedAt: started, FinishedAt: finished, DurationMs: finished.Sub(started).Milliseconds(),
+		PromptTokens: assessment.PromptTokens, CompletionTokens: assessment.CompletionTokens, TotalTokens: assessment.TotalTokens,
+		Summary: "角色外观核验 · " + review.Model + " · " + review.Status, Error: review.Reason,
+	}
+}
+
+func (s *Service) reportAppearanceDrift(asset store.ImageAsset, review store.ImageAppearance) {
+	findings, _ := json.Marshal([]map[string]any{{
+		"type": "image_appearance_drift", "assetId": asset.ID, "entryId": asset.EntryID,
+		"anchorId": review.AnchorID, "model": review.Model, "evidence": review.Evidence,
+		"detail": strings.Join(review.Evidence, "；"),
+	}})
+	if err := s.st.SaveAgentReport(store.AgentReportRecord{
+		AgentKey: "image", AgentName: "图像一致性 Agent", EventID: asset.ID,
+		ChapterID: asset.ChapterID, Severity: "warning", Summary: "角色外观疑似漂移，请对照基准图复核", Findings: findings,
+	}); err != nil {
+		s.log.Warn("record character appearance drift", "asset", asset.ID, "err", err)
+	}
+}
+
 func (s *Service) maybeReport(asset store.ImageAsset, consistency Consistency) {
 	if !s.imageAgentEnabled() || consistency.Score >= 0.75 {
 		return
@@ -584,7 +679,7 @@ func (s *Service) maybeReport(asset store.ImageAsset, consistency Consistency) {
 		EventID:   asset.ID,
 		ChapterID: asset.ChapterID,
 		Severity:  severity,
-		Summary:   fmt.Sprintf("图像一致性偏低：%.2f（阈值 0.75）", consistency.Score),
+		Summary:   fmt.Sprintf("提示词与特征一致性偏低：%.2f（阈值 0.75）", consistency.Score),
 		Findings:  findings,
 	})
 }

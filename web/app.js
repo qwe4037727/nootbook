@@ -838,8 +838,9 @@ async function deleteChapter(id) {
 
 function openImportDialog() {
   importForm.reset();
+  $("importMode").value = project.chapters.length ? "append" : "overwrite";
   importText.value = "";
-  importHint.textContent = "尚未读取内容。";
+  updateImportHint();
   showDialog(importDialog);
   importFile.focus();
 }
@@ -859,8 +860,12 @@ async function readTextFile(file) {
 
 function updateImportHint() {
   const chars = countChars(importText.value);
+  const append = $("importMode").value === "append";
+  const hasChapters = project.chapters.length > 0;
+  importTitleInput.disabled = append && hasChapters;
+  if (!importSubmitButton.disabled) importSubmitButton.textContent = append ? "追加并分析" : "导入并分析";
   importHint.textContent = chars
-    ? `已读取 ${formatNumber(chars)} 字，导入后会自动拆分章节并开始分析。`
+    ? `已读取 ${formatNumber(chars)} 字。${append ? "新章节将追加到书末。" : "导入后会自动拆分章节并开始分析。"}`
     : "尚未读取内容。";
 }
 
@@ -3178,11 +3183,11 @@ function renderImageAssets(assets) {
     return;
   }
   const fragment = document.createDocumentFragment();
-  for (const asset of [...assets].reverse()) fragment.append(renderImageCard(asset));
+  for (const asset of [...assets].reverse()) fragment.append(renderImageCard(asset, assets));
   imageAssetList.append(fragment);
 }
 
-function renderImageCard(asset) {
+function renderImageCard(asset, assets) {
   const card = document.createElement("article");
   card.className = "image-card";
 
@@ -3217,11 +3222,42 @@ function renderImageCard(asset) {
   const meta = document.createElement("p");
   meta.className = "image-card-meta";
   const bits = [imageStatusLabels[asset.status] || asset.status];
-  if (asset.status === "done") bits.push(`一致性 ${Number(asset.consistencyScore || 0).toFixed(2)}`);
+  if (asset.status === "done") bits.push(`提示词与特征一致性 ${Number(asset.consistencyScore || 0).toFixed(2)}`);
   if (asset.seed) bits.push(`seed ${asset.seed}`);
   meta.textContent = bits.join(" · ");
   if (asset.consistencyNote) meta.title = asset.consistencyNote;
   body.append(title, meta);
+  if (asset.kind === "character" && asset.status === "done") {
+    const review = asset.appearance;
+    const labels = { consistent: "未发现明显外观漂移", drift: "疑似外观漂移，请复核", uncertain: "证据不足，无法判断", unavailable: "未能核验" };
+    const reasons = { disabled: "自动核验未启用", agent_disabled: "图像 Agent 已停用", no_anchor: "生成时未设基准图", model_unconfigured: "未配置视觉模型", image_unavailable: "原图缺失或无法读取", model_error: "视觉模型调用失败或结果无效", interrupted: "核验中断" };
+    const summary = document.createElement("p");
+    summary.className = "image-card-meta";
+    summary.textContent = `角色外观：${labels[review?.status] || "未核验"}${reasons[review?.reason] ? ` · ${reasons[review.reason]}` : ""}`;
+    body.append(summary);
+    if (review?.evidence?.length) {
+      const details = document.createElement("details");
+      const heading = document.createElement("summary");
+      heading.textContent = "查看核验依据";
+      details.append(heading);
+      const evidence = document.createElement("ul");
+      for (const observation of review.evidence) {
+        const item = document.createElement("li");
+        item.textContent = observation;
+        evidence.append(item);
+      }
+      details.append(evidence);
+      if (review.anchorId) {
+        const anchor = document.createElement("a");
+        anchor.href = `/api/images/${encodeURIComponent(review.anchorId)}/file`;
+        anchor.target = "_blank";
+        anchor.rel = "noopener";
+        anchor.textContent = "查看核验时的基准图";
+        details.append(anchor);
+      }
+      body.append(details);
+    }
+  }
 
   const actions = document.createElement("div");
   actions.className = "image-card-actions";
@@ -3242,8 +3278,52 @@ function renderImageCard(asset) {
   }
   actions.append(imageActionButton("删除", "btn btn-danger btn-sm", () => void deleteImageAsset(asset)));
   body.append(actions);
+  if (asset.kind === "character" && asset.entryId && asset.status === "done") {
+    const variants = assets.filter((other) => other.id !== asset.id && other.kind === "character" && other.entryId === asset.entryId && other.status === "done");
+    if (variants.length) body.append(imageSimilarityControls(asset, variants));
+  }
   card.append(body);
   return card;
+}
+
+function imageSimilarityControls(asset, variants) {
+  const panel = document.createElement("div");
+  const label = document.createElement("label");
+  label.className = "field";
+  label.textContent = "同角色对比图";
+  const select = document.createElement("select");
+  for (const other of variants) {
+    select.add(new Option(`${other.isAnchor ? "基准图 · " : ""}${other.id}`, other.id));
+    if (other.isAnchor) select.value = other.id;
+  }
+  const result = document.createElement("p");
+  result.className = "image-card-meta";
+  result.setAttribute("role", "status");
+  const reasons = {
+    asset_not_done: "图像尚未生成完成",
+    file_unavailable: "无法读取原图",
+    image_too_large: "原图超过比较尺寸限制",
+    unsupported_or_invalid_image: "原图格式不支持或文件损坏",
+  };
+  const compare = imageActionButton("比较实际图像", "btn btn-quiet btn-sm", async () => {
+    select.disabled = compare.disabled = true;
+    result.textContent = "正在比较原图像素…";
+    try {
+      const params = new URLSearchParams({ otherId: select.value });
+      const data = await api(`/api/images/${encodeURIComponent(asset.id)}/similarity?${params}`);
+      result.textContent = data.available
+        ? `像素相似度 ${data.score.toFixed(2)} / 1。${data.note}`
+        : `像素相似度不可用。${reasons[data.reason] || "请尝试其他图像"}。`;
+    } catch (error) {
+      result.textContent = "比较失败：" + error.message;
+    } finally {
+      select.disabled = compare.disabled = false;
+    }
+  });
+  select.addEventListener("change", () => { result.textContent = ""; });
+  label.append(select);
+  panel.append(label, compare, result);
+  return panel;
 }
 
 function imageActionButton(label, className, handler) {
@@ -3288,6 +3368,8 @@ async function openImageModelSettings() {
     imageModelHeight.value = String(cfg.height || 1024);
     imageModelSteps.value = String(cfg.steps || 20);
     imageModelTimeout.value = String(cfg.timeoutSeconds || 120);
+    $("imageAppearanceEnabled").checked = cfg.appearanceEnabled === true;
+    $("imageAppearanceModel").value = cfg.appearanceModel || "";
     imageModelApiKey.value = "";
     imageModelApiKey.disabled = false;
     imageModelClearKey.checked = false;
@@ -3343,6 +3425,8 @@ async function saveImageModelSettings(event) {
         height: Number(imageModelHeight.value) || 0,
         steps: Number(imageModelSteps.value) || 0,
         timeoutSeconds: Number(imageModelTimeout.value) || 0,
+        appearanceEnabled: $("imageAppearanceEnabled").checked,
+        appearanceModel: $("imageAppearanceModel").value.trim(),
       }),
     });
     if (saved && saved.styleTag) imageStyleInput.value = saved.styleTag;
@@ -3547,6 +3631,7 @@ function bindEvents() {
     }
   });
   importText.addEventListener("input", updateImportHint);
+  $("importMode").addEventListener("change", updateImportHint);
 
   importForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -3555,15 +3640,20 @@ function bindEvents() {
       showToast("请选择文件或粘贴正文", true);
       return;
     }
-    if (project.chapters.length && !window.confirm("导入会替换当前全部章节，确定继续？")) {
-      return;
-    }
+    if (importSubmitButton.disabled) return;
+    const modeInput = $("importMode");
+    const mode = modeInput.value;
+    if (mode === "overwrite" && project.chapters.length && !window.confirm("导入会替换当前全部章节，确定继续？")) return;
     importSubmitButton.disabled = true;
+    modeInput.disabled = true;
     importSubmitButton.textContent = "导入中…";
     try {
+      if (!await flushChapterSave()) throw new Error("请先保存当前章节");
+      if (titleRevision > titleSavedRevision) await saveTitleNow();
+      if (titleRevision > titleSavedRevision) throw new Error("请先保存书名");
       const data = await api("/api/import", {
         method: "POST",
-        body: JSON.stringify({ title: importTitleInput.value.trim(), text }),
+        body: JSON.stringify({ title: importTitleInput.disabled ? "" : importTitleInput.value.trim(), text, mode }),
       });
       projectEpoch += 1;
       chapterSwitchToken += 1;
@@ -3576,12 +3666,13 @@ function bindEvents() {
       closeDialog(importDialog);
       await openChapter(lastChapterID());
       ensureAnalysisPolling();
-      showToast(`已导入 ${formatNumber(data && data.importedChapters ? data.importedChapters : 0)} 章`);
+      showToast(`已${mode === "append" ? "追加" : "导入"} ${formatNumber(data?.importedChapters || 0)} 章`);
     } catch (error) {
       showToast("导入失败：" + error.message, true);
     } finally {
       importSubmitButton.disabled = false;
-      importSubmitButton.textContent = "导入并分析";
+      modeInput.disabled = false;
+      updateImportHint();
     }
   });
 

@@ -23,6 +23,8 @@
       </button>
       <span id="saveStatus" class="save-status is-saved" aria-live="polite">已保存</span>
       <button id="planButton" class="btn btn-ghost" type="button">大纲规划</button>
+      <button id="world-center-btn" class="btn btn-ghost" type="button">大世界</button>
+      <button id="task-center-btn" class="btn btn-ghost" type="button">任务与成本</button>
       <button id="agentCenterButton" class="btn btn-ghost" type="button">Agent 中心</button>
       <button id="memoryReviewButton" class="btn btn-ghost" type="button">记忆审阅</button>
       <button id="imageCenterButton" class="btn btn-ghost" type="button" hidden>图像中心</button>
@@ -46,7 +48,8 @@
           <span>书名</span>
           <input id="titleInput" type="text" maxlength="120" autocomplete="off" placeholder="给这部小说起个名字">
         </label>
-        <p class="side-note">导入 TXT / Markdown 后，系统会在后台自动阅读全文。分析结果只用于续写，不会显示具体设定。</p>
+        <p class="side-note">导入 TXT / Markdown 后会在后台分析。可在大世界中查看和维护设定。</p>
+        <button id="snapshotButton" class="btn btn-quiet" type="button">全书快照</button>
       </section>
 
       <section class="side-section">
@@ -86,6 +89,8 @@
           </div>
           <div class="editor-tools">
             <span id="chapterCharCount" class="muted">0 字</span>
+            <button id="adaptSelectionButton" class="btn btn-quiet" type="button">选区改写</button>
+            <button id="manuscriptButton" class="btn btn-quiet" type="button">章节管理</button>
             <button id="saveButton" class="btn btn-ghost" type="button">保存</button>
             <button id="deleteChapterButton" class="btn btn-quiet btn-delete" type="button">删除本章</button>
           </div>
@@ -134,6 +139,7 @@
             </select>
           </label>
           <span class="key-hint">Ctrl / ⌘ + Enter 开始续写</span>
+          <button id="candidateButton" class="btn btn-quiet" type="button">多候选续写</button>
           <button id="generateButton" class="btn btn-primary" type="button">开始续写</button>
         </div>
 
@@ -256,6 +262,13 @@
       <label class="field">
         <span>书名（可选）</span>
         <input id="importTitleInput" type="text" maxlength="120" autocomplete="off" placeholder="留空则从文稿中识别">
+      </label>
+      <label class="field">
+        <span>导入方式</span>
+        <select id="importMode">
+          <option value="append">追加到书末（保留现有章节和设定）</option>
+          <option value="overwrite">覆盖文稿（替换现有章节）</option>
+        </select>
       </label>
       <label class="field">
         <span>或粘贴正文</span>
@@ -643,6 +656,15 @@
           <input id="imageModelTimeout" type="number" min="10" max="600" inputmode="numeric">
         </label>
       </div>
+      <label class="memory-toggle">
+        <input id="imageAppearanceEnabled" type="checkbox">
+        <span>自动核验角色外观</span>
+      </label>
+      <label class="field">
+        <span>视觉模型名（可选）</span>
+        <input id="imageAppearanceModel" type="text" autocomplete="off" placeholder="留空使用文本模型名">
+        <small class="field-hint">启用后，角色基准图与新图会发送到「模型设置」中的服务。该模型需支持图片输入。</small>
+      </label>
       <div class="dialog-actions">
         <button type="button" class="btn btn-quiet" data-close-dialog="imageModelDialog">取消</button>
         <button type="submit" class="btn btn-primary">保存图像设置</button>
@@ -715,5 +737,8 @@
 
   <script src="/app.js"></script>
   <script src="/projects.js"></script>
+  <script src="/world-center.js"></script>
+  <script src="/task-center.js"></script>
+  <script src="/manuscript-tools.js"></script>
 </body>
 </html>

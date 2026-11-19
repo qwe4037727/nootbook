@@ -109,7 +109,7 @@ func TestServiceGenerateAndAnchor(t *testing.T) {
 			t.Fatalf("file %s missing: %v", key, statErr)
 		}
 	}
-	if !done.VisualProxy || !strings.Contains(done.ConsistencyNote, "代理") {
+	if !done.VisualProxy || !strings.Contains(done.ConsistencyNote, "仅检查提示词与结构化特征") {
 		t.Fatalf("consistency not marked as proxy: %+v", done)
 	}
 	if done.StyleTag != "水墨风" || !strings.Contains(string(done.Prompt), "山门") {

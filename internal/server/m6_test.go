@@ -8,6 +8,10 @@ import (
 	"image/color"
 	"image/png"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -164,6 +168,220 @@ func TestImageRoutesLifecycle(t *testing.T) {
 	}
 	if rec := serveJSON(t, h, http.MethodGet, "/api/images/"+asset.ID, nil); rec.Code != http.StatusNotFound {
 		t.Fatalf("get deleted = %d", rec.Code)
+	}
+}
+
+func TestCharacterAppearanceAutoAudit(t *testing.T) {
+	h, st, svc, _ := newM6Handler(t, milestone.Config{M6Enabled: true})
+	entry, err := st.CreateKnowledgeEntry(novel.KBEntry{ID: novel.NewID("c"), Kind: novel.EntryCharacter, Name: "阿遥"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	verdicts := make(chan string, 4)
+	for _, verdict := range []string{"drift", "consistent", "uncertain", "failed"} {
+		verdicts <- verdict
+	}
+	close(verdicts)
+	vision := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			Model    string `json:"model"`
+			Messages []struct {
+				Content json.RawMessage `json:"content"`
+			} `json:"messages"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || payload.Model != "vision-stub" || r.URL.Path != "/v1/chat/completions" {
+			t.Error("invalid vision request")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		var images int
+		for _, message := range payload.Messages {
+			images += strings.Count(string(message.Content), `"type":"image_url"`)
+		}
+		if images != 2 {
+			t.Errorf("vision image count = %d", images)
+		}
+		verdict := <-verdicts
+		if verdict == "" || verdict == "failed" {
+			w.WriteHeader(http.StatusBadGateway)
+			return
+		}
+		content, _ := json.Marshal(map[string]any{"verdict": verdict, "evidence": []string{"左眉疤痕与面部轮廓对照"}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]any{"content": string(content)}, "finish_reason": "stop"}}, "usage": map[string]int{"prompt_tokens": 50, "completion_tokens": 10, "total_tokens": 60}})
+	}))
+	defer vision.Close()
+	cfg, err := st.LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.BaseURL, cfg.Model = vision.URL+"/v1", "text-stub"
+	if _, err := st.SaveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	gen := func(status, reason, anchorID string) store.ImageAsset {
+		t.Helper()
+		asset, err := svc.Submit(imagegen.GenerateInput{Kind: "character", EntryID: entry.ID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if worked, err := svc.RunOnce(context.Background()); !worked || err != nil {
+			t.Fatalf("RunOnce = %v, %v", worked, err)
+		}
+		var result store.ImageAsset
+		rec := serveJSON(t, h, http.MethodGet, "/api/images/"+asset.ID, nil)
+		if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil || result.Status != "done" || result.Appearance == nil {
+			t.Fatalf("generation response = %d %s, %v", rec.Code, rec.Body, err)
+		}
+		if a := result.Appearance; a.Status != status || a.Reason != reason || a.AnchorID != anchorID {
+			t.Fatalf("appearance = %+v; want %s / %s / %s", a, status, reason, anchorID)
+		}
+		return result
+	}
+	gen("unavailable", "disabled", "")
+	rec := serveJSON(t, h, http.MethodPut, "/api/config/image-model", map[string]any{
+		"backend": "openai", "baseUrl": cfg.Image.BaseURL, "model": cfg.Image.Model,
+		"appearanceEnabled": true, "appearanceModel": "vision-stub",
+	})
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"appearanceEnabled":true`) {
+		t.Fatalf("image config = %d %s", rec.Code, rec.Body)
+	}
+	anchor := gen("unavailable", "no_anchor", "")
+	if _, err := svc.SetAnchor(anchor.ID); err != nil {
+		t.Fatal(err)
+	}
+	drift := gen("drift", "", anchor.ID)
+	gen("consistent", "", anchor.ID)
+	gen("uncertain", "", anchor.ID)
+	unavailable := gen("unavailable", "model_error", anchor.ID)
+	if rec := serveJSON(t, h, http.MethodGet, "/api/images/"+unavailable.ID+"/file", nil); rec.Code != http.StatusOK {
+		t.Fatalf("image after audit failure = %d", rec.Code)
+	}
+	reports, err := st.ListAgentReports("image", "", "", 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var driftReports int
+	for _, report := range reports {
+		if strings.Contains(string(report.Findings), "image_appearance_drift") {
+			driftReports++
+			if report.EventID != drift.ID || !strings.Contains(string(report.Findings), anchor.ID) || !strings.Contains(string(report.Findings), "左眉疤痕") {
+				t.Fatalf("drift report = %+v", report)
+			}
+		}
+	}
+	if driftReports != 1 {
+		t.Fatalf("drift reports = %d", driftReports)
+	}
+}
+
+func TestImageRoutesCharacterSimilarity(t *testing.T) {
+	h, st, svc, _ := newM6Handler(t, milestone.Config{M6Enabled: true})
+	entry, err := st.SaveKBEntry(novel.KBEntry{ID: novel.NewID("c"), Kind: novel.EntryCharacter, Name: "林越"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	generate := func(data []byte) store.ImageAsset {
+		t.Helper()
+		svc.SetBackendFactory(func(store.ImageConfig, string) (imagegen.Backend, error) {
+			return &m6StubBackend{data: data}, nil
+		})
+		rec := serveJSON(t, h, http.MethodPost, "/api/images/generate", map[string]any{"kind": "character", "entryId": entry.ID})
+		var asset store.ImageAsset
+		if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &asset) != nil || asset.ID == "" {
+			t.Fatalf("generate = %d: %s", rec.Code, rec.Body.String())
+		}
+		if worked, err := svc.RunOnce(context.Background()); err != nil || !worked {
+			t.Fatalf("RunOnce = %v, %v", worked, err)
+		}
+		asset, err := st.GetImageAsset(asset.ID)
+		if err != nil || asset.Status != store.ImageAssetDone {
+			t.Fatalf("get saved asset = %+v, %v", asset, err)
+		}
+		return asset
+	}
+	pattern := func(side int, swap bool) []byte {
+		t.Helper()
+		img := image.NewGray(image.Rect(0, 0, side, side))
+		for y := 0; y < side; y++ {
+			for x := 0; x < side; x++ {
+				if (x < side/2) != swap {
+					img.SetGray(x, y, color.Gray{Y: 255})
+				}
+			}
+		}
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			t.Fatal(err)
+		}
+		return buf.Bytes()
+	}
+	first := generate(pattern(64, false))
+	similar := generate(pattern(128, false))
+	different := generate(pattern(64, true)) // Same histogram, reversed layout.
+	if first.ConsistencyScore != different.ConsistencyScore {
+		t.Fatalf("fixtures should have equal prompt scores: %v and %v", first.ConsistencyScore, different.ConsistencyScore)
+	}
+	endpoint := "/api/images/" + first.ID + "/similarity?otherId="
+	compare := func(id string) imagegen.PixelSimilarity {
+		t.Helper()
+		rec := serveJSON(t, h, http.MethodGet, endpoint+id, nil)
+		var result imagegen.PixelSimilarity
+		if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &result) != nil || result.AssetID != first.ID || result.OtherID != id || result.Method == "" || result.Note == "" {
+			t.Fatalf("compare = %d: %s", rec.Code, rec.Body.String())
+		}
+		return result
+	}
+	if got := compare(similar.ID); !got.Available || got.Score == nil || *got.Score < 0.99 || *got.Score > 1 {
+		t.Fatalf("matching layout at different resolutions = %+v", got)
+	}
+	if got := compare(different.ID); !got.Available || got.Score == nil || *got.Score != 0 {
+		t.Fatalf("opposite layout should produce a real zero = %+v", got)
+	}
+
+	path := filepath.Join(st.Dir(), filepath.FromSlash(different.FileKey))
+	oversized := image.NewGray(image.Rect(0, 0, 4097, 1))
+	var oversizedPNG bytes.Buffer
+	if err := png.Encode(&oversizedPNG, oversized); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		data   []byte
+		reason string
+	}{
+		{oversizedPNG.Bytes(), "image_too_large"},
+		{[]byte("corrupt image"), "unsupported_or_invalid_image"},
+	} {
+		if err := os.WriteFile(path, tc.data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if got := compare(different.ID); got.Available || got.Score != nil || got.Reason != tc.reason {
+			t.Fatalf("unavailable comparison (%s) = %+v", tc.reason, got)
+		}
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if got := compare(different.ID); got.Available || got.Score != nil || got.Reason != "file_unavailable" {
+		t.Fatalf("missing original = %+v", got)
+	}
+	if err := st.ResetImageAsset(different.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := compare(different.ID); got.Available || got.Score != nil || got.Reason != "asset_not_done" {
+		t.Fatalf("pending image = %+v", got)
+	}
+
+	other, err := st.CreateImageAsset(store.ImageAsset{Kind: "character", EntryID: "other"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"", first.ID, other.ID} {
+		if rec := serveJSON(t, h, http.MethodGet, endpoint+id, nil); rec.Code != http.StatusBadRequest {
+			t.Errorf("invalid pair %q = %d: %s", id, rec.Code, rec.Body.String())
+		}
+	}
+	if rec := serveJSON(t, h, http.MethodGet, endpoint+"missing", nil); rec.Code != http.StatusNotFound {
+		t.Errorf("unknown asset = %d: %s", rec.Code, rec.Body.String())
 	}
 }
 

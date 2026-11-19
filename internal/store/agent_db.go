@@ -184,6 +184,22 @@ func (s *Store) agentDatabase() (*sql.DB, error) {
 			return nil, fmt.Errorf("store: migrate agent db %s: %w", schema.name, err)
 		}
 	}
+	var appearanceColumn int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('image_asset') WHERE name = 'appearance_json'`).Scan(&appearanceColumn); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("store: inspect image appearance schema: %w", err)
+	}
+	if appearanceColumn == 0 {
+		if _, err := db.Exec(`ALTER TABLE image_asset ADD COLUMN appearance_json TEXT NOT NULL DEFAULT 'null'`); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("store: migrate image appearance: %w", err)
+		}
+	}
+	if _, err := db.Exec(`UPDATE agent_report SET summary = replace(summary, '图像一致性偏低：', '提示词与特征一致性偏低：')
+		WHERE agent_key = 'image' AND summary LIKE '图像一致性偏低：%'`); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("store: relabel prompt consistency reports: %w", err)
+	}
 	s.agentDB = db
 	return db, nil
 }

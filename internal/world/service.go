@@ -73,7 +73,7 @@ func (s *Service) ListEntries(query EntryQuery) ([]novel.KBEntry, error) {
 	return out, nil
 }
 
-// EntryCreate 是新建扩展词条（势力/地点/物品）的请求。
+// EntryCreate 是新建世界词条的请求。
 type EntryCreate struct {
 	Kind       novel.EntryKind
 	Name       string
@@ -84,10 +84,8 @@ type EntryCreate struct {
 }
 
 func (s *Service) CreateEntry(in EntryCreate) (novel.KBEntry, error) {
-	switch in.Kind {
-	case novel.EntryFaction, novel.EntryLocation, novel.EntryItem:
-	default:
-		return novel.KBEntry{}, fmt.Errorf("%w: kind must be faction|location|item", novel.ErrKBValidation)
+	if !in.Kind.Valid() {
+		return novel.KBEntry{}, fmt.Errorf("%w: invalid kind", novel.ErrKBValidation)
 	}
 	if strings.TrimSpace(in.Name) == "" {
 		return novel.KBEntry{}, fmt.Errorf("%w: name is required", novel.ErrKBValidation)
@@ -101,7 +99,16 @@ func (s *Service) CreateEntry(in EntryCreate) (novel.KBEntry, error) {
 		Fields:     in.Fields,
 		SourceRefs: in.SourceRefs,
 	}
-	saved, err := s.st.SaveKBEntry(entry)
+	var saved novel.KBEntry
+	var err error
+	if in.Kind.Extended() {
+		saved, err = s.st.SaveKBEntry(entry)
+	} else {
+		if err := validateEntryFields(novel.KBEntry{ID: entry.ID, Kind: entry.Kind}, entry.Fields); err != nil {
+			return novel.KBEntry{}, err
+		}
+		saved, err = s.st.CreateKnowledgeEntry(entry)
+	}
 	if err != nil {
 		return novel.KBEntry{}, err
 	}
@@ -149,6 +156,10 @@ func (s *Service) allEntries() ([]novel.KBEntry, error) {
 		out = append(out, entry)
 	}
 	for _, entry := range extended {
+		// Older setting edits could leave shadow rows that must never override or resurrect knowledge.json entries.
+		if entry.Kind == novel.EntrySetting {
+			continue
+		}
 		entry.LockedFields = locks.Fields(entry.ID)
 		out = append(out, entry)
 	}

@@ -197,8 +197,7 @@ type Consistency struct {
 }
 
 // ScoreConsistency 计算结构化一致性。
-// 视觉相似度需要视觉嵌入模型；当前未接入，按 0.6*特征命中 + 0.3*特征代理 + 0.1*画风一致
-// 计算，并把 VisualProxy 置为 true，避免把结构化评分误读成视觉相似度。
+// 结构化评分只衡量提示词和特征，不读取图像。
 func ScoreConsistency(prompt string, current PromptSpec, anchor *store.ImageAsset) Consistency {
 	core := current.CoreFeatures
 	if len(core) == 0 {
@@ -239,7 +238,7 @@ func ScoreConsistency(prompt string, current PromptSpec, anchor *store.ImageAsse
 	score := 0.6*featureHit + 0.3*featureHit + 0.1*styleMatch
 	return Consistency{
 		Score:       round2(score),
-		Note:        note + "（视觉相似度未接入，按结构化特征代理）",
+		Note:        note + "（仅检查提示词与结构化特征）",
 		VisualProxy: true,
 	}
 }
