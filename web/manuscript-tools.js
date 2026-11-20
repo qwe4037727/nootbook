@@ -1,54 +1,90 @@
 (() => {
-  const dialog = document.createElement("dialog");
-  dialog.className = "dialog dialog-wide manuscript-dialog";
-  dialog.setAttribute("aria-labelledby", "manuscriptToolsTitle");
   const node = (tag, text = "", className = "") => {
     const element = document.createElement(tag);
     element.textContent = text;
     if (className) element.className = className;
     return element;
   };
-  const heading = node("h2");
-  heading.id = "manuscriptToolsTitle";
-  const close = node("button", "×", "icon-button");
-  close.type = "button";
-  close.setAttribute("aria-label", "关闭");
-  const head = node("div", "", "dialog-head");
-  head.append(heading, close);
-  const status = node("p", "", "dialog-note");
-  status.setAttribute("role", "status");
-  const body = node("div", "", "manuscript-tool-body");
-  dialog.append(head, status, body);
-  document.body.append(dialog);
-  close.onclick = () => dialog.close();
-  let busy = false;
-  dialog.addEventListener("cancel", (event) => { if (busy) event.preventDefault(); });
 
-  function open(title) {
-    heading.textContent = title;
-    status.textContent = "";
-    body.replaceChildren();
-    showDialog(dialog);
-  }
+  function open(route, title) {
+    const page = node("section", "", "dialog dialog-wide manuscript-dialog");
+    page.classList.add("studio-page");
+    page.hidden = true;
+    page.setAttribute("aria-labelledby", "manuscriptToolsTitle");
+    const heading = node("h2", title);
+    heading.id = "manuscriptToolsTitle";
+    const close = node("button", "×", "icon-button");
+    close.type = "button";
+    close.setAttribute("aria-label", "关闭");
+    close.onclick = () => void closePage();
+    const head = node("div", "", "dialog-head");
+    head.append(heading, close);
+    const status = node("p", "", "dialog-note");
+    status.setAttribute("role", "status");
+    const body = node("div", "", "manuscript-tool-body");
+    page.append(head, status, body);
+    const session = new AbortController();
+    const { signal } = session;
+    let busy = false;
 
-  function run(action) {
-    if (busy) return;
-    busy = true;
-    body.inert = true;
-    close.disabled = true;
-    status.textContent = "处理中…";
-    return (async () => {
+    function cleanup() {
+      session.abort();
+      page.remove();
+    }
+
+    async function closePage(afterClose) {
+      if (signal.aborted) return;
+      await window.studioPages.close(page);
+      if (signal.aborted) afterClose?.();
+    }
+
+    async function run(action, onSuccess) {
+      if (busy || signal.aborted || page.hidden) return;
+      busy = true;
+      body.inert = true;
+      close.disabled = true;
+      status.textContent = "处理中…";
+      let result;
       try {
-        status.textContent = await action() || "";
+        result = await action();
+        if (!signal.aborted) status.textContent = !onSuccess && typeof result === "string" ? result : "";
       } catch (error) {
-        status.textContent = error.message;
+        if (!signal.aborted) status.textContent = error.message;
+        return;
       } finally {
         busy = false;
         body.inert = false;
         close.disabled = false;
-        if (dialog.open && !dialog.contains(document.activeElement)) close.focus();
+        if (!page.hidden && !signal.aborted && !page.contains(document.activeElement)) close.focus();
       }
-    })();
+      if (!signal.aborted && result !== false) await onSuccess?.(result);
+    }
+
+    function runAndClose(action, afterClose) {
+      return run(action, (result) => closePage(() => afterClose(result)));
+    }
+
+    function panel(title) {
+      const panel = node("section", "", "manuscript-tool-section");
+      panel.append(node("h3", title));
+      body.append(panel);
+      return panel;
+    }
+
+    function request(url, options) {
+      return api(url, { ...options, signal });
+    }
+
+    function post(url, payload = {}) {
+      return request(url, { method: "POST", body: JSON.stringify(payload) });
+    }
+
+    document.body.append(page);
+    if (!window.studioPages?.open(route, page, { canLeave: () => !busy, onClose: cleanup })) {
+      cleanup();
+      return null;
+    }
+    return { body, closePage, panel, post, request, run, runAndClose };
   }
 
   function button(label, action, primary = false) {
@@ -78,17 +114,6 @@
     return control;
   }
 
-  function section(title) {
-    const panel = node("section", "", "manuscript-tool-section");
-    panel.append(node("h3", title));
-    body.append(panel);
-    return panel;
-  }
-
-  function post(url, payload = {}) {
-    return api(url, { method: "POST", body: JSON.stringify(payload) });
-  }
-
   async function saveEditor() {
     if (!await flushChapterSave()) throw new Error("请先保存当前章节");
   }
@@ -116,12 +141,22 @@
 
   function openAdapt() {
     const { selectionStart, selectionEnd, value } = chapterContent;
-    if (!chapter.id || selectionEnd <= selectionStart) return showToast("请先在正文中选中要改写的段落", true);
     const id = chapter.id;
-    const original = value.slice(selectionStart, selectionEnd);
-    open("选区改写");
-    const options = section("改写指令");
-    options.append(node("pre", original, "manuscript-preview"));
+    const tool = open("adapt", "选区改写");
+    if (!tool) return;
+    const { body, closePage, panel, post, run } = tool;
+    const options = panel("改写范围");
+    if (!id || !value.trim()) {
+      options.append(node("p", "请先选中一章并写入正文。", "dialog-note"));
+      options.append(button("返回写作工作台", () => void closePage()));
+      return;
+    }
+    const source = node("textarea", "", "manuscript-preview");
+    source.readOnly = true;
+    source.rows = 6;
+    source.value = value;
+    field(options, "在原文中选中要改写的段落", source);
+    source.setSelectionRange(selectionStart, selectionEnd);
     const instruction = node("textarea");
     instruction.rows = 3;
     instruction.maxLength = 2000;
@@ -134,6 +169,8 @@
     const result = node("div", "", "manuscript-tool-section");
     const generate = button("生成改编草稿", () => run(async () => {
       if (!instruction.value.trim()) throw new Error("请输入改写指令");
+      const { selectionStart, selectionEnd } = source;
+      if (selectionEnd <= selectionStart) throw new Error("请先在原文中选中改写范围");
       await saveEditor();
       if (chapter.id !== id || chapter.content !== value) throw new Error("正文已变化，请重新选择改写范围");
       const data = await post("/api/adapt/rewrite", {
@@ -158,10 +195,7 @@
         result.append(node("h4", label), list.children.length ? list : node("p", "无条目", "dialog-note"));
       }
       for (const warning of impact.warnings || []) result.append(node("p", warning, "dialog-note"));
-      result.append(button("在草稿台审阅", () => {
-        dialog.close();
-        void openDraftBox(data.draft.id);
-      }, true));
+      result.append(button("在草稿台审阅", () => void closePage(() => void openDraftBox(data.draft.id)), true));
       result.scrollIntoView({ block: "nearest" });
       return "改编草稿已保存，正文等待审阅确认。";
     }), true);
@@ -175,8 +209,10 @@
     const current = { ...chapter };
     const offset = chapterContent.selectionStart;
     const path = `/api/chapters/${encodeURIComponent(current.id)}`;
-    open("章节管理");
-    const order = section("排序");
+    const tool = open("chapters", "章节管理");
+    if (!tool) return;
+    const { panel, post, request, run, runAndClose } = tool;
+    const order = panel("排序");
     const items = [...project.chapters];
     const navigator = field(order, "章节顺序", select(items.map((item) => [item.id, chapterLabel(item)])));
     navigator.size = Math.min(8, Math.max(2, items.length));
@@ -191,32 +227,28 @@
       else navigator.insertBefore(option, navigator.options[target].nextSibling);
       navigator.selectedIndex = target;
     };
-    order.append(button("上移", () => move(-1)), button("下移", () => move(1)), button("保存顺序", () => run(async () => {
+    order.append(button("上移", () => move(-1)), button("下移", () => move(1)), button("保存顺序", () => runAndClose(async () => {
       await saveEditor();
       await updateEditor(await post("/api/chapters/reorder", { chapterIds: items.map((item) => item.id) }));
-      dialog.close();
-      showToast("章节顺序已保存");
-    }), true));
+    }, () => showToast("章节顺序已保存")), true));
 
-    const merge = section("合并连续章节");
+    const merge = panel("合并连续章节");
     const choices = project.chapters.map((item) => [item.id, chapterLabel(item)]);
     const from = field(merge, "从", select(choices));
     const to = field(merge, "合并至（含）", select(choices));
     from.value = current.id;
     to.selectedIndex = Math.min(from.selectedIndex + 1, choices.length - 1);
     const mergeTitle = field(merge, "合并后的标题（可选）", textInput());
-    merge.append(button("合并章节", () => run(async () => {
+    merge.append(button("合并章节", () => runAndClose(async () => {
       if (from.selectedIndex >= to.selectedIndex) throw new Error("请选择至少两个连续的章节");
-      if (!window.confirm("确定合并所选范围内的章节？")) return;
+      if (!await window.studioPages.confirm("确定合并所选范围内的章节？")) return false;
       await saveEditor();
       const chapterIds = choices.slice(from.selectedIndex, to.selectedIndex + 1).map(([id]) => id);
       const data = await post("/api/chapters/merge", { chapterIds, title: mergeTitle.value.trim() });
       await updateEditor(data, data.chapter.id);
-      dialog.close();
-      showToast("章节已合并");
-    })));
+    }, () => showToast("章节已合并"))));
 
-    const split = section("拆分当前章节");
+    const split = panel("拆分当前章节");
     const splitOffset = node("input");
     splitOffset.type = "number";
     splitOffset.min = "1";
@@ -225,31 +257,27 @@
     field(split, "拆分位置（字符偏移，默认取编辑器光标）", splitOffset);
     const first = field(split, "上半章标题（可选）", textInput());
     const second = field(split, "下半章标题（可选）", textInput());
-    split.append(button("拆分章节", () => run(async () => {
+    split.append(button("拆分章节", () => runAndClose(async () => {
       if (!splitOffset.value || !splitOffset.checkValidity()) throw new Error("请将拆分位置设在正文首尾之间");
       await saveEditor();
       const data = await post(`${path}/split`, { offset: splitOffset.valueAsNumber, firstTitle: first.value.trim(), secondTitle: second.value.trim() });
       await updateEditor(data, data.second.id);
-      dialog.close();
-      showToast("章节已拆分");
-    })));
+    }, () => showToast("章节已拆分"))));
 
-    const history = section("当前章版本");
+    const history = panel("当前章版本");
     const versions = node("div", "", "manuscript-tool-body");
     history.append(button("读取版本", () => run(async () => {
       await saveEditor();
-      const data = await api(`${path}/versions`);
+      const data = await request(`${path}/versions`);
       versions.replaceChildren();
       for (const version of data.versions || []) {
         const details = node("details");
         details.append(node("summary", `版本 ${version.revision} · ${version.title} · ${dateLabel(version.createdAt)}`));
         details.append(node("pre", version.content, "manuscript-preview"));
-        details.append(button("回滚到此版本", () => run(async () => {
-          if (!window.confirm("确定回滚本章？系统会先保存当前全书快照。")) return;
+        details.append(button("回滚到此版本", () => runAndClose(async () => {
+          if (!await window.studioPages.confirm("确定回滚本章？系统会先保存当前全书快照。")) return false;
           await updateEditor(await post(`${path}/versions/${version.revision}/restore`));
-          dialog.close();
-          showToast("章节已回滚，恢复前的全书快照已保存");
-        })));
+        }, () => showToast("章节已回滚，恢复前的全书快照已保存"))));
         versions.append(details);
       }
       if (!versions.children.length) versions.append(node("p", "暂无历史版本", "dialog-note"));
@@ -261,13 +289,15 @@
   }
 
   function openSnapshots() {
-    open("全书快照");
-    const create = section("创建快照");
+    const tool = open("snapshots", "全书快照");
+    if (!tool) return;
+    const { panel, post, request, run, runAndClose } = tool;
+    const create = panel("创建快照");
     const name = field(create, "快照名称（可选）", textInput());
-    const history = section("快照列表");
+    const history = panel("快照列表");
     const list = node("div", "", "manuscript-tool-body");
     async function load() {
-      const data = await api("/api/snapshots");
+      const data = await request("/api/snapshots");
       list.replaceChildren();
       for (const snapshot of data.snapshots || []) {
         const details = node("details");
@@ -275,21 +305,19 @@
         const preview = node("div", "", "manuscript-tool-body");
         details.append(node("summary", `${snapshot.name || snapshot.title} · ${snapshot.chapterCount} 章 · ${dateLabel(snapshot.createdAt)}`));
         details.append(button("查看快照章节", () => run(async () => {
-          const detail = await api(path);
+          const detail = await request(path);
           preview.replaceChildren();
           for (const item of detail.chapters) {
             const copy = node("details");
             copy.append(node("summary", `第 ${item.index} 章 ${item.title}`), node("pre", item.content, "manuscript-preview"));
             preview.append(copy);
           }
-        })), button("恢复此快照", () => run(async () => {
-          if (!window.confirm("恢复快照将替换全书章节和知识库。系统会先尝试保存当前快照。确定恢复？")) return;
+        })), button("恢复此快照", () => runAndClose(async () => {
+          if (!await window.studioPages.confirm("恢复快照将替换全书章节和知识库。系统会先尝试保存当前快照。确定恢复？")) return false;
           await saveBook();
           await updateEditor(await post(`${path}/restore`));
           titleInput.value = project.title;
-          dialog.close();
-          showToast("全书快照已恢复");
-        })), preview);
+        }, () => showToast("全书快照已恢复"))), preview);
         list.append(details);
       }
       if (!list.children.length) list.append(node("p", "暂无全书快照", "dialog-note"));
@@ -308,8 +336,10 @@
   function openCandidates() {
     const current = { ...chapter };
     const offset = chapterContent.selectionStart;
-    open("多候选续写");
-    const controls = section("生成候选");
+    const tool = open("candidates", "多候选续写");
+    if (!tool) return;
+    const { body, panel, post, request, run, runAndClose } = tool;
+    const controls = panel("生成候选");
     controls.append(node("p", "使用续写区的方向、篇幅和创意度。选中的候选可存为待审阅的新章草稿。", "dialog-note"));
     const source = field(controls, "续写起点", select([
       ["full", "全书末尾"], ...(current.id ? [["chapter_offset", `本章光标（偏移 ${Array.from(current.content.slice(0, offset)).length}）`]] : []),
@@ -317,13 +347,13 @@
     const count = field(controls, "候选数", select([["1", "1 个"], ["2", "2 个"], ["3", "3 个"]]));
     count.value = "2";
     const results = node("div", "", "manuscript-candidates");
-    const history = section("历史候选组");
+    const history = panel("历史候选组");
     const groups = field(history, "选择候选组", select([]));
     const view = button("查看候选组", () => run(async () => {
-      render(await api(`/api/continuations/${encodeURIComponent(groups.value)}`));
+      render(await request(`/api/continuations/${encodeURIComponent(groups.value)}`));
     }));
     async function loadGroups() {
-      const data = await api("/api/continuations");
+      const data = await request("/api/continuations");
       groups.replaceChildren();
       for (const group of data.groups || []) {
         groups.add(new Option(`${dateLabel(group.createdAt)} · ${group.direction || "自然续写"} · ${group.candidateCount} 个`, group.id));
@@ -339,11 +369,10 @@
         else {
           card.append(node("p", `${candidate.charCount} 字 · ${candidate.totalTokens} tokens`, "dialog-note"));
           card.append(node("pre", candidate.content, "manuscript-preview"));
-          card.append(button("存为待审阅草稿", () => run(async () => {
-            const draft = await post("/api/drafts", { content: candidate.content });
-            dialog.close();
-            void openDraftBox(draft.id);
-          })));
+          card.append(button("存为待审阅草稿", () => runAndClose(
+            () => post("/api/drafts", { content: candidate.content }),
+            (draft) => void openDraftBox(draft.id),
+          )));
         }
         results.append(card);
       }

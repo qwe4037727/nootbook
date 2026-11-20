@@ -89,11 +89,6 @@ const agentRunHint = $("agentRunHint");
 const agentReportList = $("agentReportList");
 const foreshadowList = $("foreshadowList");
 const agentProposalList = $("agentProposalList");
-const draftMemorySyncDialog = $("draftMemorySyncDialog");
-const draftMemorySyncReextractButton = $("draftMemorySyncReextractButton");
-const draftMemorySyncBodyOnlyButton = $("draftMemorySyncBodyOnlyButton");
-const draftMemorySyncCancelButton = $("draftMemorySyncCancelButton");
-const draftMemorySyncCancel = $("draftMemorySyncCancel");
 
 const imageCenterButton = $("imageCenterButton");
 const imageCenterDialog = $("imageCenterDialog");
@@ -251,7 +246,7 @@ function countChars(text) {
 async function api(url, options = {}) {
   const response = await fetch(url, {
     ...options,
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers: { "Content-Type": "application/json", ...studioProjectHeaders(), ...(options.headers || {}) },
   });
   const text = await response.text();
   let data = null;
@@ -343,7 +338,6 @@ function configured() {
 function refreshHeader() {
   const title = (readString(project.title).trim() || readString(titleInput.value).trim() || "未命名小说");
   headerTitle.textContent = title;
-  document.title = title + " · 续写";
 }
 
 function updateContextInfo() {
@@ -423,7 +417,8 @@ async function loadProject() {
     const data = await api("/api/project");
     applyProjectMeta(data || {});
     if (project.chapters.length) {
-      await openChapter(lastChapterID());
+      const requested = new URLSearchParams(location.search).get("chapter");
+      await openChapter(project.chapters.some((item) => item.id === requested) ? requested : lastChapterID());
     } else {
       clearChapterSelection();
     }
@@ -606,6 +601,7 @@ function updateChapterRowStats() {
 function applyChapterData(raw, id) {
   chapterSwitchToken += 1;
   selectedChapterID = id;
+  window.studioPages.updateChapter(id);
   chapter = {
     id,
     index: Number(raw.index) || 0,
@@ -651,6 +647,7 @@ async function openChapter(id, token = ++chapterSwitchToken) {
 function clearChapterSelection() {
   chapterSwitchToken += 1;
   selectedChapterID = "";
+  window.studioPages.updateChapter("");
   chapter = { id: "", index: 0, title: "", content: "", charCount: 0 };
   chapterDirtyRevision = 0;
   chapterSavedRevision = 0;
@@ -665,15 +662,17 @@ function clearChapterSelection() {
 }
 
 async function selectChapter(id) {
-  if (!id || id === selectedChapterID) return;
+  if (!id || !project.chapters.some((item) => item.id === id)) return false;
+  if (id === selectedChapterID) return true;
   const token = ++chapterSwitchToken;
   const saved = await flushChapterSave();
-  if (token !== chapterSwitchToken) return;
+  if (token !== chapterSwitchToken) return false;
   if (!saved) {
     showToast("当前章节尚未保存，已取消切换", true);
-    return;
+    return false;
   }
   await openChapter(id, token);
+  return selectedChapterID === id;
 }
 
 function markChapterDirty() {
@@ -812,7 +811,7 @@ async function addChapter() {
 async function deleteChapter(id) {
   const meta = project.chapters.find((item) => item.id === id);
   if (!meta) return;
-  if (!window.confirm(`确定删除「${chapterLabel(meta)}」？删除后无法恢复。`)) return;
+  if (!await window.studioPages.confirm(`确定删除「${chapterLabel(meta)}」？删除后无法恢复。`)) return;
 
   chapterSwitchToken += 1;
   if (chapter.id === id) {
@@ -1551,7 +1550,7 @@ async function startGeneration() {
   try {
     const response = await fetch("/api/continue", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...studioProjectHeaders() },
       body: JSON.stringify({
         direction: directionInput.value.trim(),
         targetChars: Number(targetCharsSelect.value) || 800,
@@ -1736,7 +1735,7 @@ async function refreshPendingDraftCount() {
 }
 
 async function openDraftBox(focusID = "") {
-  if (!draftBoxDialog.open) showDialog(draftBoxDialog);
+  if (draftBoxDialog.hidden && !showDialog(draftBoxDialog)) return;
   persistedDraft = null;
   draftDetailSection.hidden = true;
   draftStatusFilter.value = "pending_confirmation";
@@ -2028,7 +2027,7 @@ async function confirmPersistedDraft(memorySync = "") {
     const action = persistedDraft.newChapter
       ? "将新建章节"
       : "将覆盖" + draftTargetLabel(persistedDraft).replace(/^并入/, "");
-    if (!window.confirm(`确认联合提交？${action}，并同时写入已提取的记忆变更。`)) return;
+    if (!await window.studioPages.confirm(`确认联合提交？${action}，并同时写入已提取的记忆变更。`)) return;
   }
   setDraftDetailBusy(true, memorySync === "reextract" ? "正在重新提取记忆并提交…" : "正在联合提交…");
   try {
@@ -2076,7 +2075,7 @@ async function confirmPersistedDraft(memorySync = "") {
 
 async function rejectPersistedDraft() {
   if (!persistedDraft || draftDetailBusy || persistedDraft.status !== "pending_confirmation") return;
-  if (!window.confirm("拒绝后该草稿及其记忆变更将不再可用，确定拒绝？")) return;
+  if (!await window.studioPages.confirm("拒绝后该草稿及其记忆变更将不再可用，确定拒绝？")) return;
   setDraftDetailBusy(true, "正在拒绝…");
   try {
     const data = await api("/api/drafts/" + encodeURIComponent(persistedDraft.id) + "/reject", {
@@ -2429,34 +2428,26 @@ async function updateProposal(id, status) {
 }
 
 function askDraftMemorySync() {
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (value) => {
-      if (settled) return;
-      settled = true;
-      closeDialog(draftMemorySyncDialog);
-      resolve(value);
-    };
-    draftMemorySyncReextractButton.onclick = () => finish("reextract");
-    draftMemorySyncBodyOnlyButton.onclick = () => finish("body_only");
-    draftMemorySyncCancelButton.onclick = () => finish("");
-    draftMemorySyncCancel.onclick = () => finish("");
-    draftMemorySyncDialog.oncancel = (event) => {
-      event.preventDefault();
-      finish("");
-    };
-    showDialog(draftMemorySyncDialog);
+  return window.studioPages.ask("草稿正文在最后一次记忆提取后发生了变化。请选择如何同步记忆。", [
+    ["仅提交正文（记忆不更新）", "body_only"],
+    ["先执行记忆重提取", "reextract"],
+  ], { cancel: "" });
+}
+
+const pageRoutes = {
+  settingsDialog: "settings", importDialog: "import", memoryReviewDialog: "memory",
+  planDialog: "outline", draftBoxDialog: "drafts", agentCenterDialog: "agents",
+  imageCenterDialog: "images", imageModelDialog: "image-model", exportDialog: "export",
+};
+
+function showDialog(page) {
+  return window.studioPages.open(pageRoutes[page.id], page, {
+    onClose: () => page.dispatchEvent(new Event("close")),
   });
 }
 
-function showDialog(dialog) {
-  if (typeof dialog.showModal === "function") dialog.showModal();
-  else dialog.setAttribute("open", "");
-}
-
-function closeDialog(dialog) {
-  if (typeof dialog.close === "function") dialog.close();
-  else dialog.removeAttribute("open");
+function closeDialog(page) {
+  return window.studioPages.close(page);
 }
 
 function openSettings() {
@@ -2840,7 +2831,7 @@ async function acceptChangeSet(id) {
 }
 
 async function rejectChangeSet(id) {
-  const reason = window.prompt("驳回原因（可选，≤200 字）：", "");
+  const reason = await window.studioPages.prompt("驳回原因（可选，≤200 字）：", "");
   if (reason === null) return;
   try {
     await api("/api/memory/changesets/" + encodeURIComponent(id) + "/reject", {
@@ -2928,8 +2919,8 @@ function renderCandidate(cand) {
   merge.type = "button";
   merge.className = "btn btn-ghost btn-sm";
   merge.textContent = "并入实体";
-  merge.addEventListener("click", () => {
-    const target = window.prompt("并入目标实体 ID（c_ 或 w_ 开头）：", "");
+  merge.addEventListener("click", async () => {
+    const target = await window.studioPages.prompt("并入目标实体 ID（c_ 或 w_ 开头）：", "");
     if (!target || !target.trim()) return;
     void resolveCandidate(cand.id, "merge", target.trim());
   });
@@ -3197,7 +3188,7 @@ function renderImageCard(asset, assets) {
     const img = document.createElement("img");
     img.loading = "lazy";
     img.alt = `${imageKindLabels[asset.kind] || asset.kind} ${asset.entryId || asset.chapterId || ""}`;
-    img.src = asset.thumbKey ? `/api/images/${asset.id}/thumb` : `/api/images/${asset.id}/file`;
+    img.src = studioProjectURL(`/api/images/${encodeURIComponent(asset.id)}/${asset.thumbKey ? "thumb" : "file"}`);
     thumb.append(img);
   } else {
     const placeholder = document.createElement("span");
@@ -3249,7 +3240,7 @@ function renderImageCard(asset, assets) {
       details.append(evidence);
       if (review.anchorId) {
         const anchor = document.createElement("a");
-        anchor.href = `/api/images/${encodeURIComponent(review.anchorId)}/file`;
+        anchor.href = studioProjectURL(`/api/images/${encodeURIComponent(review.anchorId)}/file`);
         anchor.target = "_blank";
         anchor.rel = "noopener";
         anchor.textContent = "查看核验时的基准图";
@@ -3264,7 +3255,7 @@ function renderImageCard(asset, assets) {
   if (asset.status === "done") {
     const view = document.createElement("a");
     view.className = "btn btn-quiet btn-sm";
-    view.href = `/api/images/${asset.id}/file`;
+    view.href = studioProjectURL(`/api/images/${encodeURIComponent(asset.id)}/file`);
     view.target = "_blank";
     view.rel = "noopener";
     view.textContent = "查看";
@@ -3346,7 +3337,7 @@ async function imageAction(id, action, message) {
 }
 
 async function deleteImageAsset(asset) {
-  if (!window.confirm("删除这张图像资产？文件会一并删除。")) return;
+  if (!await window.studioPages.confirm("删除这张图像资产？文件会一并删除。")) return;
   try {
     await api(`/api/images/${encodeURIComponent(asset.id)}`, { method: "DELETE" });
     showToast("已删除");
@@ -3357,6 +3348,10 @@ async function deleteImageAsset(asset) {
 }
 
 async function openImageModelSettings() {
+  if (!features.images || !showDialog(imageModelDialog)) return;
+  const form = $("imageModelForm");
+  form.inert = true;
+  form.setAttribute("aria-busy", "true");
   try {
     const cfg = await api("/api/config/image-model");
     imageModelBackend.value = cfg.backend === "sdwebui" ? "sdwebui" : "openai";
@@ -3382,9 +3377,11 @@ async function openImageModelSettings() {
     }
   } catch (error) {
     showToast("读取图像模型设置失败：" + error.message, true);
-    return;
+    void closeDialog(imageModelDialog);
+  } finally {
+    form.inert = false;
+    form.removeAttribute("aria-busy");
   }
-  showDialog(imageModelDialog);
 }
 
 async function saveImageModelSettings(event) {
@@ -3504,7 +3501,7 @@ function renderExportList(records) {
     info.append(title, meta);
     const download = document.createElement("a");
     download.className = "btn btn-quiet btn-sm";
-    download.href = `/api/exports/${encodeURIComponent(record.id)}/download`;
+    download.href = studioProjectURL(`/api/exports/${encodeURIComponent(record.id)}/download`);
     download.textContent = "下载";
     row.append(info, download);
     fragment.append(row);
@@ -3643,7 +3640,7 @@ function bindEvents() {
     if (importSubmitButton.disabled) return;
     const modeInput = $("importMode");
     const mode = modeInput.value;
-    if (mode === "overwrite" && project.chapters.length && !window.confirm("导入会替换当前全部章节，确定继续？")) return;
+    if (mode === "overwrite" && project.chapters.length && !await window.studioPages.confirm("导入会替换当前全部章节，确定继续？")) return;
     importSubmitButton.disabled = true;
     modeInput.disabled = true;
     importSubmitButton.textContent = "导入中…";
@@ -3823,12 +3820,6 @@ function bindEvents() {
     });
   });
 
-  document.querySelectorAll("dialog").forEach((dialog) => {
-    dialog.addEventListener("click", (event) => {
-      if (event.target === dialog) closeDialog(dialog);
-    });
-  });
-
   generateButton.addEventListener("click", () => {
     void startGeneration();
   });
@@ -3875,9 +3866,14 @@ function bindEvents() {
     const modifier = event.ctrlKey || event.metaKey;
     if (!modifier) return;
     if (event.key === "Enter") {
-      if (document.querySelector("dialog[open]")) return;
-      event.preventDefault();
-      void startGeneration();
+      if (event.defaultPrevented || window.studioPages.decisionOpen()) return;
+      if (window.studioPages.isCurrent("continue")) {
+        event.preventDefault();
+        void startGeneration();
+      } else if (window.studioPages.isCurrent("editor")) {
+        event.preventDefault();
+        void window.studioPages.showContinuation();
+      }
     } else if (event.key.toLowerCase() === "s") {
       event.preventDefault();
       void manualSave();
@@ -3898,21 +3894,20 @@ function bindEvents() {
 
 async function init() {
   bindEvents();
+  if (!studioProjectID) {
+    try {
+      studioProjectID = (await api("/api/projects")).currentId;
+    } catch {
+      showToast("读取当前作品失败，请重新加载页面", true);
+    }
+  }
   await loadFeatures();
   await loadConfig();
   await loadProject();
   updateConfigUI();
   updateContextInfo();
   await refreshPendingDraftCount();
-  const homeShortcuts = {
-    '#world': 'world-center-btn',
-    '#agents': 'agentCenterButton',
-    '#memory': 'memoryReviewButton',
-    '#settings': 'settingsButton',
-    '#tasks': 'task-center-btn',
-  };
-  const shortcut = homeShortcuts[location.hash];
-  if (shortcut) $(shortcut)?.click();
+  await window.studioPages.init();
 }
 
 void init();

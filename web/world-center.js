@@ -11,7 +11,7 @@
   ]);
   const settingFields = new Map([["category", "分类"], ["content", "内容"]]);
   const relationStatuses = new Map([["active", "有效"], ["invalidated", "已失效"]]);
-  const sections = new Map([["entries", "词条"], ["relations", "关系"], ["timeline", "时间线"]]);
+  const sections = new Map([["atlas", "3D 图谱"], ["entries", "词条"], ["relations", "关系"], ["timeline", "时间线"]]);
   const list = (value) => Array.isArray(value) ? value : [];
   const endpoint = (section, id) => `/api/world/${section}${id ? `/${encodeURIComponent(id)}` : ""}`;
 
@@ -102,21 +102,19 @@
     const launcher = document.getElementById("world-center-btn");
     if (!launcher || document.getElementById("world-center-dialog")) return;
 
-    const dialog = element("dialog", "", "dialog dialog-wide");
-    dialog.id = "world-center-dialog";
-    dialog.setAttribute("aria-labelledby", "world-center-title");
-    launcher.setAttribute("aria-haspopup", "dialog");
-    launcher.setAttribute("aria-controls", dialog.id);
-    const layout = element("div", "", "dialog-form");
+    const page = element("section", "", "dialog dialog-wide studio-page");
+    page.id = "world-center-dialog";
+    page.hidden = true;
+    page.setAttribute("aria-labelledby", "world-center-title");
+    launcher.setAttribute("aria-controls", page.id);
+    const layout = element("div", "", "dialog-form world-center-layout");
     const header = element("header", "", "dialog-head");
     const titleBlock = element("div");
     const title = element("h2", "大世界");
     title.id = "world-center-title";
     titleBlock.append(title);
     const projectLine = note(titleBlock, "");
-    const closeButton = button("×", () => close(), "icon-button");
-    closeButton.setAttribute("aria-label", "关闭大世界");
-    closeButton.autofocus = true;
+    const closeButton = button("返回编辑器", () => window.studioPages.close(page));
     header.append(titleBlock, closeButton);
     const navigation = element("nav");
     navigation.setAttribute("aria-label", "大世界分类");
@@ -124,15 +122,16 @@
     const status = element("div");
     status.setAttribute("role", "status");
     status.setAttribute("aria-atomic", "true");
-    const content = element("section");
+    const content = element("section", "", "world-center-content");
     content.setAttribute("aria-labelledby", "world-center-view-title");
     layout.append(header, navigation, status, content);
-    dialog.append(layout);
-    document.body.append(dialog);
+    page.append(layout);
+    document.body.append(page);
 
     let session;
     const navButtons = new Map();
     for (const [section, label] of sections) {
+      if (section === "atlas" && !window.worldAtlas) continue;
       const navButton = button(label, () => navigate(section));
       navButtons.set(section, navButton);
       navigation.append(navButton);
@@ -143,21 +142,25 @@
       status.textContent = message;
     }
 
-    function request(path, method = "GET", body) {
-      return api(path, {
+    async function request(path, method = "GET", body) {
+      const { controller: { signal }, projectId } = session;
+      const result = await api(path, {
         method,
         cache: "no-store",
-        signal: session.controller.signal,
-        headers: session.projectId ? { "X-Project-ID": session.projectId } : {},
+        signal,
+        headers: projectId ? { "X-Project-ID": projectId } : {},
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
+      signal.throwIfAborted();
+      return result;
     }
 
-    async function run(message, work) {
+    async function run(message, work, { writing = false } = {}) {
       const current = session;
-      if (!current || current.busy) return;
+      if (!current || current.busy || current.confirming) return;
       const previousFocus = document.activeElement;
       current.busy = true;
+      current.writing = writing;
       content.inert = true;
       content.setAttribute("aria-busy", "true");
       setStatus(message);
@@ -169,48 +172,60 @@
       } finally {
         if (session === current) {
           current.busy = false;
+          current.writing = false;
           current.feedback = "";
           content.inert = false;
           content.removeAttribute("aria-busy");
           const target = current.focusTarget || previousFocus;
           current.focusTarget = null;
-          if (target?.isConnected && dialog.contains(target)) target.focus();
+          if (target?.isConnected && page.contains(target)) target.focus();
         }
       }
     }
 
+    async function confirmAction(message) {
+      const current = session;
+      if (!current || current.busy || current.confirming) return false;
+      current.confirming = true;
+      try {
+        const accepted = await window.studioPages.confirm(message);
+        return accepted && session === current && !current.busy;
+      } finally {
+        current.confirming = false;
+      }
+    }
+
     function canLeave() {
-      return session && !session.busy && (!session.dirty || window.confirm("放弃当前未保存的修改？"));
+      if (session?.confirming || session?.writing) return false;
+      return session?.dirty ? confirmAction("放弃当前未保存的修改？") : true;
     }
 
-    function close() {
-      if (canLeave()) dialog.close();
-    }
-
-    dialog.addEventListener("cancel", (event) => {
-      event.preventDefault();
-      close();
-    });
-    dialog.addEventListener("close", () => {
+    function onClose() {
       session?.controller.abort();
+      session?.atlas?.destroy();
       session = null;
-      launcher.focus();
-    });
+      content.inert = false;
+      content.removeAttribute("aria-busy");
+      content.replaceChildren();
+      setStatus();
+    }
 
     launcher.addEventListener("click", () => {
-      if (dialog.open) return;
+      if (!page.hidden || !window.studioPages) return;
+      if (!window.studioPages.open("world", page, { onClose, canLeave })) return;
       session = {
-        controller: new AbortController(), section: "entries", kind: "", query: "", relationStatus: "",
+        controller: new AbortController(), section: window.worldAtlas ? "atlas" : "entries",
+        kind: "", query: "", relationStatus: "", atlasView: {},
         entries: [], chapters: [], ready: false, busy: false, dirty: false, feedback: "", focusTarget: null,
       };
       projectLine.textContent = "";
       navigation.hidden = true;
       content.replaceChildren();
-      dialog.showModal();
       void initialize();
     });
 
     async function initialize() {
+      const current = session;
       await run("正在读取当前作品…", async () => {
         const projects = await request("/api/projects");
         if (!projects?.currentId) throw new Error("无法确定当前作品");
@@ -228,9 +243,10 @@
         projectLine.textContent = `作品：${project.title || projects.projects?.find((item) => item.id === session.projectId)?.name || session.projectId}`;
         session.ready = true;
         navigation.hidden = false;
-        renderEntries(session.entries);
+        if (session.section === "atlas") await loadAtlas(session.entries);
+        else renderEntries(session.entries);
       });
-      if (session && !session.ready && !content.childElementCount) {
+      if (session && session === current && !session.ready && !content.childElementCount) {
         setView("无法打开大世界");
         content.append(button("重试", initialize));
         content.querySelector("button").focus();
@@ -238,6 +254,8 @@
     }
 
     function setView(heading) {
+      session.atlas?.destroy();
+      session.atlas = null;
       session.dirty = false;
       for (const [name, navButton] of navButtons) {
         const selected = name === session.section;
@@ -267,8 +285,29 @@
       return endpoint("entries") + (query.size ? `?${query}` : "");
     }
 
+    async function loadAtlas(entries) {
+      const current = session;
+      const relations = await request(endpoint("relations")).catch((error) => {
+        current.feedback = `关系读取失败：${error.message}`;
+        return null;
+      });
+      current.controller.signal.throwIfAborted();
+      session.entries = entries;
+      session.section = "atlas";
+      setView("空间关系图谱");
+      session.atlas = window.worldAtlas.mount(content, {
+        entries, relations, kinds, relationStatuses, view: session.atlasView,
+        openEntry, openRelation: (relation) => {
+          session.section = "relations";
+          renderRelationForm(relation, "atlas");
+        },
+      });
+    }
+
     async function loadSection(section) {
-      if (section === "entries") {
+      if (section === "atlas") {
+        await loadAtlas(list(await request(endpoint("entries"))));
+      } else if (section === "entries") {
         const entries = list(await request(entryListPath()));
         if (!session.kind && !session.query.trim()) session.entries = entries;
         session.section = section;
@@ -286,7 +325,28 @@
     }
 
     function navigate(section) {
-      if (canLeave()) void run("正在加载…", () => loadSection(section));
+      const current = session;
+      if (!current || current.busy || current.confirming) return;
+      const load = () => run("正在加载…", () => loadSection(section));
+      if (!current.dirty) return load();
+      return confirmAction("放弃当前未保存的修改？").then((accepted) => {
+        if (accepted) return load();
+      });
+    }
+
+    function openChapter(chapterId) {
+      if (!chapterId || session?.busy || session?.confirming) return;
+      return window.studioPages.showEditor(chapterId);
+    }
+
+    function appendSourceRefs(parent, refs) {
+      for (const ref of list(refs)) {
+        const chapter = session.chapters.find((item) => item.id === ref.chapterId);
+        if (!chapter) continue;
+        const row = actionRow(parent);
+        row.append(button(`打开第 ${chapter.index} 章 · ${chapter.title}`, () => openChapter(chapter.id)));
+        if (ref.quote) note(parent, ref.quote);
+      }
     }
 
     function renderEntries(entries) {
@@ -327,13 +387,15 @@
     function openEntry(id) {
       void run("正在读取词条…", async () => {
         const detail = await request(endpoint("entries", id));
-        renderEntryForm(detail.entry, list(detail.relations));
+        const returnSection = session.section;
+        session.section = "entries";
+        renderEntryForm(detail.entry, list(detail.relations), undefined, returnSection);
       });
     }
 
-    function editor(section, item, heading, savePayload, removeMessage) {
+    function editor(section, item, heading, savePayload, removeMessage, returnSection = section) {
       setView(heading);
-      actionRow(content).append(button(`返回${sections.get(section)}`, () => navigate(section)));
+      actionRow(content).append(button(`返回${sections.get(returnSection)}`, () => navigate(returnSection)));
       const form = element("form");
       form.style.display = "grid";
       form.style.gap = "12px";
@@ -351,12 +413,12 @@
           const actions = element("div", "", "dialog-actions");
           form.append(actions);
           if (removeMessage) {
-            actions.append(button("删除", () => {
-              if (!session.busy && window.confirm(removeMessage)) {
-                void run("正在删除…", async () => {
+            actions.append(button("删除", async () => {
+              if (await confirmAction(removeMessage)) {
+                return run("正在删除…", async () => {
                   await request(endpoint(section, item.id), "DELETE");
-                  await afterWrite(section, "已删除", null, item.id);
-                });
+                  await afterWrite(section, returnSection, "已删除", null, item.id);
+                }, { writing: true });
               }
             }, "btn btn-danger"));
           }
@@ -374,15 +436,15 @@
                   return;
                 }
                 const saved = await request(endpoint(section, item?.id), item ? "PUT" : "POST", payload);
-                await afterWrite(section, "已保存", saved);
-              });
+                await afterWrite(section, returnSection, "已保存", saved);
+              }, { writing: true });
             });
           }
         },
       };
     }
 
-    async function afterWrite(section, message, saved, removedId) {
+    async function afterWrite(section, returnSection, message, saved, removedId) {
       session.dirty = false;
       if (section === "entries") {
         session.entries = session.entries.filter((entry) => entry.id !== (saved?.id || removedId));
@@ -390,10 +452,10 @@
       }
       // Leave the submitted form immediately so a failed refresh cannot repeat the write.
       setView(message);
-      actionRow(content).append(button(`返回${sections.get(section)}`, () => navigate(section)));
+      actionRow(content).append(button(`返回${sections.get(returnSection)}`, () => navigate(returnSection)));
       try {
-        await loadSection(section);
-        session.feedback = message;
+        await loadSection(returnSection);
+        session.feedback = [message, session.feedback].filter(Boolean).join("。");
       } catch (error) {
         throw new Error(`${message}，但列表刷新失败：${error.message}`);
       }
@@ -404,7 +466,7 @@
       return control.value;
     }
 
-    function renderEntryForm(entry, relations = [], createKind = extendedKinds.has(session.kind) ? session.kind : "faction") {
+    function renderEntryForm(entry, relations = [], createKind = extendedKinds.has(session.kind) ? session.kind : "faction", returnSection = "entries") {
       const entryKind = entry?.kind || createKind;
       const isSetting = entryKind === "setting";
       const isExtended = extendedKinds.has(entryKind);
@@ -444,7 +506,7 @@
       };
       const heading = entry ? entry.name : isExtended ? "新建扩展词条" : `新建${kinds.get(entryKind)}`;
       const edit = editor("entries", entry, heading, readPatch,
-        entry ? `删除「${entry.name}」及其关系与字段锁？` : "");
+        entry ? `删除「${entry.name}」及其关系与字段锁？` : "", returnSection);
       if (entry) {
         note(edit.form, `${kinds.get(entry.kind) || entry.kind} · ${entry.id}`);
       } else if (isExtended) {
@@ -485,7 +547,7 @@
             if (cached) cached.lockedFields = [...locks];
             refreshLocks();
             session.feedback = locks.has(key) ? `已锁定「${label}」` : `已解锁「${label}」`;
-          });
+          }, { writing: true });
         });
         lockButtons.set(key, { button: toggle, status: lockStatus, label });
         actions.append(lockStatus, toggle);
@@ -536,6 +598,7 @@
       const evidence = element("details", "", "review-section");
       evidence.append(element("summary", "证据与来源"));
       for (const quote of list(entry.evidence)) note(evidence, quote);
+      appendSourceRefs(evidence, entry.sourceRefs);
       const resolved = element("div");
       const loadEvidence = button("定位证据章节", () => {
         void run("正在定位证据…", async () => {
@@ -544,6 +607,7 @@
           records(resolved, items, "未找到可定位的章节引文。", (row, item) => {
             note(row, `第 ${item.chapterIndex} 章 · ${item.chapterTitle}（字符位置 ${item.startOffset}–${item.endOffset}）`);
             note(row, item.quote);
+            if (item.chapterId) row.append(button("在编辑器打开此章", () => openChapter(item.chapterId)));
           });
         });
       });
@@ -554,6 +618,7 @@
       records(links, relations, "此词条暂无关联关系。", (row, relation) => {
         note(row, relationTitle(relation));
         note(row, relationStatuses.get(relation.status) || relation.status);
+        appendSourceRefs(row, relation.sourceRefs);
       });
       content.append(links);
     }
@@ -598,10 +663,11 @@
           note(row, `起止章序：${relation.startChapterIndex || "不限"} – ${relation.endChapterIndex || "不限"}`);
         }
         if (relation.description) note(row, relation.description);
+        appendSourceRefs(row, relation.sourceRefs);
       });
     }
 
-    function renderRelationForm(relation) {
+    function renderRelationForm(relation, returnSection = "relations") {
       const edit = editor("relations", relation, relation ? "编辑关系" : "新建关系", () => {
         if (from.value === to.value) throw new Error("关系的起点与终点必须不同");
         if (Number(end.value) > 0 && Number(end.value) < Number(start.value)) {
@@ -613,7 +679,7 @@
           startChapterIndex: Number(start.value), endChapterIndex: Number(end.value),
           ...(relation?.sourceRefs ? { sourceRefs: relation.sourceRefs } : {}),
         };
-      }, relation ? `删除「${relationTitle(relation)}」？` : "");
+      }, relation ? `删除「${relationTitle(relation)}」？` : "", returnSection);
       const options = [["", "请选择词条"], ...entryOptions()];
       const fromId = relation?.fromEntryId || "";
       const toId = relation?.toEntryId || "";
@@ -625,7 +691,10 @@
       const state = selectField(edit.form, "状态", relationStatuses, relation?.status || "active");
       const start = numberField(edit.form, "起始章序（0 为不限）", relation?.startChapterIndex);
       const end = numberField(edit.form, "结束章序（0 为不限）", relation?.endChapterIndex);
-      if (list(relation?.sourceRefs).length) note(edit.form, `保存时保留原有 ${relation.sourceRefs.length} 条来源引用。`);
+      if (list(relation?.sourceRefs).length) {
+        note(edit.form, `保存时保留原有 ${relation.sourceRefs.length} 条来源引用。`);
+        appendSourceRefs(edit.form, relation.sourceRefs);
+      }
       edit.finish();
     }
 
@@ -639,6 +708,7 @@
         if (event.summary && event.summary !== event.title) note(row, event.summary);
         if (list(event.participants).length) note(row, `参与者：${event.participants.map(entryName).join("、")}`);
         if (list(event.entities).length) note(row, `关联词条：${event.entities.map(entryName).join("、")}`);
+        if (event.chapterId) row.append(button("在编辑器打开此章", () => openChapter(event.chapterId)));
         if (event.source === "manual") row.append(button("编辑事件", () => renderTimelineForm(event)));
       });
     }

@@ -82,12 +82,6 @@ h2 span { color: #adcbff; margin-right: 6px; }
 .agent > a { display: inline-flex; align-items: center; gap: 10px; }
 .recent .activity { margin-bottom: 0; }
 #agent-project { margin: 2px 0 12px; }
-dialog { width: min(420px, calc(100% - 30px)); color: inherit; background: #151f39 !important; padding: 25px; }
-dialog::backdrop { background: #030612c9; }
-dialog label { display: block; margin: 18px 0 7px; }
-dialog input { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; color: inherit; background: #0d172d; }
-#create-error { color: #ffbdbd; }
-.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .effects-on.departing .cosmos { transition: transform 380ms ease-in, opacity 380ms ease-in; transform: scale(1.19); opacity: .45; }
 .effects-on.departing .deck { transition: opacity 380ms ease-in; opacity: .32; }
 @media (max-width: 1110px) { .work-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

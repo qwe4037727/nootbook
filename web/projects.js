@@ -9,7 +9,7 @@
   async function request(url, options = {}) {
     const response = await fetch(url, {
       ...options,
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      headers: { "Content-Type": "application/json", ...studioProjectHeaders(), ...(options.headers || {}) },
     });
     const text = await response.text();
     let data = null;
@@ -44,8 +44,9 @@
     return (info && (info.title || info.name)) || "未命名作品";
   }
 
-  async function loadProjects() {
-    const data = await request("/api/projects");
+  async function loadProjects(signal) {
+    const data = await request("/api/projects", { signal });
+    if (signal?.aborted) return;
     state.projects = Array.isArray(data.projects) ? data.projects : [];
     state.currentId = data.currentId || data.defaultId || "default";
     renderProjectsButton();
@@ -69,7 +70,8 @@
         type: "button",
         style: "max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;",
       }, "作品…");
-      button.addEventListener("click", openProjectDialog);
+      button.setAttribute("aria-controls", "projectManagerDialog");
+      button.addEventListener("click", openProjectPage);
       actions.insertBefore(button, actions.firstChild);
     }
     if (!document.getElementById("agentRunsButton")) {
@@ -79,58 +81,91 @@
         type: "button",
         title: "查看后台 Agent 的只读观察记录",
       }, "Echo 观察");
-      button.addEventListener("click", openAgentDialog);
+      button.setAttribute("aria-controls", "agentRunsDialog");
+      button.addEventListener("click", openEchoPage);
       const anchor = document.getElementById("planButton");
-      actions.insertBefore(button, anchor || null);
+      actions.insertBefore(button, anchor?.parentNode === actions ? anchor : null);
     }
   }
 
-  async function openProjectDialog() {
-    let dialog = document.getElementById("projectManagerDialog");
-    if (!dialog) {
-      dialog = el("dialog", { id: "projectManagerDialog", class: "dialog" });
-      const form = el("div", { class: "dialog-form" });
-      const head = el("div", { class: "dialog-head" });
-      head.append(
-        el("h2", {}, "作品管理"),
-        (() => {
-          const close = el("button", { class: "icon-button", type: "button", "aria-label": "关闭" }, "×");
-          close.addEventListener("click", () => dialog.close());
-          return close;
-        })(),
-      );
-      const note = el("p", { class: "dialog-note" }, "每部作品拥有独立的章节、知识库、计划、草稿、记忆与 Agent 记录。切换作品后页面会重新载入。");
-      const list = el("div", { id: "projectList", style: "display:flex;flex-direction:column;gap:10px;" });
-      const createRow = el("div", { style: "display:flex;gap:8px;align-items:center;padding-top:12px;border-top:1px solid var(--line);" });
-      const input = el("input", {
-        id: "newProjectName",
-        type: "text",
-        maxlength: "120",
-        placeholder: "新作品名称",
-        style: "flex:1;min-width:0;padding:9px 11px;border:1px solid var(--line-strong);border-radius:2px;background:var(--paper);color:var(--ink);",
-      });
-      const create = el("button", { class: "btn btn-primary", type: "button" }, "新建作品");
-      create.addEventListener("click", createProject);
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") createProject();
-      });
-      createRow.append(input, create);
-      form.append(head, note, list, createRow);
-      dialog.append(form);
-      document.body.append(dialog);
+  function createPage(id, title) {
+    const page = el("section", { id, class: "dialog", "aria-labelledby": `${id}Title` });
+    page.classList.add("studio-page");
+    page.hidden = true;
+    const form = el("div", { class: "dialog-form" });
+    const head = el("div", { class: "dialog-head" });
+    const close = el("button", { class: "icon-button", type: "button", "aria-label": "关闭" }, "×");
+    close.addEventListener("click", () => void window.studioPages.close(page));
+    head.append(el("h2", { id: `${id}Title` }, title), close);
+    form.append(head);
+    page.append(form);
+    return { page, form };
+  }
+
+  function mountPage(route, page, session) {
+    function cleanup() {
+      session.abort();
+      page.remove();
     }
+    document.body.append(page);
+    if (window.studioPages?.open(route, page, { onClose: cleanup })) return true;
+    cleanup();
+    return false;
+  }
+
+  async function openProjectPage() {
+    if (document.getElementById("projectManagerDialog")) return;
+    const { page, form } = createPage("projectManagerDialog", "作品管理");
+    const session = new AbortController();
+    const { signal } = session;
+    let busy = false;
+    async function act(action) {
+      if (busy || signal.aborted || page.hidden) return;
+      busy = true;
+      try {
+        await action();
+      } catch (error) {
+        if (!signal.aborted) showToast(error.message, true);
+      } finally {
+        busy = false;
+      }
+    }
+    const note = el("p", { class: "dialog-note" }, "每部作品拥有独立的章节、知识库、计划、草稿、记忆与 Agent 记录。切换作品后页面会重新载入。");
+    const list = el("div", { id: "projectList", style: "display:flex;flex-direction:column;gap:10px;" });
+    const createRow = el("div", { style: "display:flex;gap:8px;align-items:center;padding-top:12px;border-top:1px solid var(--line);" });
+    const input = el("input", {
+      id: "newProjectName",
+      type: "text",
+      maxlength: "120",
+      placeholder: "新作品名称",
+      style: "flex:1;min-width:0;padding:9px 11px;border:1px solid var(--line-strong);border-radius:2px;background:var(--paper);color:var(--ink);",
+    });
+    const create = el("button", { class: "btn btn-primary", type: "button" }, "新建作品");
+    const submit = () => void act(() => createProject(input.value, signal));
+    create.addEventListener("click", submit);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") submit();
+    });
+    createRow.append(input, create);
+    form.append(note, list, createRow);
+    if (!mountPage("projects", page, session)) return;
+
+    async function refresh() {
+      try {
+        await loadProjects(signal);
+      } finally {
+        if (!signal.aborted) renderProjectList(list, act, signal, refresh);
+      }
+    }
+    list.append(el("p", { class: "dialog-note" }, "正在加载作品…"));
     try {
-      await loadProjects();
+      await refresh();
     } catch {
-      // 列表加载失败时保留上次数据，错误会由按钮状态体现。
+      // 列表加载失败时保留上次数据。
     }
-    renderProjectList();
-    if (!dialog.open) dialog.showModal();
   }
 
-  function renderProjectList() {
-    const list = document.getElementById("projectList");
-    if (!list) return;
+  function renderProjectList(list, act, signal, refresh) {
     list.textContent = "";
     for (const info of state.projects) {
       const row = el("div", {
@@ -145,19 +180,19 @@
 
       if (info.id !== state.currentId) {
         const use = el("button", { class: "btn btn-quiet", type: "button" }, "切换");
-        use.addEventListener("click", () => switchProject(info.id));
+        use.addEventListener("click", () => void act(() => switchProject(info.id)));
         row.append(use);
       } else {
         row.append(el("span", { style: "color:var(--accent-dark);font-size:11px;" }, "当前"));
       }
 
       const rename = el("button", { class: "btn btn-quiet", type: "button" }, "重命名");
-      rename.addEventListener("click", () => renameProject(info));
+      rename.addEventListener("click", () => void act(() => renameProject(info, signal, refresh)));
       row.append(rename);
 
       if (info.id !== "default") {
         const remove = el("button", { class: "btn btn-quiet btn-delete", type: "button" }, "删除");
-        remove.addEventListener("click", () => deleteProject(info));
+        remove.addEventListener("click", () => void act(() => deleteProject(info, signal, refresh)));
         row.append(remove);
       }
       list.append(row);
@@ -166,97 +201,71 @@
 
   function switchProject(id) {
     setProjectCookie(id);
-    location.reload();
+    location.assign(`/studio.html?projectId=${encodeURIComponent(id)}`);
   }
 
-  async function createProject() {
-    const input = document.getElementById("newProjectName");
-    const name = (input && input.value || "").trim();
+  async function createProject(value, signal) {
+    const name = value.trim();
     if (!name) return;
-    try {
-      const info = await request("/api/projects", {
-        method: "POST",
-        body: JSON.stringify({ name }),
-      });
-      setProjectCookie(info.id);
+    const info = await request("/api/projects", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+      signal,
+    });
+    if (!signal.aborted) switchProject(info.id);
+  }
+
+  async function renameProject(info, signal, refresh) {
+    const name = await window.studioPages.prompt("新的作品名称", projectLabel(info));
+    const trimmed = name?.trim();
+    if (!trimmed || signal.aborted) return;
+    await request(`/api/projects/${encodeURIComponent(info.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: trimmed }),
+      signal,
+    });
+    if (signal.aborted) return;
+    if (info.id === state.currentId) {
       location.reload();
-    } catch (error) {
-      alert(error.message);
+      return;
     }
+    await refresh();
   }
 
-  async function renameProject(info) {
-    const name = prompt("新的作品名称", projectLabel(info));
-    if (name === null) return;
-    const trimmed = name.trim();
-    if (!trimmed) return;
+  async function deleteProject(info, signal, refresh) {
+    if (!await window.studioPages.confirm(`删除「${projectLabel(info)}」将永久移除该作品的全部章节、知识库、记忆和草稿。确定继续？`) || signal.aborted) return;
+    await request(`/api/projects/${encodeURIComponent(info.id)}`, { method: "DELETE", signal });
+    if (signal.aborted) return;
+    if (info.id === state.currentId) {
+      switchProject("default");
+      return;
+    }
+    await refresh();
+  }
+
+  async function openEchoPage() {
+    if (document.getElementById("agentRunsDialog")) return;
+    const { page, form } = createPage("agentRunsDialog", "Echo 观察记录");
+    const session = new AbortController();
+    const { signal } = session;
+    const list = el("div", { id: "agentRunsList", style: "display:flex;flex-direction:column;gap:9px;" }, "正在加载观察记录…");
+    form.append(
+      el("p", { class: "dialog-note" }, "Echo 是 M0 的只读贯穿线 Agent：章节保存/新建/删除/导入后记录一次观察，不修改正文、知识库或记忆。"),
+      list,
+    );
+    if (!mountPage("echo", page, session)) return;
     try {
-      await request(`/api/projects/${encodeURIComponent(info.id)}`, {
-        method: "PATCH",
-        body: JSON.stringify({ name: trimmed }),
-      });
-      if (info.id === state.currentId) {
-        location.reload();
-        return;
-      }
-      await loadProjects();
-      renderProjectList();
+      await loadAgentRuns(signal);
     } catch (error) {
-      alert(error.message);
+      if (!signal.aborted) list.textContent = error.message;
     }
   }
 
-  async function deleteProject(info) {
-    if (!confirm(`删除「${projectLabel(info)}」将永久移除该作品的全部章节、知识库、记忆和草稿。确定继续？`)) return;
-    try {
-      await request(`/api/projects/${encodeURIComponent(info.id)}`, { method: "DELETE" });
-      if (info.id === state.currentId) {
-        setProjectCookie("default");
-        location.reload();
-        return;
-      }
-      await loadProjects();
-      renderProjectList();
-    } catch (error) {
-      alert(error.message);
-    }
-  }
-
-  async function openAgentDialog() {
-    let dialog = document.getElementById("agentRunsDialog");
-    if (!dialog) {
-      dialog = el("dialog", { id: "agentRunsDialog", class: "dialog" });
-      const form = el("div", { class: "dialog-form" });
-      const head = el("div", { class: "dialog-head" });
-      head.append(
-        el("h2", {}, "Echo 观察记录"),
-        (() => {
-          const close = el("button", { class: "icon-button", type: "button", "aria-label": "关闭" }, "×");
-          close.addEventListener("click", () => dialog.close());
-          return close;
-        })(),
-      );
-      form.append(
-        head,
-        el("p", { class: "dialog-note" }, "Echo 是 M0 的只读贯穿线 Agent：章节保存/新建/删除/导入后记录一次观察，不修改正文、知识库或记忆。"),
-        el("div", { id: "agentRunsList", style: "display:flex;flex-direction:column;gap:9px;" }),
-      );
-      dialog.append(form);
-      document.body.append(dialog);
-    }
-    await refreshAgentRuns();
-    if (!dialog.open) dialog.showModal();
-  }
-
-  async function refreshAgentRuns() {
-    try {
-      const data = await request("/api/agents/runs?limit=20");
-      state.runs = Array.isArray(data.runs) ? data.runs : [];
-      renderAgentRuns();
-    } catch (error) {
-      const list = document.getElementById("agentRunsList");
-      if (list) list.textContent = error.message;
-    }
+  async function loadAgentRuns(signal) {
+    const data = await request("/api/agents/runs?limit=20", { signal });
+    if (signal?.aborted) return;
+    state.runs = Array.isArray(data.runs) ? data.runs : [];
+    renderAgentRuns();
   }
 
   function renderAgentRuns() {
@@ -295,9 +304,7 @@
     mountButtons();
     try {
       await loadProjects();
-      const data = await request("/api/agents/runs?limit=20");
-      state.runs = Array.isArray(data.runs) ? data.runs : [];
-      renderAgentRuns();
+      await loadAgentRuns();
     } catch (error) {
       const button = document.getElementById("projectSwitchButton");
       if (button) button.textContent = "作品：加载失败";
@@ -305,9 +312,7 @@
     window.setInterval(async () => {
       if (document.hidden) return;
       try {
-        const data = await request("/api/agents/runs?limit=20");
-        state.runs = Array.isArray(data.runs) ? data.runs : [];
-        renderAgentRuns();
+        await loadAgentRuns();
       } catch {
         // 页面其他请求会显示更具体的错误；这里保持静默轮询。
       }

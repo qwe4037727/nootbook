@@ -37,7 +37,7 @@
             <a id="start" class="launch" href="/studio.html"><span aria-hidden="true">✦</span> 开始创作 <span aria-hidden="true">›</span></a>
           </section>
           <section class="works" id="works" aria-labelledby="works-title">
-            <div class="section-head"><h2 id="works-title"><span aria-hidden="true">◎</span> 我的作品</h2><button class="quiet" id="create" type="button">＋ 新建作品</button></div>
+            <div class="section-head"><h2 id="works-title"><span aria-hidden="true">◎</span> 我的作品</h2><a class="quiet" href="/studio.html#projects">＋ 新建作品</a></div>
             <p id="works-status" class="muted" role="status">正在读取作品…</p>
             <div id="work-grid" class="work-grid"></div>
           </section>
@@ -61,14 +61,5 @@
       </div>
     </main>
   </div>
-  <dialog id="create-dialog" class="glass">
-    <form id="create-form">
-      <h2>新建作品</h2>
-      <label for="work-name">作品名称</label>
-      <input id="work-name" name="name" maxlength="120" required>
-      <p id="create-error" role="alert" hidden></p>
-      <div class="dialog-actions"><button id="cancel-create" class="quiet" type="button">取消</button><button class="launch" type="submit">创建并进入</button></div>
-    </form>
-  </dialog>
 </body>
 </html>

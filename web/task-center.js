@@ -23,7 +23,10 @@
 
   function element(tag, attrs = {}, text) {
     const node = document.createElement(tag);
-    for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+    for (const [name, value] of Object.entries(attrs)) {
+      if (name === "style") node.style.cssText = value;
+      else node.setAttribute(name, value);
+    }
     if (text != null) node.textContent = text;
     return node;
   }
@@ -68,24 +71,16 @@
     return error.message || "请求失败，请重试。";
   }
 
-  function mount(trigger) {
-    trigger.setAttribute("aria-haspopup", "dialog");
-    trigger.setAttribute("aria-controls", "taskCenterDialog");
-    let dialog;
-    trigger.addEventListener("click", () => {
-      if (dialog?.open) return;
-      dialog?.remove();
-      dialog = openCenter(trigger);
-    });
-  }
-
-  function openCenter(trigger) {
-    const dialog = element("dialog", { id: "taskCenterDialog", class: "dialog dialog-wide", "aria-labelledby": "taskCenterTitle" });
+  function openCenter() {
+    if (document.getElementById("taskCenterDialog")) return;
+    const page = element("section", { id: "taskCenterDialog", class: "dialog dialog-wide", "aria-labelledby": "taskCenterTitle" });
+    page.classList.add("studio-page");
+    page.hidden = true;
     const body = element("div", { class: "dialog-form", style: "overflow-wrap:anywhere;" });
     const title = element("h2", { id: "taskCenterTitle" }, "任务与成本");
-    const close = button("×", () => dialog.close(), "icon-button");
+    const closePage = () => window.studioPages.close(page);
+    const close = button("×", closePage, "icon-button");
     close.setAttribute("aria-label", "关闭任务与成本");
-    close.setAttribute("autofocus", "");
     const head = element("div", { class: "dialog-head" });
     head.append(title, close);
     const scopeLabel = element("p", { class: "dialog-note" }, "正在读取当前作品…");
@@ -97,14 +92,26 @@
     let currentView = "tasks";
     let projectId = "";
     let readController;
+    let timer;
     let writing = false;
+    let confirming = false;
+    let closingForContext = false;
     let lastTaskSnapshot = "";
 
+    async function closeForContextChange() {
+      closingForContext = true;
+      try {
+        await closePage();
+        if (session.signal.aborted) showToast("作品已变更，请重新打开任务中心");
+      } finally {
+        closingForContext = false;
+      }
+    }
+
     function isCurrent() {
-      if (!dialog.open || session.signal.aborted) return false;
+      if (page.hidden || session.signal.aborted || closingForContext) return false;
       if (contextKey() === context) return true;
-      dialog.close();
-      showToast("作品已变更，请重新打开任务中心");
+      void closeForContextChange();
       return false;
     }
 
@@ -238,9 +245,16 @@
       if (available.length) {
         const controls = element("div", { style: rowStyle });
         for (const action of available) {
-          const actionButton = button(actions[action], () => {
-            if (!isCurrent() || writing) return;
-            if (action === "cancel" && !window.confirm(`取消任务「${heading.textContent}」？已生成的草稿会保留。`)) return;
+          const actionButton = button(actions[action], async () => {
+            if (!isCurrent() || writing || confirming) return;
+            if (action === "cancel") {
+              confirming = true;
+              try {
+                if (!await window.studioPages.confirm(`取消任务「${heading.textContent}」？已生成的草稿会保留。`)) return;
+              } finally {
+                confirming = false;
+              }
+            }
             void mutate(`/api/tasks/${encodeURIComponent(task.id)}/${action}`, `${actions[action]}任务`);
           });
           actionButton.setAttribute("aria-label", `${actions[action]}任务：${heading.textContent}`);
@@ -320,7 +334,7 @@
     }
 
     async function load({ poll = false } = {}) {
-      if (!isCurrent() || !projectId || (poll && (readController || writing))) return;
+      if (!isCurrent() || !projectId || (poll && (readController || writing || confirming))) return;
       if (currentView === "tasks" && writing) return;
       const view = currentView;
       const panel = panels[view];
@@ -458,36 +472,33 @@
 
     for (const panel of Object.values(panels)) panel.navButton.disabled = true;
     body.append(head, scopeLabel, contextStatus, navigation, tasks.node, audit.node, cost.node);
-    dialog.append(body);
-    dialog.addEventListener("click", (event) => {
-      if (event.target === dialog) dialog.close();
-    });
-    const timer = window.setInterval(() => {
-      if (isCurrent() && !document.hidden && currentView === "tasks") void load({ poll: true });
-    }, 4000);
+    page.append(body);
     function cleanup() {
       session.abort();
       readController?.abort();
       window.clearInterval(timer);
+      page.remove();
     }
+    document.body.append(page);
+    if (!window.studioPages?.open("tasks", page, { onClose: cleanup })) {
+      cleanup();
+      return;
+    }
+    timer = window.setInterval(() => {
+      if (isCurrent() && !document.hidden && currentView === "tasks") void load({ poll: true });
+    }, 4000);
     window.addEventListener("pagehide", () => {
       cleanup();
-      dialog.close();
+      closePage();
     }, { signal: session.signal });
-    dialog.addEventListener("close", () => {
-      cleanup();
-      dialog.remove();
-      if (document.activeElement === document.body && trigger.isConnected) trigger.focus();
-    }, { once: true });
-    document.body.append(dialog);
-    dialog.showModal();
     void resolveProject();
-    return dialog;
   }
 
   function bind() {
     const trigger = document.getElementById("task-center-btn");
-    if (trigger) mount(trigger);
+    if (!trigger) return;
+    trigger.setAttribute("aria-controls", "taskCenterDialog");
+    trigger.addEventListener("click", openCenter);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });

@@ -3,20 +3,50 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>续写 · 小说续写 Agent</title>
+  <title>写作工作台 · The World</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/studio.css">
+  <link rel="stylesheet" href="/world-atlas.css">
   <script src="/studio-entry.js"></script>
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <a class="btn btn-ghost" href="/">返回首页</a>
-      <span class="brand-seal" aria-hidden="true">续</span>
-      <div class="brand-copy">
-        <p class="kicker">NOVEL CONTINUATION AGENT</p>
-        <h1 id="headerTitle">未命名小说</h1>
+<body class="studio-shell">
+  <a href="#studio-main" class="studio-skip">跳至内容</a>
+  <aside class="flight-rail">
+    <a class="flight-brand" href="/"><span aria-hidden="true">✧</span> THE WORLD</a>
+    <nav class="flight-nav" aria-label="工作台导航">
+      <div class="flight-group">
+        <p>创作</p>
+        <a data-route="editor" href="#editor"><span aria-hidden="true">◫</span>写作工作台</a>
+        <a data-route="continue" href="#continue"><span aria-hidden="true">✧</span>续写</a>
+        <a data-route="adapt" href="#adapt"><span aria-hidden="true">↗</span>改编</a>
+        <a data-route="outline" href="#outline"><span aria-hidden="true">≡</span>大纲规划</a>
+        <a data-route="drafts" href="#drafts"><span aria-hidden="true">▱</span>草稿台</a>
+        <a data-route="chapters" href="#chapters"><span aria-hidden="true">▤</span>章节管理</a>
       </div>
+      <div class="flight-group">
+        <p>世界</p>
+        <a data-route="world" href="#world"><span aria-hidden="true">◎</span>大世界</a>
+        <a data-route="memory" href="#memory"><span aria-hidden="true">◈</span>记忆审阅</a>
+        <a data-route="images" href="#images" hidden><span aria-hidden="true">▧</span>图像中心</a>
+      </div>
+      <div class="flight-group">
+        <p>管理</p>
+        <a data-route="projects" href="#projects"><span aria-hidden="true">▦</span>作品管理</a>
+        <a data-route="import" href="#import"><span aria-hidden="true">↥</span>导入文稿</a>
+        <a data-route="export" href="#export" hidden><span aria-hidden="true">↧</span>导出作品</a>
+        <a data-route="snapshots" href="#snapshots"><span aria-hidden="true">◷</span>全书快照</a>
+        <a data-route="agents" href="#agents"><span aria-hidden="true">✳</span>Agent 中心</a>
+        <a data-route="tasks" href="#tasks"><span aria-hidden="true">▥</span>任务与成本</a>
+        <a data-route="settings" href="#settings"><span aria-hidden="true">⊙</span>模型设置</a>
+      </div>
+    </nav>
+    <a class="flight-home" href="/">← 返回首页</a>
+  </aside>
+  <header class="topbar">
+    <div class="brand-copy">
+      <p class="kicker" id="studio-route-label">写作工作台</p>
+      <h1 id="headerTitle">未命名小说</h1>
     </div>
     <div class="top-actions">
       <button id="modelBadge" class="model-badge" type="button" title="配置模型接口">
@@ -24,19 +54,22 @@
         <span id="modelBadgeText">模型未配置</span>
       </button>
       <span id="saveStatus" class="save-status is-saved" aria-live="polite">已保存</span>
-      <button id="planButton" class="btn btn-ghost" type="button">大纲规划</button>
-      <button id="world-center-btn" class="btn btn-ghost" type="button">大世界</button>
-      <button id="task-center-btn" class="btn btn-ghost" type="button">任务与成本</button>
-      <button id="agentCenterButton" class="btn btn-ghost" type="button">Agent 中心</button>
-      <button id="memoryReviewButton" class="btn btn-ghost" type="button">记忆审阅</button>
-      <button id="imageCenterButton" class="btn btn-ghost" type="button" hidden>图像中心</button>
-      <button id="exportButton" class="btn btn-ghost" type="button" hidden>导出</button>
-      <button id="draftBoxButton" class="btn btn-ghost" type="button">草稿台 <span id="draftBoxCount" class="count" hidden>0</span></button>
-      <button id="settingsButton" class="btn btn-ghost" type="button">模型设置</button>
     </div>
   </header>
+  <div class="studio-launchers" hidden>
+    <button id="planButton" type="button">大纲规划</button>
+    <button id="world-center-btn" type="button">大世界</button>
+    <button id="task-center-btn" type="button">任务与成本</button>
+    <button id="agentCenterButton" type="button">Agent 中心</button>
+    <button id="memoryReviewButton" type="button">记忆审阅</button>
+    <button id="imageCenterButton" type="button" hidden>图像中心</button>
+    <button id="exportButton" type="button" hidden>导出</button>
+    <button id="draftBoxButton" type="button">草稿台 <span id="draftBoxCount" hidden>0</span></button>
+    <button id="settingsButton" type="button">模型设置</button>
+  </div>
 
-  <main class="workspace">
+  <main id="studio-main" tabindex="-1">
+    <section id="writingPage" class="workspace" aria-label="写作工作台">
     <aside class="sidebar">
       <section class="side-section">
         <div class="side-head">
@@ -113,7 +146,10 @@
         </div>
       </div>
 
-      <section class="composer" aria-labelledby="composerTitle">
+    </section>
+    </section>
+    <div id="studio-pages">
+      <section id="continuationPage" class="composer studio-page" aria-labelledby="composerTitle" hidden>
         <div class="composer-head">
           <div>
             <p class="kicker">CONTINUE</p>
@@ -202,19 +238,20 @@
           </div>
         </section>
       </section>
-    </section>
-  </main>
+      <section id="unavailablePage" class="studio-page unavailable-page" hidden>
+        <h2>此功能暂不可用</h2>
+        <p>请检查当前作品的状态或功能配置。</p>
+        <a href="#editor" class="btn btn-ghost" data-route="editor">返回写作工作台</a>
+      </section>
 
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-
-  <dialog id="settingsDialog" class="dialog" aria-labelledby="settingsTitle">
+  <section hidden id="settingsDialog" class="dialog studio-page" aria-labelledby="settingsTitle">
     <form id="settingsForm" class="dialog-form" novalidate>
       <div class="dialog-head">
         <div>
           <p class="kicker">PROVIDER</p>
           <h2 id="settingsTitle">模型设置</h2>
         </div>
-        <button type="button" class="icon-button" data-close-dialog="settingsDialog" aria-label="关闭">×</button>
+        <button type="button" class="icon-button" data-close-dialog="settingsDialog" aria-label="返回写作工作台">返回工作台</button>
       </div>
       <p class="dialog-note">同一个模型既用于后台阅读文稿，也用于续写。支持任意 OpenAI 兼容接口，例如 DeepSeek、通义千问、Kimi、智谱、Ollama。Base URL 一般以 <code>/v1</code> 结尾；本地模型服务可以不填 API Key。</p>
       <label class="field">
@@ -244,16 +281,16 @@
         <button type="submit" class="btn btn-primary">保存设置</button>
       </div>
     </form>
-  </dialog>
+  </section>
 
-  <dialog id="importDialog" class="dialog" aria-labelledby="importTitle">
+  <section hidden id="importDialog" class="dialog" aria-labelledby="importTitle">
     <form id="importForm" class="dialog-form" novalidate>
       <div class="dialog-head">
         <div>
           <p class="kicker">IMPORT</p>
           <h2 id="importTitle">导入文稿</h2>
         </div>
-        <button type="button" class="icon-button" data-close-dialog="importDialog" aria-label="关闭">×</button>
+        <button type="button" class="icon-button" data-close-dialog="importDialog" aria-label="返回写作工作台">返回工作台</button>
       </div>
       <p class="dialog-note">支持 TXT 与 Markdown，会按「第X章」等标题自动拆分章节。导入会替换当前全部章节，并在后台自动开始分析。文件较大时，分析会持续一段时间。</p>
       <label class="field">
@@ -282,15 +319,15 @@
         <button id="importSubmitButton" type="submit" class="btn btn-primary">导入并分析</button>
       </div>
     </form>
-  </dialog>
+  </section>
 
-  <dialog id="memoryReviewDialog" class="dialog dialog-wide" aria-labelledby="memoryReviewTitle">
+  <section hidden id="memoryReviewDialog" class="dialog dialog-wide" aria-labelledby="memoryReviewTitle">
     <div class="dialog-head">
       <div>
         <p class="kicker">MEMORY REVIEW</p>
         <h2 id="memoryReviewTitle">记忆审阅</h2>
       </div>
-      <button type="button" class="icon-button" data-close-dialog="memoryReviewDialog" aria-label="关闭">×</button>
+      <button type="button" class="icon-button" data-close-dialog="memoryReviewDialog" aria-label="返回写作工作台">返回工作台</button>
     </div>
 
     <div class="review-body">
@@ -326,15 +363,15 @@
         <div id="candidateList" class="candidate-list"></div>
       </section>
     </div>
-  </dialog>
+  </section>
 
-  <dialog id="planDialog" class="dialog dialog-wide" aria-labelledby="planTitle">
+  <section hidden id="planDialog" class="dialog dialog-wide" aria-labelledby="planTitle">
     <div class="dialog-head">
       <div>
         <p class="kicker">PLAN</p>
         <h2 id="planTitle">大纲规划</h2>
       </div>
-      <button type="button" class="icon-button" data-close-dialog="planDialog" aria-label="关闭">×</button>
+      <button type="button" class="icon-button" data-close-dialog="planDialog" aria-label="返回写作工作台">返回工作台</button>
     </div>
 
     <div class="review-body">
@@ -377,15 +414,15 @@
         <div id="planTree" class="plan-tree"></div>
       </section>
     </div>
-  </dialog>
+  </section>
 
-  <dialog id="draftBoxDialog" class="dialog dialog-wide" aria-labelledby="draftBoxTitle">
+  <section hidden id="draftBoxDialog" class="dialog dialog-wide" aria-labelledby="draftBoxTitle">
     <div class="dialog-head">
       <div>
         <p class="kicker">DRAFT DESK</p>
         <h2 id="draftBoxTitle">草稿台</h2>
       </div>
-      <button type="button" class="icon-button" data-close-dialog="draftBoxDialog" aria-label="关闭">×</button>
+      <button type="button" class="icon-button" data-close-dialog="draftBoxDialog" aria-label="返回写作工作台">返回工作台</button>
     </div>
 
     <div class="review-body">
@@ -439,15 +476,15 @@
         <p id="draftDetailStatus" class="review-note" aria-live="polite"></p>
       </section>
     </div>
-  </dialog>
+  </section>
 
-  <dialog id="agentCenterDialog" class="dialog dialog-wide" aria-labelledby="agentCenterTitle">
+  <section hidden id="agentCenterDialog" class="dialog dialog-wide" aria-labelledby="agentCenterTitle">
     <div class="dialog-head">
       <div>
         <p class="kicker">AGENT CENTER</p>
         <h2 id="agentCenterTitle">Agent 中心</h2>
       </div>
-      <button type="button" class="icon-button" data-close-dialog="agentCenterDialog" aria-label="关闭">×</button>
+      <button type="button" class="icon-button" data-close-dialog="agentCenterDialog" aria-label="返回写作工作台">返回工作台</button>
     </div>
 
     <div class="review-body">
@@ -499,9 +536,9 @@
         <div id="agentProposalList" class="agent-list"></div>
       </section>
     </div>
-  </dialog>
+  </section>
 
-  <dialog id="imageCenterDialog" class="dialog dialog-wide" aria-labelledby="imageCenterTitle">
+  <section hidden id="imageCenterDialog" class="dialog dialog-wide" aria-labelledby="imageCenterTitle">
     <div class="dialog-head">
       <div>
         <p class="kicker">IMAGE STUDIO</p>
@@ -509,7 +546,7 @@
       </div>
       <div class="review-actions">
         <button id="imageModelButton" class="btn btn-quiet btn-sm" type="button">图像模型设置</button>
-        <button type="button" class="icon-button" data-close-dialog="imageCenterDialog" aria-label="关闭">×</button>
+        <button type="button" class="icon-button" data-close-dialog="imageCenterDialog" aria-label="返回写作工作台">返回工作台</button>
       </div>
     </div>
 
@@ -596,16 +633,16 @@
         <div id="imageAssetList" class="image-grid"></div>
       </section>
     </div>
-  </dialog>
+  </section>
 
-  <dialog id="imageModelDialog" class="dialog" aria-labelledby="imageModelTitle">
+  <section hidden id="imageModelDialog" class="dialog" aria-labelledby="imageModelTitle">
     <form id="imageModelForm" class="dialog-form" novalidate>
       <div class="dialog-head">
         <div>
           <p class="kicker">IMAGE PROVIDER</p>
           <h2 id="imageModelTitle">图像模型设置</h2>
         </div>
-        <button type="button" class="icon-button" data-close-dialog="imageModelDialog" aria-label="关闭">×</button>
+        <button type="button" class="icon-button" data-close-dialog="imageModelDialog" aria-label="返回写作工作台">返回工作台</button>
       </div>
       <p class="dialog-note">支持 OpenAI 兼容的 <code>/images/generations</code> 与本地 Stable Diffusion WebUI 的 <code>/sdapi/v1/txt2img</code>。留空 Base URL 时不接受生成任务。</p>
       <label class="field">
@@ -672,15 +709,15 @@
         <button type="submit" class="btn btn-primary">保存图像设置</button>
       </div>
     </form>
-  </dialog>
+  </section>
 
-  <dialog id="exportDialog" class="dialog" aria-labelledby="exportTitle">
+  <section hidden id="exportDialog" class="dialog" aria-labelledby="exportTitle">
     <div class="dialog-head">
       <div>
         <p class="kicker">EXPORT</p>
         <h2 id="exportTitle">导出整书</h2>
       </div>
-      <button type="button" class="icon-button" data-close-dialog="exportDialog" aria-label="关闭">×</button>
+      <button type="button" class="icon-button" data-close-dialog="exportDialog" aria-label="返回写作工作台">返回工作台</button>
     </div>
     <div class="review-body">
       <section class="review-section">
@@ -719,26 +756,15 @@
         <div id="exportList" class="export-list"></div>
       </section>
     </div>
-  </dialog>
+  </section>
 
-  <dialog id="draftMemorySyncDialog" class="dialog" aria-labelledby="draftMemorySyncTitle">
-    <div class="dialog-head">
-      <div>
-        <p class="kicker">MEMORY SYNC</p>
-        <h2 id="draftMemorySyncTitle">正文已修改，记忆尚未同步</h2>
-      </div>
-      <button type="button" class="icon-button" id="draftMemorySyncCancel" aria-label="关闭">×</button>
     </div>
-    <p class="dialog-note">草稿正文在最后一次记忆提取后发生了变化。直接提交会静默跳过记忆更新，因此需要明确选择：</p>
-    <div class="dialog-actions">
-      <button type="button" id="draftMemorySyncCancelButton" class="btn btn-quiet">取消</button>
-      <button type="button" id="draftMemorySyncBodyOnlyButton" class="btn btn-ghost">仅提交正文（记忆不更新）</button>
-      <button type="button" id="draftMemorySyncReextractButton" class="btn btn-primary">先执行记忆重提取</button>
-    </div>
-  </dialog>
-
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="/studio-pages.js"></script>
   <script src="/app.js"></script>
   <script src="/projects.js"></script>
+  <script src="/world-atlas.js"></script>
   <script src="/world-center.js"></script>
   <script src="/task-center.js"></script>
   <script src="/manuscript-tools.js"></script>

@@ -133,34 +133,11 @@
   wireEntry(get('start'), () => current?.id);
   search.addEventListener('input', () => { if (current || projects.length) renderWorks(); });
   window.addEventListener('keydown', (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && !get('create-dialog').open) {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
       search.focus();
     }
   });
-  const dialog = get('create-dialog');
-  const form = get('create-form');
-  get('create').addEventListener('click', () => { form.reset(); get('create-error').hidden = true; dialog.showModal(); });
-  get('cancel-create').addEventListener('click', () => dialog.close());
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const name = get('work-name').value.trim();
-    const message = get('create-error');
-    if (!name) { message.textContent = '请输入作品名称。'; message.hidden = false; return; }
-    const submit = form.querySelector('[type=submit]');
-    submit.disabled = true;
-    get('cancel-create').disabled = true;
-    message.hidden = true;
-    try {
-      const created = await request('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-      dialog.close();
-      enter(created.id, studio(created.id));
-    } catch (error) {
-      message.textContent = error.message;
-      message.hidden = false;
-    } finally { submit.disabled = false; get('cancel-create').disabled = false; }
-  });
-  dialog.addEventListener('cancel', (event) => { if (form.querySelector('[type=submit]').disabled) event.preventDefault(); });
 
   const canvas = get('starfield');
   const context = canvas.getContext('2d');
